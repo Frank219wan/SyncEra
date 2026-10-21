@@ -43,6 +43,7 @@ function HRIntake(){
   const {state,setState,t,copy,toast}=useApp();const nav=useNavigate();
   const [editing,setEditing]=useState(false),[draft,setDraft]=useState<Organization>(()=>structuredClone(state.hr));
   const org=editing?draft:state.hr;
+  const firstTimeTeamProfile=state.hr.revision===1&&state.hr.name===hrSample.name;
   const [active,setActive]=useState(0),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const update=(patch:Partial<Organization>)=>setDraft(current=>({...current,...patch,revision:current.revision+1}));
   const updatePerson=(i:number,p:Person)=>update({people:org.people.map((item,index)=>index===i?p:item)});
@@ -58,7 +59,7 @@ function HRIntake(){
     toast(t('Local department plan saved. No AI analysis was generated.','部门规划草案已保存在本地；没有生成 AI 分析。','Draf perancangan jabatan disimpan secara setempat. Tiada analisis AI dijana.'));
   }
   if(!editing)return <><PageHeader title={t('Team profile','团队资料','Profil pasukan')} description={t('Saved organization, department and optional employee information.','已保存的机构、部门和可选员工资料。','Maklumat organisasi, jabatan dan pekerja pilihan yang tersimpan.')} action={<DemoNotice/>}/>
-    <div className="form-actions"><button className="button" onClick={()=>{setDraft(structuredClone(state.hr));setEditing(true);}}>{t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button><button className="button secondary" onClick={reviewPlan}>{t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button></div>
+    <div className="form-actions"><button className="button" onClick={()=>{setDraft(structuredClone(state.hr));setEditing(true);}}>{firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button><button className="button secondary" onClick={reviewPlan}>{t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button></div>
     {error&&<ErrorState message={error} retry={()=>setError('')}/>}
     {Boolean(org.planningVersions?.length)&&org.analyzedRevision!==org.revision&&<div className="stale-notice"><Info size={18}/><span>{t('Team inputs have changed since the last saved planning view. Review the department plan before relying on it.','团队输入已变化；使用既有部门规划前请重新核对。','Input pasukan berubah sejak paparan perancangan terakhir. Semak semula pelan jabatan.')}</span></div>}
     <section className="surface department-detail"><h2>{t('Organization profile','机构资料','Profil organisasi')}</h2><dl><dt>{t('Organization name','机构名称','Nama organisasi')}</dt><dd>{org.name||'—'}</dd><dt>{t('Sector / context','行业／背景','Sektor / konteks')}</dt><dd>{org.sector||'—'}</dd><dt>{t('Organization goals','机构目标','Matlamat organisasi')}</dt><dd>{(org.goals||[]).map(id=>organizationGoals.find(goal=>goal.id===id)?.label).filter((name):name is NonNullable<typeof name>=>Boolean(name)).map(name=>copy(name)).join(' · ')||'—'}</dd><dt>{t('Skills to support','需要发展的技能','Kemahiran disokong')}</dt><dd>{org.needs.map(id=>skillNames[id]?copy(skillNames[id]):id).join(' · ')||'—'}</dd></dl></section>
