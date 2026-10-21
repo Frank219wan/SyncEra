@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {BrowserRouter,Routes,Route,Outlet} from 'react-router-dom';
+import {BrowserRouter,Routes,Route,Outlet,useSearchParams} from 'react-router-dom';
 import '@fontsource/noto-sans/400.css';
 import '@fontsource/noto-sans/500.css';
 import '@fontsource/noto-sans/600.css';
@@ -12,10 +12,25 @@ import './styles.css';
 import {Provider,useApp} from './store';
 import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
+import {About} from './pages/About';
 import {Intake,ProfileInput,ProfileReview,Analyzing} from './pages/Intake';
-import {Radar,Recommendations,RoleDetail} from './pages/Careers';
+import {ProfileEdit} from './pages/ProfileEdit';
+import {Recommendations,RoleDetail} from './pages/Careers';
+import {Radar} from './pages/RadarExperience';
+import {ConnectedRadar} from './pages/ConnectedCareers';
+import {isDemo} from './services/api';
 import {MindMap,RoadmapDraft,LearningJourney,LearningJourneyOverview} from './pages/Learning';
 import {OrganizationPages,HRDepartmentDetails} from './pages/Organization';
+function ProfileRoute(){const [params]=useSearchParams();return params.get('edit')==='1'?<ProfileEdit/>:<ProfileInput/>;}
+function RadarRoute(){return isDemo?<Radar/>:<ConnectedRadar/>;}
+function RecommendationsRoute(){
+  const {state,t}=useApp();
+  if(!state.results&&state.profile.revision&&state.profile.occupation&&state.profile.education){
+    const pending=state.profile.skills.some(skill=>!skill.confirmed);
+    return <EmptyState title={pending?t('Review your saved profile','请核对已保存画像','Semak profil tersimpan'):t('Your saved profile is ready','已保存画像，可更新推荐','Profil tersimpan sedia')} description={pending?t('Confirm extracted or inferred skills before calculating matches.','先确认提取或推断的技能，再计算职业推荐。','Sahkan kemahiran yang diekstrak atau diinferens sebelum mengira padanan.'):t('Calculate career matches from the current profile before relying on an earlier analysis.','请根据当前画像重新计算职业推荐，再参考分析结果。','Kira padanan daripada profil semasa sebelum menggunakan analisis terdahulu.')} action={<ButtonLink to={pending?'/individual/intake/review':'/individual/analyzing'}>{pending?t('Review skills','核对技能','Semak kemahiran'):t('Calculate current matches','重新计算推荐','Kira padanan semasa')}</ButtonLink>}/>;
+  }
+  return <Recommendations/>;
+}
 function NotFound(){const {t}=useApp();return <EmptyState title={t('This path isn’t here yet.','暂时没有这条路径。','Laluan ini belum tersedia.')} description={t('Return home to find your next step.','返回首页，找到你的下一步。','Kembali ke laman utama untuk langkah seterusnya.')} action={<ButtonLink to="/">{t('Return home','返回首页','Kembali ke utama')}</ButtonLink>}/>;}
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{error:boolean}>{
   state={error:false};
@@ -24,18 +39,19 @@ class ErrorBoundary extends React.Component<{children:React.ReactNode},{error:bo
 }
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><Provider><BrowserRouter><Routes><Route path="/" element={<Home/>}/><Route element={<Shell><Outlet/></Shell>}>
   <Route path="/individual" element={<IndividualHome/>}/>
-  <Route path="/individual/radar" element={<Radar/>}/>
+  <Route path="/individual/radar" element={<RadarRoute/>}/>
   <Route path="/individual/intake" element={<Intake/>}/>
-  <Route path="/individual/intake/profile" element={<ProfileInput/>}/>
+  <Route path="/individual/intake/profile" element={<ProfileRoute/>}/>
   <Route path="/individual/intake/review" element={<ProfileReview/>}/>
   <Route path="/individual/analyzing" element={<Analyzing/>}/>
-  <Route path="/individual/recommendations" element={<Recommendations/>}/>
+  <Route path="/individual/recommendations" element={<RecommendationsRoute/>}/>
   <Route path="/individual/roles/:roleId" element={<RoleDetail/>}/>
   <Route path="/individual/skills/:skillId/mind-map" element={<MindMap/>}/>
   <Route path="/individual/roadmap/draft" element={<RoadmapDraft/>}/>
   <Route path="/individual/roadmap/:planId" element={<LearningJourney/>}/>
   <Route path="/individual/learning-journey" element={<LearningJourneyOverview/>}/>
   <Route path="/organization" element={<OrganizationHome/>}/>
+  <Route path="/about" element={<About/>}/>
   {['intake','heatmap','mobility','training','dashboard'].map(p=><Route key={p} path={`/organization/hr/${p}`} element={<OrganizationPages key={`hr-${p}`}/>}/>)}
   <Route path="/organization/hr/department/:departmentId" element={<HRDepartmentDetails/>}/>
   {['students','trends','gaps','cohort','insights'].map(p=><Route key={p} path={`/organization/tvet/${p}`} element={<OrganizationPages key={`tvet-${p}`}/>}/>)}

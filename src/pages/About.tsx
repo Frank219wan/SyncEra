@@ -1,0 +1,19 @@
+import {Link} from 'react-router-dom';
+import {useApp} from '../store';
+import {PageHeader,DemoNotice,icons} from '../components';
+
+const {ArrowRight,Leaf}=icons;
+
+function BambooIcon(){return <svg className="about-concept-icon" viewBox="0 0 120 120" role="img" aria-label="Bamboo"><path d="M42 103V20M68 103V11M91 103V35"/><path d="M35 37h14M61 29h14M84 53h14M35 68h14M61 63h14M84 79h14"/><path d="M42 43C25 41 20 31 18 23c13 0 22 7 24 20ZM68 47c16-2 23-12 25-22-14 1-23 9-25 22ZM91 65c-14-1-22-9-25-18 13 0 22 7 25 18Z"/><path className="roots" d="M15 108c18-15 31-4 45-13 15 11 28-3 46 13M27 113c12-9 21-2 32-9 12 8 22 0 35 9"/></svg>}
+function IvyIcon(){return <svg className="about-concept-icon" viewBox="0 0 120 120" role="img" aria-label="Ivy"><path d="M28 107C75 91 43 58 91 17"/><path d="M47 91C25 91 18 80 18 68c16-2 27 5 29 23ZM57 73c18 0 28-10 30-23-17-2-29 6-30 23ZM67 52C48 50 40 39 41 27c17 0 27 9 26 25ZM80 32c14 2 24-4 29-14-12-5-24 0-29 14Z"/><circle cx="30" cy="105" r="4"/></svg>}
+
+export function About(){
+  const {t}=useApp();
+  return <div className="about-screen"><PageHeader title={t('About FutureProof AI','关于 FutureProof AI','Tentang FutureProof AI')} description={t('A career guidance workspace built to help people and teams grow with changing work.','一个帮助个人与团队应对工作变化、持续成长的 AI 职业引导空间。','Ruang bimbingan kerjaya AI untuk membantu individu dan pasukan berkembang bersama perubahan kerja.')} action={<DemoNotice/>}/>
+    <div className="surface about-page">
+      <section className="about-hero"><div className="large-symbol"><Leaf size={28}/></div><div><h2>{t('Growth with roots, direction and adaptability.','有根系、有方向，也能适应变化。','Pertumbuhan dengan akar, arah dan keupayaan menyesuaikan diri.')}</h2><p>{t('We turn broad career information into a clearer next step without pretending that a score is a prediction.','我们把广泛的职业信息整理成更清晰的下一步，但不会把评分伪装成预测。','Kami menukar maklumat kerjaya yang luas kepada langkah seterusnya yang lebih jelas tanpa mendakwa skor sebagai ramalan.')}</p></div></section>
+      <div className="about-grid"><article><BambooIcon/><h3>{t('Bamboo · individual growth','竹林 · 个人成长','Buluh · pertumbuhan individu')}</h3><p>{t('Bamboo has a deep, connected root system. It represents the career information and trends we gather across the web, giving each person a stronger foundation for learning. Its upward growth reflects progress built step by step.','竹子的根系发达而相互连接，代表我们从全网搜寻并整理的职业信息与趋势，为每个人的学习提供更强的基础；竹子的向上生长，则代表一步一步积累的职业成长。','Buluh mempunyai sistem akar yang dalam dan saling terhubung. Ia melambangkan maklumat kerjaya dan trend yang kami kumpulkan, serta pertumbuhan yang dibina sedikit demi sedikit.')}</p></article><article><IvyIcon/><h3>{t('Ivy · team adaptability','爬山虎 · 团队适应力','Ivy · kebolehsuaian pasukan')}</h3><p>{t('Ivy changes its direction and pace as its surroundings change. It represents teams that sense new constraints, learn together and adapt their development choices with evidence.','爬山虎会随着外界环境改变生长方向和速度，代表团队能够感知新的约束，以证据共同学习，并调整发展选择。','Ivy mengubah arah dan kadar pertumbuhan apabila persekitaran berubah. Ia mewakili pasukan yang belajar bersama dan menyesuaikan pilihan pembangunan berdasarkan bukti.')}</p></article></div>
+      <section className="about-principles"><h3>{t('Our development principles','我们的开发理念','Prinsip pembangunan kami')}</h3><ul><li>{t('Evidence before certainty','先看证据，再谈确定性','Bukti sebelum kepastian')}</li><li>{t('Human review for important decisions','重要决策保留人工审核','Semakan manusia untuk keputusan penting')}</li><li>{t('Progress is personal; teams remain adaptable','成长属于个人，团队保持适应性','Kemajuan adalah peribadi; pasukan kekal adaptif')}</li></ul></section>
+      <div className="form-actions"><Link className="button secondary" to="/">{t('Back to home','返回首页','Kembali ke utama')}</Link><Link className="button" to="/individual/radar">{t('Explore Career Radar','探索职业雷达','Teroka Radar kerjaya')}<ArrowRight size={16}/></Link></div>
+    </div></div>;
+}

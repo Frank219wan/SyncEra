@@ -1,16 +1,33 @@
 import {useState,useEffect,useRef} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {Link,useNavigate} from 'react-router-dom';
+import {CircleUserRound} from 'lucide-react';
 import {useApp} from '../store';
 import {sampleProfile,skillNames} from '../data';
 import {api,isDemo} from '../services/api';
 import {PageHeader,Stepper,ButtonLink,Field,DemoNotice,SkillChip,ErrorState,icons} from '../components';
-const {ArrowRight,ArrowLeft,Check,Users,GraduationCap,Building2,Compass,Leaf,BookOpen,X}=icons;
+const {ArrowRight,ArrowLeft,Check,Users,GraduationCap,Compass,BookOpen,X}=icons;
 const stages=[['student','Student','在校学生','Pelajar'],['graduate','Recent graduate','应届毕业生','Graduan baharu'],['professional','Working professional','在职人士','Profesional bekerja'],['returning','Returning to work','重返职场','Kembali bekerja']] as const;
 const goals=[['explore','Explore possibilities','探索职业方向','Teroka peluang'],['first-job','Find my first role','寻找第一份工作','Cari kerjaya pertama'],['switch','Change my career','转换职业方向','Tukar kerjaya'],['upskill','Grow in my field','提升现有职业','Tingkatkan kemahiran']] as const;
 function IntakeSteps({current}:{current:number}){const {t}=useApp();return <Stepper current={current} steps={[t('Your direction','你的方向','Arah anda'),t('Your experience','你的经历','Pengalaman anda'),t('Review profile','确认画像','Semak profil')]}/>;}
 export function Intake(){
-  const {state,setState,t}=useApp();const nav=useNavigate();
-  return <><PageHeader title={t('Start where you are.','从现在的你，开始。','Mulakan dari sini.')} description={t('There is no perfect starting point. Just yours.','不必等到万事俱备，就从你的起点出发。','Tiada titik mula yang sempurna. Hanya titik mula anda.')} action={<DemoNotice/>}/><IntakeSteps current={0}/><form className="intake-surface surface" onSubmit={e=>{e.preventDefault();nav('/individual/intake/profile');}}><fieldset><legend>{t('Where are you in your journey?','你目前处于哪个阶段？','Di manakah anda dalam perjalanan ini?')}</legend><p className="muted">{t('We’ll adapt the experience to your starting point.','我们会根据你的起点调整后续问题。','Kami akan menyesuaikan pengalaman mengikut titik mula anda.')}</p><div className="choice-grid">{stages.map(([v,en,zh,ms],i)=>{const Icon=[BookOpen,GraduationCap,Building2,Leaf][i];return <label className={`choice ${state.profile.stage===v?'chosen':''}`} key={v}><input required type="radio" name="stage" value={v} checked={state.profile.stage===v} onChange={()=>setState(s=>({...s,profile:{...s.profile,stage:v}}))}/><Icon size={24} strokeWidth={1.4}/><strong>{t(en,zh,ms)}</strong><span className="choice-check">{state.profile.stage===v&&<Check size={13}/>}</span></label>;})}</div></fieldset><fieldset><legend>{t('What would you like to move toward?','你希望迈向什么目标？','Apakah matlamat anda?')}</legend><div className="choice-grid compact">{goals.map(([v,en,zh,ms])=><label key={v} className={`choice ${state.profile.goal===v?'chosen':''}`}><input required type="radio" name="goal" checked={state.profile.goal===v} onChange={()=>setState(s=>({...s,profile:{...s.profile,goal:v}}))}/><strong>{t(en,zh,ms)}</strong><span className="choice-check">{state.profile.goal===v&&<Check size={13}/>}</span></label>)}</div></fieldset><div className="form-actions"><ButtonLink secondary to="/individual"><ArrowLeft size={16}/>{t('My growth','我的成长','Pertumbuhan saya')}</ButtonLink><button className="button" type="submit">{t('Continue','继续','Teruskan')}<ArrowRight size={16}/></button></div></form></>;
+  const {state,t,copy}=useApp();const p=state.profile;const hasProfile=Boolean(p.occupation||p.education||p.experience||p.skills.length||p.interests||p.vision);const value=(text:string)=>text.trim()||t('Not provided yet','尚未填写','Belum diisi');
+  const stage=stages.find(item=>item[0]===p.stage),goal=goals.find(item=>item[0]===p.goal);
+  return <><PageHeader title={t('My profile','我的画像','Profil saya')} description={t('Review the information you have saved.','查看已保存的资料。','Semak maklumat tersimpan.')} action={<div className="profile-header-action"><DemoNotice/><div className="profile-avatar" role="img" aria-label={t('Default profile avatar','默认个人头像','Avatar profil lalai')}><CircleUserRound size={40} strokeWidth={1.4}/></div></div>}/>
+    <section className="surface form-panel profile-overview"><div className="section-heading profile-overview-heading"><h2>{t('Profile overview','画像概览','Gambaran profil')}</h2>{hasProfile&&<Link className="button" to="/individual/intake/profile?edit=1">{t('Edit profile','编辑画像','Edit profil')}<ArrowRight size={16}/></Link>}</div>
+      {!hasProfile?<div className="empty-inline"><p>{t('Your profile is still empty. Add your background, skills and interests when you’re ready.','画像尚为空白；准备好后可补充背景、技能和兴趣。','Profil anda masih kosong. Tambah latar belakang, kemahiran dan minat apabila sedia.')}</p><Link className="button" to="/individual/intake/profile?edit=1">{t('Create my profile','创建我的画像','Cipta profil saya')}<ArrowRight size={16}/></Link></div>
+      :<><div className="department-detail profile-overview-details"><dl>
+        <div className="profile-overview-row"><dt>{t('Current stage','当前阶段','Tahap semasa')}</dt><dd>{stage?t(stage[1],stage[2],stage[3]):value('')}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Career goal','职业目标','Matlamat kerjaya')}</dt><dd>{goal?t(goal[1],goal[2],goal[3]):value('')}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Current role / study','当前职业／专业','Jawatan / pengajian')}</dt><dd>{value(p.occupation)}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Education','教育背景','Pendidikan')}</dt><dd>{value(p.education)}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Experience','经历','Pengalaman')}</dt><dd>{value(p.experience)}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Skills','技能','Kemahiran')}</dt><dd>{p.skills.length?p.skills.map(s=>`${copy(skillNames[s.id]||[s.id,s.id,s.id])} · ${s.level}${s.confirmed?'':' · '+t('unconfirmed','待确认','belum disahkan')}`).join(', '):value('')}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Interests','兴趣','Minat')}</dt><dd>{value(p.interests)}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Future vision','未来愿景','Visi masa depan')}</dt><dd>{value(p.vision)}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Work preferences','工作偏好','Keutamaan kerja')}</dt><dd>{value(p.preferences)}</dd></div>
+        <div className="profile-overview-row"><dt>{t('Region','地区','Wilayah')}</dt><dd>{value(p.region)}</dd></div>
+      </dl></div><p className="fine-print">{t('Saved profile data is the source used by your career matches. After an edit, refresh your matches before relying on them.','已保存画像是职业推荐的数据来源；修改后请刷新推荐再参考。','Profil tersimpan ialah sumber padanan kerjaya. Segarkan padanan selepas mengedit.')}</p></>}
+    </section><div className="form-actions standalone"><Link className="button secondary" to="/individual">{t('My growth','我的成长','Pertumbuhan saya')}<ArrowRight size={16}/></Link></div></>;
 }
 export function ProfileInput(){
   const {state,setState,t,copy,toast}=useApp();const p=state.profile;const nav=useNavigate();
