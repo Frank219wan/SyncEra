@@ -1,5 +1,7 @@
 # SyncEra backend integration
 
+> **Historical Backend Phase 3 record — superseded for current integration status.** The root `.replit`, frontend contract adapter, deterministic Tech Adapter and candidate data have changed on `feature/tech-integration`. See the root `README.md`, `docs/REVIEW_RESOLUTION.md` and `backend/AI_BACKEND_HANDOFF.md`; do not use the old test counts or Backend-only startup statement below as current evidence.
+
 ## Repository and branch
 
 - Remote: `git@github.com:Frank219wan/SyncEra.git`.

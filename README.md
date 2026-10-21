@@ -21,16 +21,24 @@ node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node
 
 ## 交付内容
 
-- 23 个主要路由及未找到页面：首页、个人 11 页、组织入口、HR 5 页、TVET 5 页。
+- 25 个主要路由及未找到页面：首页、个人成长与学习旅程、组织入口、HR 部门详情与工作区、TVET 工作区。
 - 职业雷达、画像录入与确认、情景推荐、职业详情、技能地图、计划草案、采纳与任务确认、成长、改期和历史。
-- 企业匿名团队编辑、技能热图明细、内部转型、培训进度、概览和导出。
+- HR 部门优先录入、员工资料可选、CSV 列映射/预览/确认、人工实施状态和本地规划版本历史；员工技能热图与培训进度仍需可选的员工资料。
 - 院校学生编辑、趋势、个人差距、手动选群、汇总图表、建议依据和导出。
 - 中英马三语、键盘焦点、弹窗焦点约束、错误和空状态、桌面与窄屏布局。
 
 ## 数据与边界
 
-这是前端演示，不是已连接真实 AI 或就业数据库的产品。只使用虚构测试资料。演示资料存于此浏览器的 localStorage（futureproof-v1），不会跨设备同步。清除站点数据会清除本地进度。
+默认启动的是前端演示模式，只使用虚构测试资料。演示资料与计划历史存于此浏览器的 localStorage（futureproof-v1），不会跨设备同步。清除站点数据会清除本地进度。CSV 员工导入在本机预览并经用户确认后保存；当前未接入 XLSX/PDF/DOCX 解析。
 
 固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。PDF/DOCX 提取、真实评分、课程推荐和认证评估均尚待服务接入。TXT 可本地读取。
 
-VITE_API_MODE 默认 demo。real 模式只有适配器雏形，尚未完成真实数据的全界面绑定，不能直接视为生产模式。详见 docs/HANDOFF.md。
+VITE_API_MODE 默认 demo。设置 `VITE_API_MODE=real` 后，个人职业雷达、推荐、职业详情和 Evidence 会请求同源 `/api/v1`，跨栈请求测试见 `tests/cross-stack.test.ts`。机构分析、学习进度等 P1 能力尚未接入；real 不等于生产模式。详见 docs/HANDOFF.md。
+
+## Backend 与 Tech 集成
+
+本分支基于 `feature/tech-integration`，包含 `backend/` FastAPI 服务、Tech v0.1.0 确定性 Adapter、DOSM／TalentCorp 候选 Snapshot 和 Microsoft Learn 候选课程。进入 `backend/` 后按 [Backend README](backend/README.md) 和 [Tech Integration](backend/tech_delivery/INTEGRATION.md) 操作。
+
+候选来源与课程已经完成技术预检，但 `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` 不是 Team Lead 治理批准。替换为真实 reviewer-owned approval manifest 前，不得把候选数据声明为已批准生产数据。
+
+根目录 `.replit` 会构建 real 模式前端，并由 FastAPI 在同一端口提供网页、前端路由和 `/api/v1`。部署前需提供 Node.js 22+、Corepack 和 Python；本地验证可运行 `pnpm install --frozen-lockfile`、`pnpm test`、`pnpm build`，再运行 `backend` 的 `pytest` 与跨栈测试。锁文件暂时固定 `electron-to-chromium@1.5.459`，使新环境能通过依赖等待期检查；未降低该策略。

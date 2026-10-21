@@ -1,5 +1,7 @@
 # Frontend–Backend contract gap report (Phase 3)
 
+> **Historical baseline — superseded on 2026-10-21.** This report records the gap at `origin/main` commit `34beee2`; it is not the current branch status. The Individual form normalize/confirm, trends, recommendations, evidence, skill map and roadmap mappings described below have since been implemented and are covered by frontend contract tests plus `tests/live-api-contract.test.mjs`. PDF/DOCX browser upload, P1 progress and Organization remain open. See `docs/REVIEW_RESOLUTION.md` and `docs/HANDOFF.md` for the current state.
+
 ## Evidence and scope
 
 Checked against the fetched SyncEra frontend at `origin/main` commit `34beee2`: `src/services/api.ts`, `src/types.ts`, `src/domain.ts`, and the running FastAPI `/openapi.json`. The specifically named frontend `API_CONTRACT.md` v0.1 and `src/data/types.ts` are absent; the actual type file is `src/types.ts`. The exact named team contract Markdown file is absent; `backend/contracts/FutureProof_AI_OpenAPI_v1_0.yaml` and the local `AI_API_CONTRACT.md` were available. No frontend file was edited in this backend integration.

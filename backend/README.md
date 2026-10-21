@@ -1,6 +1,6 @@
 # FutureProof AI backend MVP
 
-Python 3.10+ / FastAPI backend. The default run is an explicitly labelled **synthetic demo**. No verified market snapshot, teammate AI module or approved course catalogue was present when this report was written. Do not submit real CVs, student records or employee records.
+Python 3.10+ / FastAPI backend. The default run remains an explicitly labelled **synthetic demo**. Tech v0.1.0 adds a deterministic adapter, a real-source candidate market package and a verified course candidate; none becomes active public data until Team Lead replaces the technical-precheck manifests with reviewer-owned approvals. Do not submit real CVs, student records or employee records.
 
 ## Run locally
 
@@ -29,7 +29,7 @@ cd backend
 .venv/bin/python -m pytest tests -q
 ```
 
-Latest local result: **31 passed, 0 failed, 0 skipped** (27 pre-existing + 4 CV upload tests). If the sandbox reports `PermissionError: EEXIST ... mkdir .../T/pytest-of-unknown`, re-run with a fresh basetemp: `.venv/bin/python -m pytest tests -q --basetemp="$(mktemp -d)/fp_pytest"` — this is an environment artifact, not a test failure.
+Latest Backend + Tech result: **37 passed, 0 failed, 0 skipped** (including semantic rejection of plausible-looking but false adapter explanations). If the sandbox reports `PermissionError: EEXIST ... mkdir .../T/pytest-of-unknown`, re-run with a fresh basetemp: `.venv/bin/python -m pytest tests -q --basetemp="$(mktemp -d)/fp_pytest"` — this is an environment artifact, not a test failure.
 
 Tests cover all 16 route registrations, the synthetic vertical slice, actual PDF/DOCX multipart upload, original OpenAPI P0 response schemas, reviewed local import validation, source/resource approvals, snapshot/score consistency and AI adapter failure/loading. They make no paid model calls. Test-only URLs and approvals remain in temporary test storage; they are not production data.
 
@@ -39,6 +39,8 @@ Tests cover all 16 route registrations, the synthetic vertical slice, actual PDF
 - `app/approved_data.py`: validated repositories for synthetic and reviewer-approved public snapshots and approved learning resources. Public data requires original HTTPS URLs, dated evidence and a separate exact-match approval manifest. This validates structure and provenance records; human review must verify source content.
 - `app/import_data.py`: local import command. It is not an HTTP endpoint. See [AI_BACKEND_HANDOFF.md](AI_BACKEND_HANDOFF.md) for input schemas and commands.
 - `app/ai_adapter.py`: configurable extraction/scoring boundary. A configured missing module fails startup; unconfigured mode uses an explicitly mock rule-only fallback.
+- `futureproof_ai/`: deterministic `extract_profile`, `retrieve_trends`, `score_roles` and the Backend-loadable adapter factory.
+- `tech_delivery/`: DOSM/TalentCorp candidate Snapshot, Microsoft Learn resource, source/method notes and clearly labelled technical-precheck manifests pending Team Lead approval.
 - `app/services.py` and `app/scoring_validation.py`: server-built trend input and independent, versioned `demo-v1`/`tech-v1` score, gap and evidence validation. Review status and time feasibility remain visible.
 - `app/storage.py`: SQLite profile confirmation. The first confirmation may omit `profile_revision` for Contract v1.0 compatibility. Every later update to a confirmed profile must include the current revision; missing revision returns 409 `PROFILE_REVISION_REQUIRED`, stale revision returns 409 `SNAPSHOT_CONFLICT`. Unconfirmed profiles cannot be recommended. See [confirm/scoring addendum](contracts/PROFILE_CONFIRM_AND_SCORING_ADDENDUM.md).
 
@@ -48,4 +50,4 @@ P1 progress, organization and refresh routes are registered but disabled with HT
 
 ## Replit
 
-The SyncEra root `.replit` installs dependencies and runs Uvicorn from `backend/` on `0.0.0.0` and `${PORT:-8000}`. This backend was integrated on `feature/backend-integration` after the branch was updated to the latest frontend-bearing `main`. The existing frontend files and its root `.gitignore` were preserved. See [docs/integration/GITHUB_SYNC_INTEGRATION.md](docs/integration/GITHUB_SYNC_INTEGRATION.md) for the checkout and review status. No Replit deployment was performed. If the team later imports the repository as a Replit project, set `FRONTEND_ORIGINS`, add reviewed data files if approved, then verify `/api/v1/health` and `/docs` on the assigned URL. SQLite on ephemeral Replit storage is suitable only for a demo unless a persistent volume is configured.
+The SyncEra root `.replit` runs `scripts/run-replit.sh`, which installs the locked frontend and backend dependencies, starts Uvicorn with `futureproof_ai.futureproof_adapter` on loopback port 8000, and exposes Vite on `${PORT:-3000}` in `real` API mode. Vite proxies `/api` to the backend. No Replit deployment was performed. If the team imports the repository as a Replit project, add reviewed data only after approval, then verify the public UI and the proxied `/api/v1/health`. SQLite on ephemeral Replit storage is suitable only for a demo unless a persistent volume is configured.

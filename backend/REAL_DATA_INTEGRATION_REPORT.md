@@ -1,6 +1,10 @@
 # Phase 2 real-data integration report
 
-Date: 2026-10-21 MYT. Result: **integration plumbing implemented; real-data integration blocked on external deliverables**.
+Date: 2026-10-21 MYT. Initial Phase 2 result: **integration plumbing implemented; real-data integration was blocked on external deliverables**.
+
+## Tech v0.1.0 follow-up
+
+The later `feature/tech-integration` delivery adds `futureproof_ai/`, a DOSM/TalentCorp candidate Snapshot, one verified Microsoft Learn resource, method/integration notes and Tech integration tests. The complete backend suite now passes **37 tests**. The Individual frontend real-mode contract is connected and covered by a live normalize-to-roadmap CI test. The candidate data is still not active governance-approved data: files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` must be replaced by Team Lead reviewer-owned manifests before import/activation. The remaining P0 blockers are human source/resource approval, approved-data import and live Replit verification. The sections below preserve the Backend Phase 2 audit state before the Tech handoff.
 
 ## Audit result
 

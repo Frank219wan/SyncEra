@@ -117,4 +117,25 @@ def validate_scored_recommendations(raw, profile: Profile, snap, scenario: str, 
                           'observed snapshot metrics are unchanged.')
         if item.scenario_assumptions != [assumption]:
             raise ValueError('scenario explanation does not match trusted assumptions')
+        if policy == 'tech-v1':
+            expected_reason = (
+                'Deterministic match from confirmed skill levels, explicit interests/field, '
+                'study capacity, and the selected dated scenario.'
+            )
+            expected_uncertainty = (
+                f"{snap.uncertainty.rstrip('.; ')}; matching weights and level-to-hours conversion "
+                'are transparent Phase-1 heuristics and are not outcome-calibrated.'
+            )
+            if item.reason != expected_reason or item.uncertainty != expected_uncertainty:
+                raise ValueError('explanation does not match trusted scoring policy')
+        elif not item.reason.strip() or not item.uncertainty.strip():
+            raise ValueError('recommendation explanation is incomplete')
+    if policy == 'tech-v1':
+        ordered = sorted(values, key=lambda item: (
+            -item.match_score, -item.score_breakdown.skill_compatibility,
+            -item.score_breakdown.scenario_outlook,
+            -item.score_breakdown.transition_feasibility, item.role_id,
+        ))
+        if [item.role_id for item in values] != [item.role_id for item in ordered]:
+            raise ValueError('recommendation tie order is not reproducible')
     return [item.model_dump() for item in values]

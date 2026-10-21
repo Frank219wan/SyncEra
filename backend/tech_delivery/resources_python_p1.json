@@ -1,0 +1,18 @@
+[
+  {
+    "resource": {
+      "resource_id": "resource_mslearn_python_fundamentals_p1",
+      "title": "Write your first Python programs — Part 1",
+      "provider": "Microsoft Learn",
+      "url": "https://learn.microsoft.com/en-us/training/paths/get-started-with-python-fundamentals/",
+      "language": "en",
+      "cost_amount": 0.0,
+      "currency": "MYR",
+      "estimated_hours": 3.2,
+      "verified_at": "2026-10-21T03:14:00+00:00"
+    },
+    "skill_ids": [
+      "skill_python"
+    ]
+  }
+]

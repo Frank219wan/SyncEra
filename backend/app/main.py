@@ -1,13 +1,15 @@
 from __future__ import annotations
 import os
 import json
+from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 from fastapi import FastAPI, Request, Query, UploadFile, File, Form
 from pydantic import ValidationError
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
@@ -19,10 +21,23 @@ from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
 
 ERROR_CODES={400:'BAD_REQUEST',404:'NOT_FOUND',409:'SNAPSHOT_CONFLICT',422:'VALIDATION_ERROR',429:'RATE_LIMITED',502:'MODEL_INVALID_OUTPUT',503:'SOURCE_UNAVAILABLE',504:'MODEL_TIMEOUT'}
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self,path,scope):
+        try:
+            response=await super().get_response(path,scope)
+            if response.status_code!=404: return response
+        except StarletteHTTPException as exc:
+            if exc.status_code!=404: raise
+        clean=scope.get('path',path).lstrip('/')
+        if clean.startswith('api/') or '.' in Path(clean).name:
+            raise StarletteHTTPException(status_code=404,detail='Not Found')
+        return FileResponse(Path(self.directory)/'index.html')
+
 def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
-def create_app(store=None,adapter=None,market=None,resources=None):
+def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
     app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
     app.state.store=store or ProfileStore()
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
@@ -119,7 +134,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
     @app.post('/api/v1/profiles/normalize',response_model=Envelope[NormalizeData],responses=documented_errors(400,422,502,504))
     def normalize(payload:NormalizeRequest,request:Request):
         data=svc.normalize(app.state.adapter,payload,app.state.store)
-        return success(request,data,data_model=NormalizeData,is_mock=getattr(app.state.adapter,'is_mock',True))
+        return success(request,data,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/profiles/upload',response_model=Envelope[NormalizeData],responses={
         400:{'model':APIErrorEnvelope,'description':'Invalid request length'},
@@ -150,7 +165,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         text=extract_cv_text(file.filename,data)
         payload=NormalizeRequest(pipeline='A',input_type='synthetic_cv_text',synthetic_input=True,text=text,preferred_field_id=preferred_field_id,study_constraints=payload_constraints)
         result=svc.normalize(app.state.adapter,payload,app.state.store)
-        return success(request,result,data_model=NormalizeData,is_mock=getattr(app.state.adapter,'is_mock',True))
+        return success(request,result,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/profiles/confirm',response_model=Envelope[ConfirmData],responses=documented_errors(404,409,422))
     def confirm(payload:ConfirmRequest,request:Request):
@@ -204,6 +219,12 @@ def create_app(store=None,adapter=None,market=None,resources=None):
     @app.post('/api/v1/admin/trends/refresh',status_code=503,response_model=APIErrorEnvelope)
     def refresh(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 trend refresh is disabled')
 
+    configured_root=site_dir or os.getenv('WEB_DIST_DIR') or os.getenv('STATIC_DIR')
+    root=Path(configured_root or Path(__file__).resolve().parents[2]/'dist')
+    if configured_root and not (root/'index.html').is_file():
+        raise RuntimeError('Configured frontend directory does not contain index.html')
+    if (root/'index.html').is_file():
+        app.mount('/',SPAStaticFiles(directory=str(root),html=True),name='web')
     return app
 
 app=create_app()
