@@ -124,6 +124,9 @@ def _public_https_url(value: str | None) -> bool:
 def _unique(values):
     return len(values) == len(set(values))
 
+def _technical_precheck(approvals):
+    return any(a.reviewed_by.casefold().startswith('technical-precheck') for a in approvals)
+
 class MarketRepository:
     def __init__(self, active_snapshot_id: str | None = None):
         self.snapshots: dict[str, MarketSnapshot] = {}
@@ -149,13 +152,16 @@ class MarketRepository:
     def get_evidence(self, evidence_id: str):
         return self.evidence.get(evidence_id)
 
-    def import_public(self, raw: dict, raw_approvals: list[dict]):
-        """Validate and stage one reviewed package. No activation or HTTP publication occurs here."""
+    def import_public(self, raw: dict, raw_approvals: list[dict], *, allow_technical_precheck: bool = False):
+        """Import a reviewed package, or explicitly stage a labelled isolated precheck."""
         try:
             package = PublicSnapshotPackage.model_validate(raw)
             approvals = [SourceApproval.model_validate(a) for a in raw_approvals]
         except Exception as exc:
             raise ImportRejected(f'invalid package schema: {exc}') from exc
+        precheck = _technical_precheck(approvals)
+        if precheck and not allow_technical_precheck:
+            raise ImportRejected('technical precheck is not reviewer-owned approval')
         if not ID_RE.fullmatch(package.snapshot_id):
             raise ImportRejected('snapshot_id must be a stable opaque identifier')
         if package.collected_at > datetime.now(timezone.utc) + timedelta(minutes=5):
@@ -226,7 +232,8 @@ class MarketRepository:
             role_scores={s.role_id:s.trend_score for s in package.role_signals},
             skill_scores={s.skill_id:s.trend_score for s in package.skill_signals},
             scenario_assumptions=package.scenario_assumptions,uncertainty=package.uncertainty,
-            data_label='public_open',is_mock=False,evidence={e.evidence_id:e for e in package.evidence},
+            data_label='mixed_demo' if precheck else 'public_open',is_mock=precheck,
+            evidence={e.evidence_id:e for e in package.evidence},
             role_evidence_ids={s.role_id:s.evidence_ids for s in package.role_signals},
             skill_evidence_ids={s.skill_id:s.evidence_ids for s in package.skill_signals},
             role_metrics={s.role_id:s.observed_metrics for s in package.role_signals},
@@ -252,12 +259,14 @@ class ResourceRepository:
     def __init__(self):
         self.entries: dict[str, ApprovedResourceEntry] = {}
 
-    def import_approved(self, raw_entries: list[dict], raw_approvals: list[dict]):
+    def import_approved(self, raw_entries: list[dict], raw_approvals: list[dict], *, allow_technical_precheck: bool = False):
         try:
             entries=[ApprovedResourceEntry.model_validate(e) for e in raw_entries]
             approvals=[ResourceApproval.model_validate(a) for a in raw_approvals]
         except Exception as exc:
             raise ImportRejected(f'invalid resource schema: {exc}') from exc
+        if _technical_precheck(approvals) and not allow_technical_precheck:
+            raise ImportRejected('technical precheck is not reviewer-owned resource approval')
         ids=[e.resource.resource_id for e in entries]
         if any(not ID_RE.fullmatch(rid) for rid in ids):
             raise ImportRejected('resource_id must be a stable opaque identifier')

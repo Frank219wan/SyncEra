@@ -1,6 +1,14 @@
 # Phase 2 real-data integration report
 
-Date: 2026-10-21 MYT. Result: **integration plumbing implemented; real-data integration blocked on external deliverables**.
+Date: 2026-10-21 MYT. Initial Phase 2 result: **integration plumbing implemented; real-data integration was blocked on external deliverables**.
+
+## Phase 4 local integration update
+
+The local `feature/backend-ai-integration` branch combines the Backend CI commit and the latest Tech v0.1.0 delivery, including its request-level preferred-field correction and technical review note. The deterministic adapter was loaded with `AI_ADAPTER_MODULE=futureproof_ai.futureproof_adapter`; candidate snapshot and course were tested through isolated, explicit precheck repositories. The normal importer now rejects the supplied technical-precheck manifests, and their isolated HTTP responses are labelled `mixed_demo / is_mock=true`. The current full suite result is **38 passed, 0 failed, 0 skipped**. See `docs/integration/BACKEND_AI_INTEGRATION_REPORT.md` for the complete audit and live HTTP records. No candidate data was formally approved or deployed in this Phase 4 run.
+
+## Tech v0.1.0 follow-up (historical handoff state)
+
+The later `feature/tech-integration` delivery adds `futureproof_ai/`, a DOSM/TalentCorp candidate Snapshot, one Microsoft Learn resource candidate, method/integration notes and five Tech tests. The combined local suite now passes **38 tests**. The candidate data is still not active governance-approved data: files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` must be replaced by Team Lead reviewer-owned manifests before import/activation. The remaining P0 blockers are human source/resource approval, approved-data import, frontend real-mode binding and live Replit verification. The sections below preserve the Backend Phase 2 audit state before the Tech handoff.
 
 ## Audit result
 
