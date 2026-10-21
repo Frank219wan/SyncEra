@@ -58,6 +58,19 @@ def test_public_catalogue_and_envelopes(client):
             assert 'Synthetic' in e['limitations']
     assert client.get('/api/v1/explore/bubbles').json()['meta']['snapshot_id']==client.get('/api/v1/trends/roles').json()['meta']['snapshot_id']
 
+def test_static_frontend_and_spa_fallback(tmp_path,monkeypatch):
+    static_dir=tmp_path/'dist'
+    static_dir.mkdir()
+    (static_dir/'index.html').write_text('<main>FutureProof</main>',encoding='utf-8')
+    (static_dir/'manifest.webmanifest').write_text('{}',encoding='utf-8')
+    monkeypatch.setenv('STATIC_DIR',str(static_dir))
+    static_client=TestClient(create_app(store=ProfileStore(str(tmp_path/'static.sqlite'))))
+    assert static_client.get('/').text=='<main>FutureProof</main>'
+    assert static_client.get('/individual/recommendations').text=='<main>FutureProof</main>'
+    assert static_client.get('/manifest.webmanifest').json()=={}
+    assert static_client.get('/api/v1/health').status_code==200
+    assert static_client.get('/api/v1/not-real').status_code==404
+
 def test_vertical_slice(client):
     p=profile(client)
     rec=good(client.post('/api/v1/recommendations',json={'profile_id':p['profile_id'],'region':'MY','ai_scenario':'moderate','top_k':5}))

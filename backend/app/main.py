@@ -214,7 +214,10 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
     @app.post('/api/v1/admin/trends/refresh',status_code=503,response_model=APIErrorEnvelope)
     def refresh(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 trend refresh is disabled')
 
-    root=Path(site_dir or os.getenv('WEB_DIST_DIR',Path(__file__).resolve().parents[2]/'dist'))
+    configured_root=site_dir or os.getenv('WEB_DIST_DIR') or os.getenv('STATIC_DIR')
+    root=Path(configured_root or Path(__file__).resolve().parents[2]/'dist')
+    if configured_root and not (root/'index.html').is_file():
+        raise RuntimeError('Configured frontend directory does not contain index.html')
     if (root/'index.html').is_file():
         app.mount('/',SPAStaticFiles(directory=str(root),html=True),name='web')
     return app

@@ -4,7 +4,7 @@ Date: 2026-10-21 MYT. Initial Phase 2 result: **integration plumbing implemented
 
 ## Tech v0.1.0 follow-up
 
-The later `feature/tech-integration` delivery adds `futureproof_ai/`, a DOSM/TalentCorp candidate Snapshot, one verified Microsoft Learn resource, method/integration notes and five end-to-end Tech tests. The complete repository suite now passes **36 tests**. The candidate data is still not active governance-approved data: files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` must be replaced by Team Lead reviewer-owned manifests before import/activation. The remaining P0 blockers are human source/resource approval, approved-data import, frontend real-mode binding and live Replit verification. The sections below preserve the Backend Phase 2 audit state before the Tech handoff.
+The later `feature/tech-integration` delivery adds `futureproof_ai/`, a DOSM/TalentCorp candidate Snapshot, one verified Microsoft Learn resource, method/integration notes and Tech integration tests. The complete backend suite now passes **37 tests**. The Individual frontend real-mode contract is connected and covered by a live normalize-to-roadmap CI test. The candidate data is still not active governance-approved data: files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` must be replaced by Team Lead reviewer-owned manifests before import/activation. The remaining P0 blockers are human source/resource approval, approved-data import and live Replit verification. The sections below preserve the Backend Phase 2 audit state before the Tech handoff.
 
 ## Audit result
 

@@ -79,6 +79,7 @@
 - Moderate/Fast 可复算且不修改观测指标；
 - Evidence ID 精确传递；
 - Matching Score 通过 Backend 二次算术校验；
+- Backend 独立复算四个分数组件、优势、技能差距、SDG、情景乘数、排序与名次，并拒绝语义不真实但 Schema 合法的 Adapter 输出；
 - A 画像确认 → 推荐 → Skill Gap → Skill Mind Map；
 - request-level preferred field 覆盖。
 
