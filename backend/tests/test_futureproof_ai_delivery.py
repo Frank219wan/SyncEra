@@ -215,3 +215,55 @@ def test_a_flow_real_snapshot_adapter_and_skill_resource(tmp_path):
     resource = skill_map.json()["data"]["nodes"][0]["resource"]
     assert resource["resource_id"] == "resource_mslearn_python_fundamentals_p1"
     assert resource["url"].startswith("https://learn.microsoft.com/")
+
+
+def test_request_level_preferred_field_override_reaches_adapter(tmp_path):
+    client = TestClient(
+        create_app(
+            store=ProfileStore(str(tmp_path / "field_override.sqlite")),
+            adapter=create_adapter(),
+        )
+    )
+    normalized = client.post(
+        "/api/v1/profiles/normalize",
+        json={
+            "pipeline": "A",
+            "input_type": "form",
+            "synthetic_input": True,
+            "form": {
+                "skills": [{"skill_id": "skill_excel", "level": 3}],
+                "interests": ["business"],
+            },
+            "study_constraints": CONSTRAINTS,
+        },
+    ).json()["data"]["profile"]
+    confirmed = client.post(
+        "/api/v1/profiles/confirm",
+        json={
+            "profile_id": normalized["profile_id"],
+            "skills": [
+                {
+                    "skill_id": "skill_excel",
+                    "level": 3,
+                    "source": "confirmed",
+                    "confidence": 1.0,
+                }
+            ],
+            "reviewed_by_user": True,
+            "profile_revision": normalized["revision"],
+        },
+    ).json()["data"]["profile"]
+
+    response = client.post(
+        "/api/v1/recommendations",
+        json={
+            "profile_id": confirmed["profile_id"],
+            "region": "MY",
+            "ai_scenario": "moderate",
+            "preferred_field_id": "field_business",
+        },
+    )
+    assert response.status_code == 200, response.text
+    recommendations = response.json()["data"]["recommendations"]
+    assert recommendations
+    assert {item["role_id"] for item in recommendations} == {"role_business_analyst"}

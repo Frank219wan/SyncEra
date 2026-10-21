@@ -159,14 +159,15 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         svc.require_field(payload.preferred_field_id)
         snap=svc.require_snapshot(app.state.market,payload.snapshot_id,payload.region)
         package=svc.trend_package(snap)
+        selected_field=payload.preferred_field_id or profile.preferred_field_id
+        scoring_profile=profile if selected_field==profile.preferred_field_id else profile.model_copy(update={'preferred_field_id':selected_field})
         if hasattr(app.state.adapter,'score_roles'):
-            try: raw=app.state.adapter.score_roles(profile,package,payload.ai_scenario)
+            try: raw=app.state.adapter.score_roles(scoring_profile,package,payload.ai_scenario)
             except TimeoutError: raise svc.APIError(504,'MODEL_TIMEOUT','Matching model timed out',retryable=True)
             except Exception: raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching model failed')
         else:
-            raw=svc.demo_recommendations(profile,snap,payload.ai_scenario,payload.preferred_field_id or profile.preferred_field_id,payload.top_k)
+            raw=svc.demo_recommendations(scoring_profile,snap,payload.ai_scenario,selected_field,payload.top_k)
         recommendations=svc.validate_recommendations(raw,snap,payload.ai_scenario)
-        selected_field=payload.preferred_field_id or profile.preferred_field_id
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
