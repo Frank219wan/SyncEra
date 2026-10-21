@@ -1,5 +1,6 @@
-import {Link} from 'react-router-dom';
+import {Link,useLocation} from 'react-router-dom';
 import {useApp} from '../store';
+import {routeContextFromPath} from '../routing';
 import {PageHeader,DemoNotice,icons} from '../components';
 
 const {ArrowRight,Leaf}=icons;
@@ -9,11 +10,14 @@ function IvyIcon(){return <svg className="about-concept-icon" viewBox="0 0 120 1
 
 export function About(){
   const {t}=useApp();
+  const {program}=routeContextFromPath(useLocation().pathname);
+  const destination=program==='hr'?'/organization/hr/dashboard':program==='tvet'?'/organization/tvet/students':program==='organization'?'/organization':'/individual/radar';
+  const destinationLabel=program==='hr'?t('Return to HR workspace','返回 HR 工作区','Kembali ke ruang HR'):program==='tvet'?t('Return to education workspace','返回教育工作区','Kembali ke ruang pendidikan'):program==='organization'?t('Choose organization workspace','选择机构工作区','Pilih ruang organisasi'):t('Explore Career Radar','探索职业雷达','Teroka Radar kerjaya');
   return <div className="about-screen"><PageHeader title={t('About FutureProof AI','关于 FutureProof AI','Tentang FutureProof AI')} description={t('A career guidance workspace built to help people and teams grow with changing work.','一个帮助个人与团队应对工作变化、持续成长的 AI 职业引导空间。','Ruang bimbingan kerjaya AI untuk membantu individu dan pasukan berkembang bersama perubahan kerja.')} action={<DemoNotice/>}/>
     <div className="surface about-page">
       <section className="about-hero"><div className="large-symbol"><Leaf size={28}/></div><div><h2>{t('Growth with roots, direction and adaptability.','有根系、有方向，也能适应变化。','Pertumbuhan dengan akar, arah dan keupayaan menyesuaikan diri.')}</h2><p>{t('We turn broad career information into a clearer next step without pretending that a score is a prediction.','我们把广泛的职业信息整理成更清晰的下一步，但不会把评分伪装成预测。','Kami menukar maklumat kerjaya yang luas kepada langkah seterusnya yang lebih jelas tanpa mendakwa skor sebagai ramalan.')}</p></div></section>
       <div className="about-grid"><article><BambooIcon/><h3>{t('Bamboo · individual growth','竹林 · 个人成长','Buluh · pertumbuhan individu')}</h3><p>{t('Bamboo has a deep, connected root system. It represents the career information and trends we gather across the web, giving each person a stronger foundation for learning. Its upward growth reflects progress built step by step.','竹子的根系发达而相互连接，代表我们从全网搜寻并整理的职业信息与趋势，为每个人的学习提供更强的基础；竹子的向上生长，则代表一步一步积累的职业成长。','Buluh mempunyai sistem akar yang dalam dan saling terhubung. Ia melambangkan maklumat kerjaya dan trend yang kami kumpulkan, serta pertumbuhan yang dibina sedikit demi sedikit.')}</p></article><article><IvyIcon/><h3>{t('Ivy · team adaptability','爬山虎 · 团队适应力','Ivy · kebolehsuaian pasukan')}</h3><p>{t('Ivy changes its direction and pace as its surroundings change. It represents teams that sense new constraints, learn together and adapt their development choices with evidence.','爬山虎会随着外界环境改变生长方向和速度，代表团队能够感知新的约束，以证据共同学习，并调整发展选择。','Ivy mengubah arah dan kadar pertumbuhan apabila persekitaran berubah. Ia mewakili pasukan yang belajar bersama dan menyesuaikan pilihan pembangunan berdasarkan bukti.')}</p></article></div>
       <section className="about-principles"><h3>{t('Our development principles','我们的开发理念','Prinsip pembangunan kami')}</h3><ul><li>{t('Evidence before certainty','先看证据，再谈确定性','Bukti sebelum kepastian')}</li><li>{t('Human review for important decisions','重要决策保留人工审核','Semakan manusia untuk keputusan penting')}</li><li>{t('Progress is personal; teams remain adaptable','成长属于个人，团队保持适应性','Kemajuan adalah peribadi; pasukan kekal adaptif')}</li></ul></section>
-      <div className="form-actions"><Link className="button secondary" to="/">{t('Back to home','返回首页','Kembali ke utama')}</Link><Link className="button" to="/individual/radar">{t('Explore Career Radar','探索职业雷达','Teroka Radar kerjaya')}<ArrowRight size={16}/></Link></div>
+      <div className="form-actions"><Link className="button secondary" to="/">{t('Back to home','返回首页','Kembali ke utama')}</Link><Link className="button" to={destination}>{destinationLabel}<ArrowRight size={16}/></Link></div>
     </div></div>;
 }

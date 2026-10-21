@@ -22,7 +22,7 @@ export function Shell({children}:{children:ReactNode}) {
     ['/organization/hr/training',BookOpen,t('Enterprise training','企业培训','Latihan perusahaan')],
     ['/organization',Building2,t('Switch workspace','切换工作区','Tukar ruang kerja')],
     ['/',LayoutDashboard,t('Back to home','返回首页','Kembali ke utama')],
-    ['/about',Info,t('About','关于','Tentang')],
+    ['/organization/hr/about',Info,t('About','关于','Tentang')],
   ]:tvet?[
     ['/organization/tvet/students',Users,t('Student analysis','学生分析','Analisis pelajar')],
     ['/organization/tvet/trends',Compass,t('Industry trends','行业趋势','Trend industri')],
@@ -31,20 +31,20 @@ export function Shell({children}:{children:ReactNode}) {
     ['/organization/tvet/insights',BarChart3,t('Institution insights','院校洞察','Wawasan institusi')],
     ['/organization',Building2,t('Switch workspace','切换工作区','Tukar ruang kerja')],
     ['/',LayoutDashboard,t('Back to home','返回首页','Kembali ke utama')],
-    ['/about',Info,t('About','关于','Tentang')],
+    ['/organization/tvet/about',Info,t('About','关于','Tentang')],
   ]:[
     ['/individual',LayoutDashboard,t('My growth','我的成长','Pertumbuhan saya')],
     ['/individual/radar',Compass,t('Career radar','职业雷达','Radar kerjaya')],
     ['/individual/intake',Users,t('My profile','我的画像','Profil saya')],
     ['/individual/recommendations',Network,t('Career matches','职业推荐','Padanan kerjaya')],
     ['/individual/learning-journey',Map,t('Learning journey','学习旅程','Perjalanan belajar')],
-    ['/about',Info,t('About','关于','Tentang')],
+    ['/individual/about',Info,t('About','关于','Tentang')],
   ];
   const navItems=context.program==='organization' ? [
     ['/organization',Building2,t('Organization home','机构首页','Laman utama organisasi')],
     ['/organization/hr/intake',Users,t('HR / L&D','人力资源／学习发展','HR / L&D')],
     ['/organization/tvet/students',GraduationCap,t('TVET / University','TVET／大学','TVET / Universiti')],
-    ['/about',Info,t('About','关于','Tentang')],
+    ['/organization/about',Info,t('About','关于','Tentang')],
   ] : nav;
   useEffect(()=>{window.scrollTo(0,0);},[pathname]);
 return <div className="app-shell"><a className="skip-link" href="#main">{t('Skip to content','跳至内容','Langkau ke kandungan')}</a><aside className="sidebar"><Brand/><div className="workspace-switch"><span className="workspace-icon"><Building2 size={17}/></span><span>{org?t('Organization workspace','机构工作区','Ruang kerja organisasi'):t('Individual workspace','个人工作区','Ruang kerja individu')}</span></div><nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{navItems.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;const detailActive=url==='/organization/hr/dashboard'&&pathname.startsWith('/organization/hr/department/');return <NavLink key={url as string} to={url as string} end={url==='/individual'||url==='/organization'} className={({isActive})=>isActive||detailActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav><div className="sidebar-bottom"><div className="growth-note"><Leaf size={20}/><p>{t('A little growth, every day.','每天，向上生长一点。','Berkembang sedikit, setiap hari.')}</p></div><span className="local-note">{t('Your progress is saved on this device','进度保存在当前设备','Kemajuan disimpan pada peranti ini')}</span></div></aside><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>{org?t('Organization','机构','Organisasi'):t('Your personal space','个人成长空间','Ruang peribadi anda')}</span><ChevronRight size={13}/><span>{hr?'HR / L&D':tvet?'TVET / University':context.program==='organization'?t('Choose workspace','选择工作区','Pilih ruang kerja'):t('Connected growth','共同成长','Pertumbuhan terhubung')}</span></div><LocaleSwitcher/></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div></div>;

@@ -80,7 +80,7 @@ export function ConnectedRecommendations(){
     }).catch(e=>{if(active)setError((e as Error).message);}).finally(()=>{if(active)setBusy(false);});
     return()=>{active=false;};
   },[eligible,state.profile.id,state.scenario,state.snapshotId,attempt,setState]);
-  if(!eligible)return <EmptyState title={t('Confirm your profile first','请先确认画像','Sahkan profil dahulu')} description={t('A connected recommendation requires a confirmed profile and a current snapshot.','连接服务的推荐需要已确认画像和当前快照。','Cadangan memerlukan profil disahkan dan gambaran semasa.')} action={<ButtonLink to="/individual/intake">{t('Build my profile','创建画像','Bina profil')}</ButtonLink>}/>;
+  if(!eligible)return <EmptyState title={t('Confirm your profile first','请先确认画像','Sahkan profil dahulu')} description={t('A connected recommendation requires a confirmed profile and a current snapshot.','连接服务的推荐需要已确认画像和当前快照。','Cadangan memerlukan profil disahkan dan gambaran semasa.')} action={<ButtonLink to="/individual/intake/start">{t('Build my profile','创建画像','Bina profil')}</ButtonLink>}/>;
   return <>
     <PageHeader title={t('Career matches','职业推荐','Padanan kerjaya')} description={t('Relative fit from the selected snapshot and scenario.','基于所选快照和情景的相对匹配。','Padanan relatif daripada gambaran dan senario terpilih.')} action={<DemoNotice/>}/>
     <div className="results-context"><div><strong>{t('Current snapshot','当前快照','Gambaran semasa')}: {state.snapshotId}</strong><p>{state.serviceMeta?.dataLabel} · {t('Scores are not hiring probabilities.','评分不代表录用概率。','Skor bukan kebarangkalian diambil bekerja.')}</p></div><ScenarioSwitcher/></div>

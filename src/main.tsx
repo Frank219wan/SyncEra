@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {BrowserRouter,Routes,Route,Outlet,useSearchParams} from 'react-router-dom';
+import {BrowserRouter,Routes,Route,Outlet,Navigate,useSearchParams} from 'react-router-dom';
 import '@fontsource/noto-sans/400.css';
 import '@fontsource/noto-sans/500.css';
 import '@fontsource/noto-sans/600.css';
@@ -13,7 +13,7 @@ import {Provider,useApp} from './store';
 import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
 import {About} from './pages/About';
-import {Intake,ProfileInput,ProfileReview,Analyzing} from './pages/Intake';
+import {Intake,IntakeStart,ProfileInput,ProfileReview,Analyzing} from './pages/Intake';
 import {ProfileEdit} from './pages/ProfileEdit';
 import {Recommendations,RoleDetail} from './pages/Careers';
 import {Radar} from './pages/RadarExperience';
@@ -21,7 +21,7 @@ import {ConnectedRadar} from './pages/ConnectedCareers';
 import {isDemo} from './services/api';
 import {MindMap,RoadmapDraft,LearningJourney,LearningJourneyOverview} from './pages/Learning';
 import {OrganizationPages,HRDepartmentDetails} from './pages/Organization';
-function ProfileRoute(){const [params]=useSearchParams();return params.get('edit')==='1'?<ProfileEdit/>:<ProfileInput/>;}
+function ProfileRoute(){const [params]=useSearchParams();const {state}=useApp();return params.get('edit')==='1'?<ProfileEdit/>:!state.profile.stage||!state.profile.goal?<Navigate to="/individual/intake/start" replace/>:<ProfileInput/>;}
 function RadarRoute(){return isDemo?<Radar/>:<ConnectedRadar/>;}
 function RecommendationsRoute(){
   const {state,t}=useApp();
@@ -41,6 +41,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><
   <Route path="/individual" element={<IndividualHome/>}/>
   <Route path="/individual/radar" element={<RadarRoute/>}/>
   <Route path="/individual/intake" element={<Intake/>}/>
+  <Route path="/individual/intake/start" element={<IntakeStart/>}/>
   <Route path="/individual/intake/profile" element={<ProfileRoute/>}/>
   <Route path="/individual/intake/review" element={<ProfileReview/>}/>
   <Route path="/individual/analyzing" element={<Analyzing/>}/>
@@ -51,7 +52,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><
   <Route path="/individual/roadmap/:planId" element={<LearningJourney/>}/>
   <Route path="/individual/learning-journey" element={<LearningJourneyOverview/>}/>
   <Route path="/organization" element={<OrganizationHome/>}/>
-  <Route path="/about" element={<About/>}/>
+  <Route path="/about" element={<Navigate to="/individual/about" replace/>}/>
+  <Route path="/individual/about" element={<About/>}/>
+  <Route path="/organization/about" element={<About/>}/>
+  <Route path="/organization/hr/about" element={<About/>}/>
+  <Route path="/organization/tvet/about" element={<About/>}/>
   {['intake','heatmap','mobility','training','dashboard'].map(p=><Route key={p} path={`/organization/hr/${p}`} element={<OrganizationPages key={`hr-${p}`}/>}/>)}
   <Route path="/organization/hr/department/:departmentId" element={<HRDepartmentDetails/>}/>
   {['students','trends','gaps','cohort','insights'].map(p=><Route key={p} path={`/organization/tvet/${p}`} element={<OrganizationPages key={`tvet-${p}`}/>}/>)}
