@@ -1,19 +1,14 @@
-import {useEffect,useState} from 'react';
+import {useState} from 'react';
 import {Link} from 'react-router-dom';
-import {Brand,LocaleSwitcher,Bamboo,PageHeader,ButtonLink,DemoNotice,icons,Field,SkillChip,Modal,ErrorState} from '../components';
+import {Bamboo,PageHeader,ButtonLink,DemoNotice,icons,Field,SkillChip,Modal,ErrorState} from '../components';
 import {useApp} from '../store';
 import {roles} from '../data';
 import {api} from '../services/api';
 import {completeTask,dueDate} from '../domain';
 import type {Task} from '../types';
+export {Home} from './Landing';
 const {ArrowRight,Compass,Check,Leaf,BookOpen,Users,Building2,GraduationCap,ChevronRight}=icons;
 
-export function Home(){
-  const {t}=useApp();
-  const [playIntro]=useState(()=>{try{return sessionStorage.getItem('futureproof-home-intro')!=='seen'&&!matchMedia('(prefers-reduced-motion: reduce)').matches;}catch{return false;}});
-  useEffect(()=>{if(playIntro){try{sessionStorage.setItem('futureproof-home-intro','seen');}catch{}}},[playIntro]);
-  return <div className={`landing ${playIntro?'intro-active':''}`}><div className="garden-background"/><header className="landing-header"><Brand/><LocaleSwitcher/></header><main className="landing-main"><div className="landing-copy"><h1>connected<br/>growth</h1><p>{t('Grow your career with AI','与 AI 一起，生长职业未来','Kembangkan kerjaya anda dengan AI')}</p></div><div className="entry-pair"><Link to="/individual" className="entry-card individual-entry"><div className="entry-plant bamboo-mini"><Bamboo earned={6} small/></div><h2>{t('Individual','个人','Individu')}</h2><p>{t('rooted to rise','扎根，向上生长','berakar untuk berkembang')}</p></Link><Link to="/organization" className="entry-card organization-entry"><div className="entry-plant ivy-decoration"><Leaf/><Leaf/><Leaf/><Leaf/></div><h2>{t('Organization','机构','Organisasi')}</h2><p>{t('guided to thrive','相引，共同繁茂','dibimbing untuk maju')}</p></Link></div></main></div>;
-}
 
 export function IndividualHome(){
   const {state,setState,t,copy,toast}=useApp();
