@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T05:05:36.283Z",
+  "title": "Design System: FutureProof AI",
+  "extensions": {
+    "colorMeta": {
+      "sage": {
+        "role": "primary",
+        "displayName": "Sage",
+        "tonalRamp": [
+          "oklch(15.00% 0.0152 136.08)",
+          "oklch(26.43% 0.0152 136.08)",
+          "oklch(37.86% 0.0152 136.08)",
+          "oklch(49.29% 0.0152 136.08)",
+          "oklch(60.71% 0.0152 136.08)",
+          "oklch(72.14% 0.0152 136.08)",
+          "oklch(83.57% 0.0152 136.08)",
+          "oklch(95.00% 0.0152 136.08)"
+        ]
+      },
+      "ivory": {
+        "role": "neutral",
+        "displayName": "Ivory",
+        "tonalRamp": [
+          "oklch(15.00% 0.0095 93.57)",
+          "oklch(26.43% 0.0095 93.57)",
+          "oklch(37.86% 0.0095 93.57)",
+          "oklch(49.29% 0.0095 93.57)",
+          "oklch(60.71% 0.0095 93.57)",
+          "oklch(72.14% 0.0095 93.57)",
+          "oklch(83.57% 0.0095 93.57)",
+          "oklch(95.00% 0.0095 93.57)"
+        ]
+      },
+      "forest": {
+        "role": "primary",
+        "displayName": "Forest",
+        "tonalRamp": [
+          "oklch(15.00% 0.0388 160.65)",
+          "oklch(26.43% 0.0388 160.65)",
+          "oklch(37.86% 0.0388 160.65)",
+          "oklch(49.29% 0.0388 160.65)",
+          "oklch(60.71% 0.0388 160.65)",
+          "oklch(72.14% 0.0388 160.65)",
+          "oklch(83.57% 0.0388 160.65)",
+          "oklch(95.00% 0.0388 160.65)"
+        ]
+      },
+      "body": {
+        "role": "neutral",
+        "displayName": "Body",
+        "tonalRamp": [
+          "oklch(15.00% 0.0338 154.26)",
+          "oklch(26.43% 0.0338 154.26)",
+          "oklch(37.86% 0.0338 154.26)",
+          "oklch(49.29% 0.0338 154.26)",
+          "oklch(60.71% 0.0338 154.26)",
+          "oklch(72.14% 0.0338 154.26)",
+          "oklch(83.57% 0.0338 154.26)",
+          "oklch(95.00% 0.0338 154.26)"
+        ]
+      },
+      "action": {
+        "role": "primary",
+        "displayName": "Action",
+        "tonalRamp": [
+          "oklch(15.00% 0.0584 154.76)",
+          "oklch(26.43% 0.0584 154.76)",
+          "oklch(37.86% 0.0584 154.76)",
+          "oklch(49.29% 0.0584 154.76)",
+          "oklch(60.71% 0.0584 154.76)",
+          "oklch(72.14% 0.0584 154.76)",
+          "oklch(83.57% 0.0584 154.76)",
+          "oklch(95.00% 0.0584 154.76)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "tonalRamp": [
+          "oklch(15.00% 0.0235 137.25)",
+          "oklch(26.43% 0.0235 137.25)",
+          "oklch(37.86% 0.0235 137.25)",
+          "oklch(49.29% 0.0235 137.25)",
+          "oklch(60.71% 0.0235 137.25)",
+          "oklch(72.14% 0.0235 137.25)",
+          "oklch(83.57% 0.0235 137.25)",
+          "oklch(95.00% 0.0235 137.25)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "tonalRamp": [
+          "oklch(15.00% 0.0309 148.44)",
+          "oklch(26.43% 0.0309 148.44)",
+          "oklch(37.86% 0.0309 148.44)",
+          "oklch(49.29% 0.0309 148.44)",
+          "oklch(60.71% 0.0309 148.44)",
+          "oklch(72.14% 0.0309 148.44)",
+          "oklch(83.57% 0.0309 148.44)",
+          "oklch(95.00% 0.0309 148.44)"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Soft",
+        "tonalRamp": [
+          "oklch(15.00% 0.0181 134.92)",
+          "oklch(26.43% 0.0181 134.92)",
+          "oklch(37.86% 0.0181 134.92)",
+          "oklch(49.29% 0.0181 134.92)",
+          "oklch(60.71% 0.0181 134.92)",
+          "oklch(72.14% 0.0181 134.92)",
+          "oklch(83.57% 0.0181 134.92)",
+          "oklch(95.00% 0.0181 134.92)"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "tonalRamp": [
+          "oklch(15.00% 0.1250 28.07)",
+          "oklch(26.43% 0.1250 28.07)",
+          "oklch(37.86% 0.1250 28.07)",
+          "oklch(49.29% 0.1250 28.07)",
+          "oklch(60.71% 0.1250 28.07)",
+          "oklch(72.14% 0.1250 28.07)",
+          "oklch(83.57% 0.1250 28.07)",
+          "oklch(95.00% 0.1250 28.07)"
+        ]
+      },
+      "warning": {
+        "role": "neutral",
+        "displayName": "Warning",
+        "tonalRamp": [
+          "oklch(15.00% 0.0730 81.66)",
+          "oklch(26.43% 0.0730 81.66)",
+          "oklch(37.86% 0.0730 81.66)",
+          "oklch(49.29% 0.0730 81.66)",
+          "oklch(60.71% 0.0730 81.66)",
+          "oklch(72.14% 0.0730 81.66)",
+          "oklch(83.57% 0.0730 81.66)",
+          "oklch(95.00% 0.0730 81.66)"
+        ]
+      },
+      "workspace": {
+        "role": "neutral",
+        "displayName": "Workspace",
+        "tonalRamp": [
+          "oklch(15.00% 0.0102 131.36)",
+          "oklch(26.43% 0.0102 131.36)",
+          "oklch(37.86% 0.0102 131.36)",
+          "oklch(49.29% 0.0102 131.36)",
+          "oklch(60.71% 0.0102 131.36)",
+          "oklch(72.14% 0.0102 131.36)",
+          "oklch(83.57% 0.0102 131.36)",
+          "oklch(95.00% 0.0102 131.36)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Entry concept",
+        "purpose": "Two-line connected growth heading."
+      },
+      "headline": {
+        "displayName": "Page heading",
+        "purpose": "Workspace orientation."
+      }
+    },
+    "shadows": [
+      {
+        "name": "entrance-rest",
+        "value": "0 8px 24px rgba(36,61,48,.08)",
+        "purpose": "Ambient entrance-card depth."
+      },
+      {
+        "name": "entrance-hover",
+        "value": "0 16px 34px rgba(36,61,48,.13)",
+        "purpose": "Entrance link hover and focus."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "180ms",
+        "purpose": "Background state changes."
+      },
+      {
+        "name": "entrance-lift",
+        "value": "350ms cubic-bezier(.16,1,.3,1)",
+        "purpose": "Entrance card lift."
+      },
+      {
+        "name": "garden-breath",
+        "value": "22s ease-in-out infinite alternate",
+        "purpose": "Photographic background breathing."
+      },
+      {
+        "name": "text-breath",
+        "value": "7s ease-in-out infinite",
+        "purpose": "Subtle entry-copy drift."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "min-wide",
+        "value": "1600px"
+      },
+      {
+        "name": "max-1330",
+        "value": "1330px"
+      },
+      {
+        "name": "max-1170",
+        "value": "1170px"
+      },
+      {
+        "name": "max-960",
+        "value": "960px"
+      },
+      {
+        "name": "max-680",
+        "value": "680px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary next-step action.",
+      "html": "<button class=\"ds-button\">Continue</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:12px;border:1px solid transparent;border-radius:8px;background:var(--action,#365b43);color:var(--surface,#f7f5ee);font-weight:500;padding:12px 19px;line-height:1.4;min-height:44px;transition:background .18s,box-shadow .18s;white-space:normal;text-align:center}.ds-button:hover{background:#294934}.ds-button:active{background:#203e2b}.ds-button:focus-visible{outline:3px solid #6b854f;outline-offset:4px}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Alternative action with outlined hierarchy.",
+      "html": "<button class=\"ds-button ds-secondary\">Keep current plan</button>",
+      "css": ".ds-button{display:inline-flex;align-items:center;justify-content:center;gap:12px;border:1px solid transparent;border-radius:8px;background:var(--action,#365b43);color:var(--surface,#f7f5ee);font-weight:500;padding:12px 19px;line-height:1.4;min-height:44px;transition:background .18s,box-shadow .18s;white-space:normal;text-align:center}.ds-button.ds-secondary{background:transparent;color:var(--action,#365b43);border-color:#96a78d}.ds-button.ds-secondary:hover{background:#e4ecdf}.ds-button:focus-visible{outline:3px solid #6b854f;outline-offset:4px}"
+    },
+    {
+      "name": "Text action",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "Quiet inline action.",
+      "html": "<button class=\"ds-text\">View details</button>",
+      "css": ".ds-text{display:inline-flex;align-items:center;gap:8px;border:0;background:none;padding:4px 0;color:var(--action,#365b43);font-weight:500;line-height:1.5;text-align:left}.ds-text:hover{text-decoration:underline}.ds-text:focus-visible{outline:3px solid #6b854f;outline-offset:4px}"
+    },
+    {
+      "name": "Text field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labeled editable profile value.",
+      "html": "<label class=\"ds-field\"><span>Preferred role</span><input placeholder=\"Enter a role\"></label>",
+      "css": ".ds-field{display:flex;flex-direction:column;gap:8px;font:500 13px \"Noto Sans\",\"Noto Sans SC\",sans-serif;color:var(--ink,#243d30)}.ds-field input{font:400 14px \"Noto Sans\",\"Noto Sans SC\",sans-serif;min-height:43px;border:1px solid #8c9c87;border-radius:8px;background:#fdfdf8;padding:10px 12px;color:var(--ink,#243d30)}.ds-field input:focus-visible{outline:3px solid #6b854f;outline-offset:2px}"
+    },
+    {
+      "name": "Workspace navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Current location within a workspace.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Workspace\"><a class=\"ds-link ds-active\" href=\"#growth\" aria-current=\"page\">My growth</a><a class=\"ds-link\" href=\"#radar\">Career radar</a></nav>",
+      "css": ".ds-nav{display:flex;flex-direction:column;gap:7px;font-family:\"Noto Sans\",\"Noto Sans SC\",sans-serif}.ds-link{display:flex;align-items:center;gap:12px;padding:12px;border-radius:8px;color:#50654f;font-size:13px;transition:background .18s}.ds-link:hover{background:#dce7d5}.ds-link.ds-active{background:#d4e1cb;color:var(--ink,#243d30);font-weight:600}.ds-link{text-decoration:none}.ds-link:focus-visible{outline:3px solid #6b854f;outline-offset:4px}"
+    },
+    {
+      "name": "Skill chip",
+      "kind": "chip",
+      "refersTo": "skill-chip",
+      "description": "Compact skill evidence label.",
+      "html": "<span class=\"ds-chip\">Data analysis</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:9px;white-space:normal;max-width:100%;padding:4px 10px;font-size:11px;background:#e8ede1;border-radius:5px;color:#4a6244;line-height:1.6}"
+    },
+    {
+      "name": "Workspace surface",
+      "kind": "card",
+      "refersTo": "surface",
+      "description": "Flat ivory panel; consuming layouts own padding.",
+      "html": "<section class=\"ds-surface\"><h2 class=\"ds-title\">Your strengths</h2><p class=\"ds-copy\">Confirmed skills and experience.</p></section>",
+      "css": ".ds-surface{background:var(--surface,#f7f5ee);border:1px solid var(--line,#cdd8c9);border-radius:var(--radius,14px)}.ds-surface{padding:28px}.ds-title{font:500 23px/1.3 \"Noto Serif\",\"Noto Serif SC\",serif;color:var(--ink,#243d30);margin:0 0 12px}.ds-copy{font:400 14px/1.65 \"Noto Sans\",\"Noto Sans SC\",sans-serif;color:var(--body,#415547);margin:0}"
+    },
+    {
+      "name": "Entrance card",
+      "kind": "card",
+      "refersTo": "entry-card",
+      "description": "Near-square botanical entrance with keyboard and hover lift; plant layer omitted from this isolated silhouette sample.",
+      "html": "<a class=\"ds-entry\" href=\"#individual\"><h2>Individual</h2><p>rooted to rise</p></a>",
+      "css": ".ds-entry{width:248px;height:248px;flex-shrink:0;padding:28px 24px;position:relative;background:var(--surface,#f7f5ee);border:1px solid var(--line,#cdd8c9);box-shadow:var(--shadow,0 8px 24px rgba(36,61,48,.08));border-radius:22% 18% 21% 19% / 19% 22% 18% 21%;overflow:hidden;transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s}.ds-entry h2{font-size:28px;line-height:1.2;position:relative;letter-spacing:-.025em;white-space:nowrap}.ds-entry p{font-size:14px;margin-top:8px;position:relative}.ds-entry:hover,.ds-entry:focus-visible{transform:translateY(-8px);box-shadow:0 16px 34px rgba(36,61,48,.13)}.ds-entry{display:block;box-sizing:border-box;text-decoration:none;color:var(--body,#415547);font:400 14px/1.65 \"Noto Sans\",\"Noto Sans SC\",sans-serif}.ds-entry h2{font-family:\"Noto Serif\",\"Noto Serif SC\",serif;font-weight:500;color:var(--ink,#243d30);margin:0}.ds-entry:focus-visible{outline:3px solid #6b854f;outline-offset:4px}@media(prefers-reduced-motion:reduce){.ds-entry{transition:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Connected growth",
+    "overview": "A calm botanical workspace connects career discovery to observable learning progress. Sage scenery, opaque ivory surfaces and deep green text preserve the approved natural, warm, quiet character. Photographic leaves frame the entry experience; bamboo and restrained botanical drawings connect learning progress to growth inside the workspace.\n\nThis record extracts the shipped implementation from `src/styles.css` and `src/components.tsx`. The locked choices in `docs/implementation-brief.md` supersede historical unresolved choices in the parent PRODUCT.md. The palette and serif/sans pairing are inherited decisions, not a new identity proposal.",
+    "keyCharacteristics": [
+      "Warm opaque surfaces on pale sage surroundings.",
+      "Serif headings with practical multilingual sans-serif controls.",
+      "Softly irregular entrance cards and regular workspace geometry.",
+      "Subtle breathing motion, visible focus, and reduced-motion support."
+    ],
+    "rules": [
+      {
+        "name": "The Opaque Surface Rule",
+        "body": "Reading and control surfaces remain opaque; the photographic atmosphere belongs behind them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Voices Rule",
+        "body": "Use serif for orientation and growth storytelling; use sans-serif for data entry, actions and evidence.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "**Do** preserve the approved sage, ivory and forest roles.",
+      "**Do** pair serif orientation with sans-serif actions and evidence.",
+      "**Do** retain keyboard focus and reduced-motion behavior.",
+      "**Do** keep data and synthetic-demo disclosures readable."
+    ],
+    "donts": [
+      "**Don't** replace opaque reading surfaces with translucent glass.",
+      "**Don't** turn every workspace panel into an irregular entrance card.",
+      "**Don't** use tiny metadata typography for primary reading.",
+      "**Don't** translate user-entered content as part of language switching."
+    ]
+  }
+}
