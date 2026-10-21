@@ -2,10 +2,10 @@ import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import {
-  mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
-  profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
+  applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
+  fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -96,7 +96,7 @@ export const api = {
   },
 
   confirm: async (profile: Profile): Promise<Profile> => {
-    if (isDemo) return { ...structuredClone(profile), skills: profile.skills.map(skill => ({ ...skill, confirmed: true })) };
+    if (isDemo) return { ...structuredClone(profile), skills: profile.skills.filter(skill => skill.confirmed) };
     const response = await request<{ profile: ApiNormalizedProfile; profile_revision: number }>('/profiles/confirm', { body: profileToConfirmRequest(profile) });
     return mergeNormalizedProfile(response.data.profile, profile);
   },
@@ -108,11 +108,43 @@ export const api = {
     }
     const response = await request<{ items: ApiRoleSignal[]; next_cursor: string | null }>('/trends/roles?region=MY&limit=50');
     const meta = toServiceMeta(response.meta);
+    if (!meta.snapshotId) throw new ApiError(502, 'MISSING_SNAPSHOT', 'Role trends did not include a snapshot ID.');
     return {
       snapshotId: meta.snapshotId ?? '', snapshotAt: meta.generatedAt,
       region: 'MY', origin: meta.isMock ? 'synthetic_fixture' : 'public_observed',
-      roles: mapTrendRoles(response.data.items, roles), meta,
+      roles: mapTrendRoles(response.data.items, roles).map(role=>({...role,bubbleSize:1})), meta,
     };
+  },
+
+  discovery: async (): Promise<TrendPackage> => {
+    const trends = await api.trends();
+    if (isDemo) return trends;
+    const query = `?region=MY&snapshot_id=${encodeURIComponent(trends.snapshotId)}`;
+    const [bubbleResult,skillResult] = await Promise.allSettled([
+      request<ApiBubblesData>(`/explore/bubbles${query}`),
+      request<{items:ApiSkillSignal[];next_cursor:string|null}>(`/trends/skills${query}&limit=50`),
+    ]);
+    const warnings:string[]=[];
+    let mapped=trends.roles;
+    let bubbleSizeBasis:string|undefined;
+    if(bubbleResult.status==='fulfilled'){
+      const {data,meta}=bubbleResult.value;
+      if(meta.snapshot_id===trends.snapshotId&&Boolean(meta.is_mock)===trends.meta.isMock){
+        const sized=applyBubbleSizes(mapped,data);
+        if(sized){mapped=sized;bubbleSizeBasis=data.size_basis;}
+        else warnings.push('Bubble data is incomplete or has non-comparable sizes; showing neutral bubbles.');
+      }else warnings.push('Bubble data does not match the role snapshot or source label.');
+    }else warnings.push(`Bubble API unavailable: ${(bubbleResult.reason as Error).message}`);
+    let skills:TrendPackage['skills'];
+    if(skillResult.status==='fulfilled'){
+      const {data,meta}=skillResult.value;
+      if(meta.snapshot_id===trends.snapshotId&&Boolean(meta.is_mock)===trends.meta.isMock){
+        skills=data.items.map(item=>({id:fromContractSkillId(item.skill_id),name:item.name,score:item.trend_score,
+          label:item.signal_label,change:item.observed_metrics?.change_pp??null,
+          evidenceIds:item.evidence_ids,sourceWindow:item.source_window}));
+      }else warnings.push('Skill data does not match the role snapshot or source label.');
+    }else warnings.push(`Skill trends API unavailable: ${(skillResult.reason as Error).message}`);
+    return {...trends,roles:mapped,skills,bubbleSizeBasis,warnings};
   },
 
   evidence: async (evidenceId: string): Promise<{ evidence: Evidence; meta: ReturnType<typeof toServiceMeta> }> => {

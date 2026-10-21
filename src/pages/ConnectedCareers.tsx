@@ -5,6 +5,7 @@ import {fromContractSkillId,type ApiRoleData} from '../services/api-contract';
 import {useApp} from '../store';
 import type {Evidence,Recommendation,TrendPackage} from '../types';
 import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
+import {Radar} from './RadarExperience';
 
 function EvidenceSources({ids}:{ids:string[]}) {
   const {t}=useApp();
@@ -33,37 +34,24 @@ function EvidenceSources({ids}:{ids:string[]}) {
 }
 
 export function ConnectedRadar(){
-  const {state,setState,t,copy}=useApp();
+  const {setState,t}=useApp();
   const [data,setData]=useState<TrendPackage|null>(null);
   const [error,setError]=useState('');
   const [attempt,setAttempt]=useState(0);
-  const [query,setQuery]=useState('');
   useEffect(()=>{
     let active=true;
     setData(null);setError('');
-    api.trends().then(packageData=>{
+    api.discovery().then(packageData=>{
       if(!active)return;
       setData(packageData);
       setState(previous=>({...previous,snapshotId:packageData.snapshotId,serviceMeta:packageData.meta,trendPackage:packageData}));
     }).catch(e=>{if(active)setError((e as Error).message);});
     return()=>{active=false;};
   },[attempt,setState]);
-  const shown=data?.roles.filter(role=>copy(role.name).toLowerCase().includes(query.toLowerCase()))??[];
-  return <>
-    <PageHeader title={t('Career radar','职业雷达','Radar kerjaya')} description={t('Signals from the connected snapshot. A score is not a job count.','数据来自已连接快照；信号分数不是招聘数量。','Isyarat daripada gambaran yang disambungkan; skor bukan jumlah pekerjaan.')} action={<DemoNotice/>}/>
-    {error&&<ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>}
-    {data&&<><p className="muted">{t('Snapshot','快照','Gambaran')}: {data.snapshotId} · {data.meta.dataLabel} · {data.snapshotAt??t('Date unavailable','日期不可用','Tarikh tiada')}</p>
-      <label className="search-box"><input value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('Find a career','搜索职业','Cari kerjaya')} aria-label={t('Find a career','搜索职业','Cari kerjaya')}/></label>
-      <div className="radar-list surface">{shown.map(role=><Link className="radar-list-row" key={role.id} to={`/individual/roles/${role.id}`} onClick={()=>setState(previous=>({...previous,selectedRole:role.id}))}>
-        <div><strong>{copy(role.name)}</strong><span>{role.signalLabel??t('Current snapshot','当前快照','Gambaran semasa')}</span></div>
-        <span>{role.signalAvailable?`${role.signal} / 100`:t('No comparable signal','暂无可比信号','Tiada isyarat sebanding')}</span>
-      </Link>)}</div>
-      {!shown.length&&<EmptyState title={t('No careers found','未找到职业','Tiada kerjaya')} description={t('Try another search.','换个关键词试试。','Cuba carian lain.')}/>}
-    </>}
-    {!error&&!data&&<p className="muted">{t('Loading the current snapshot…','正在加载当前快照…','Memuatkan gambaran semasa…')}</p>}
-  </>;
+  if(error)return <ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>;
+  if(!data)return <p className="muted">{t('Loading the current snapshot…','正在加载当前快照…','Memuatkan gambaran semasa…')}</p>;
+  return <Radar data={data}/>;
 }
-
 export function ConnectedRecommendations(){
   const {state,setState,t}=useApp();
   const eligible=Boolean(state.snapshotId&&state.results?.length&&state.results.every(item=>item.origin==='computed'));
@@ -80,7 +68,7 @@ export function ConnectedRecommendations(){
     }).catch(e=>{if(active)setError((e as Error).message);}).finally(()=>{if(active)setBusy(false);});
     return()=>{active=false;};
   },[eligible,state.profile.id,state.scenario,state.snapshotId,attempt,setState]);
-  if(!eligible)return <EmptyState title={t('Confirm your profile first','请先确认画像','Sahkan profil dahulu')} description={t('A connected recommendation requires a confirmed profile and a current snapshot.','连接服务的推荐需要已确认画像和当前快照。','Cadangan memerlukan profil disahkan dan gambaran semasa.')} action={<ButtonLink to="/individual/intake">{t('Build my profile','创建画像','Bina profil')}</ButtonLink>}/>;
+  if(!eligible)return <EmptyState title={t('Confirm your profile first','请先确认画像','Sahkan profil dahulu')} description={t('A connected recommendation requires a confirmed profile and a current snapshot.','连接服务的推荐需要已确认画像和当前快照。','Cadangan memerlukan profil disahkan dan gambaran semasa.')} action={<ButtonLink to="/individual/intake/start">{t('Build my profile','创建画像','Bina profil')}</ButtonLink>}/>;
   return <>
     <PageHeader title={t('Career matches','职业推荐','Padanan kerjaya')} description={t('Relative fit from the selected snapshot and scenario.','基于所选快照和情景的相对匹配。','Padanan relatif daripada gambaran dan senario terpilih.')} action={<DemoNotice/>}/>
     <div className="results-context"><div><strong>{t('Current snapshot','当前快照','Gambaran semasa')}: {state.snapshotId}</strong><p>{state.serviceMeta?.dataLabel} · {t('Scores are not hiring probabilities.','评分不代表录用概率。','Skor bukan kebarangkalian diambil bekerja.')}</p></div><ScenarioSwitcher/></div>

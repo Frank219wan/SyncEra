@@ -24,11 +24,9 @@ export function validatePeople(org: Organization, school=false) {
   if (!school) {
     const departments=org.departments||[];
     if (!departments.length) errors.push('departments');
-    if (!org.goals?.length) errors.push('goals');
     if (new Set(departments.map(d=>d.name.trim().toLowerCase())).size!==departments.length || departments.some(d=>!d.name.trim())) errors.push('departmentNames');
-    if (departments.some(d=>!d.responsibilities.trim()||!d.currentStatus.trim()||!d.challenges.trim()||!d.goals.length||!Number.isFinite(d.headcount)||d.headcount<0)) errors.push('departmentDetails');
+    if (departments.some(d=>!d.responsibilities.trim()||!d.currentStatus.trim()||!d.challenges.trim()||!Number.isFinite(d.headcount)||d.headcount<0)) errors.push('departmentDetails');
     if (org.people.some(p=>!departments.some(d=>d.name.trim().toLowerCase()===p.department.trim().toLowerCase()))) errors.push('department');
-    if (!org.needs.length && !departments.some(d=>d.goals.length)) errors.push('needs');
   }
   return errors;
 }

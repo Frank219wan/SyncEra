@@ -1,24 +1,14 @@
 import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
 import type {AppState,Copy,Locale} from './types';
-import {emptyProfile,hrSample,tvetSample} from './data';
-const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',serviceMeta:null,plan:null,hr:hrSample,tvet:tvetSample};
+import {emptyProfile,emptyHr,tvetSample} from './data';
+import {restoreHr} from './hrState';
+const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',serviceMeta:null,plan:null,hr:emptyHr,hrProfileSaved:false,tvet:tvetSample};
 function read():AppState {
   try {
     const saved=JSON.parse(localStorage.getItem('futureproof-v1')||'null');
     if(saved?.schema!==1)return structuredClone(initial);
     const state={...initial,...saved.state};
-    const savedHr=saved.state?.hr||{};
-    const people=Array.isArray(savedHr.people)?savedHr.people:initial.hr.people;
-    const sampleWorkspace=savedHr.name===hrSample.name;
-    const legacyNames=[...new Set(people.map((person:{department?:string})=>person.department?.trim()).filter((name:string|undefined):name is string=>Boolean(name)))];
-    const departments=Array.isArray(savedHr.departments)?savedHr.departments.map((department:{id:string;name:string;responsibilities?:string;currentStatus?:string;challenges?:string;goals?:string[];headcount?:number})=>{
-      const sampleDepartment=sampleWorkspace?hrSample.departments?.find(d=>d.name===department.name):undefined;
-      return sampleDepartment?{...sampleDepartment,...department,responsibilities:department.responsibilities||sampleDepartment.responsibilities,currentStatus:department.currentStatus||sampleDepartment.currentStatus,challenges:department.challenges||sampleDepartment.challenges,goals:department.goals?.length?department.goals:sampleDepartment.goals,headcount:department.headcount??sampleDepartment.headcount}:department;
-    }):legacyNames.map((name,index)=>{
-      const sampleDepartment=sampleWorkspace?hrSample.departments?.find(d=>d.name===name):undefined;
-      return sampleDepartment?structuredClone(sampleDepartment):{id:`migrated-dept-${index+1}`,name,responsibilities:'',currentStatus:'',challenges:'',goals:[],headcount:people.filter((person:{department?:string})=>person.department?.trim()===name).length};
-    });
-    return {...state,hr:{...initial.hr,...savedHr,people,departments,goals:Array.isArray(savedHr.goals)&&(savedHr.goals.length>0||!sampleWorkspace)?savedHr.goals:(sampleWorkspace?hrSample.goals||[]:[])}};
+    return {...state,...restoreHr(saved.state?.hr,saved.state?.hrProfileSaved)};
   }
   catch {return structuredClone(initial);}
 }

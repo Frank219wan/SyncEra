@@ -15,26 +15,39 @@ export function Shell({children}:{children:ReactNode}) {
   const {t}=useApp(); const {pathname}=useLocation();
   const context=routeContextFromPath(pathname);const hr=context.program==='hr',tvet=context.program==='tvet',org=context.workspace==='organization';
   const nav=hr?[
-    ['/organization/hr/dashboard',LayoutDashboard,t('Overview','工作台','Gambaran')],
+    ['/organization/hr/dashboard',LayoutDashboard,t('HR dashboard','HR 工作台','Papan pemuka HR')],
     ['/organization/hr/intake',Users,t('Team profile','团队资料','Profil pasukan')],
     ['/organization/hr/heatmap',BarChart3,t('Skill heatmap','技能热图','Peta kemahiran')],
     ['/organization/hr/mobility',Network,t('Internal mobility','内部转型','Mobiliti dalaman')],
-    ['/organization/hr/training',BookOpen,t('Training','企业培训','Latihan')],
+    ['/organization/hr/training',BookOpen,t('Enterprise training','企业培训','Latihan perusahaan')],
+    ['/organization',Building2,t('Switch workspace','切换工作区','Tukar ruang kerja')],
+    ['/',LayoutDashboard,t('Back to home','返回首页','Kembali ke utama')],
+    ['/organization/hr/about',Info,t('About','关于','Tentang')],
   ]:tvet?[
-    ['/organization/tvet/students',Users,t('Student profiles','学生资料','Profil pelajar')],
+    ['/organization/tvet/students',Users,t('Student analysis','学生分析','Analisis pelajar')],
     ['/organization/tvet/trends',Compass,t('Industry trends','行业趋势','Trend industri')],
     ['/organization/tvet/gaps',Network,t('Career gaps','职业差距','Jurang kerjaya')],
-    ['/organization/tvet/cohort',GraduationCap,t('Select cohort','选择学生群体','Pilih kohort')],
+    ['/organization/tvet/cohort',GraduationCap,t('Cohort analysis','群体分析','Analisis kohort')],
     ['/organization/tvet/insights',BarChart3,t('Institution insights','院校洞察','Wawasan institusi')],
+    ['/organization',Building2,t('Switch workspace','切换工作区','Tukar ruang kerja')],
+    ['/',LayoutDashboard,t('Back to home','返回首页','Kembali ke utama')],
+    ['/organization/tvet/about',Info,t('About','关于','Tentang')],
   ]:[
     ['/individual',LayoutDashboard,t('My growth','我的成长','Pertumbuhan saya')],
     ['/individual/radar',Compass,t('Career radar','职业雷达','Radar kerjaya')],
     ['/individual/intake',Users,t('My profile','我的画像','Profil saya')],
     ['/individual/recommendations',Network,t('Career matches','职业推荐','Padanan kerjaya')],
     ['/individual/learning-journey',Map,t('Learning journey','学习旅程','Perjalanan belajar')],
+    ['/individual/about',Info,t('About','关于','Tentang')],
   ];
+  const navItems=context.program==='organization' ? [
+    ['/organization',Building2,t('Organization home','机构首页','Laman utama organisasi')],
+    ['/organization/hr/intake',Users,t('HR / L&D','人力资源／学习发展','HR / L&D')],
+    ['/organization/tvet/students',GraduationCap,t('TVET / University','TVET／大学','TVET / Universiti')],
+    ['/organization/about',Info,t('About','关于','Tentang')],
+  ] : nav;
   useEffect(()=>{window.scrollTo(0,0);},[pathname]);
-  return <div className="app-shell"><a className="skip-link" href="#main">{t('Skip to content','跳至内容','Langkau ke kandungan')}</a><aside className="sidebar"><Brand/><nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{nav.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;return <NavLink key={url as string} to={url as string} end={url==='/individual'} className={({isActive})=>isActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav><div className="sidebar-bottom"><div className="growth-note"><Leaf size={20}/><p>{t('A little growth, every day.','每天，向上生长一点。','Berkembang sedikit, setiap hari.')}</p></div><span className="local-note">{t('Your progress is saved on this device','进度保存在当前设备','Kemajuan disimpan pada peranti ini')}</span></div></aside><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>{org?t('Organization','机构','Organisasi'):t('Your personal space','个人成长空间','Ruang peribadi anda')}</span><ChevronRight size={13}/><span>{hr?'HR / L&D':tvet?'TVET / University':t('Connected growth','共同成长','Pertumbuhan terhubung')}</span></div><LocaleSwitcher/></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div></div>;
+return <div className="app-shell"><a className="skip-link" href="#main">{t('Skip to content','跳至内容','Langkau ke kandungan')}</a><aside className="sidebar"><Brand/><div className="workspace-switch"><span className="workspace-icon"><Building2 size={17}/></span><span>{org?t('Organization workspace','机构工作区','Ruang kerja organisasi'):t('Individual workspace','个人工作区','Ruang kerja individu')}</span></div><nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{navItems.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;const detailActive=url==='/organization/hr/dashboard'&&pathname.startsWith('/organization/hr/department/');return <NavLink key={url as string} to={url as string} end={url==='/individual'||url==='/organization'} className={({isActive})=>isActive||detailActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav><div className="sidebar-bottom"><div className="growth-note"><Leaf size={20}/><p>{t('A little growth, every day.','每天，向上生长一点。','Berkembang sedikit, setiap hari.')}</p></div><span className="local-note">{t('Your progress is saved on this device','进度保存在当前设备','Kemajuan disimpan pada peranti ini')}</span></div></aside><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>{org?t('Organization','机构','Organisasi'):t('Your personal space','个人成长空间','Ruang peribadi anda')}</span><ChevronRight size={13}/><span>{hr?'HR / L&D':tvet?'TVET / University':context.program==='organization'?t('Choose workspace','选择工作区','Pilih ruang kerja'):t('Connected growth','共同成长','Pertumbuhan terhubung')}</span></div><LocaleSwitcher/></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div></div>;
 }
 export function PageHeader({title,description,action,back}:{title:string;description?:string;action?:ReactNode;back?:string}){
   const {t}=useApp();return <header className="page-heading">{back&&<Link to={back} className="back-link"><ArrowLeft size={16}/>{t('Back','返回','Kembali')}</Link>}<div className="heading-row"><div><h1>{title}</h1>{description&&<p>{description}</p>}</div>{action}</div></header>;

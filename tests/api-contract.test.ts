@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyProfile } from '../src/data.ts';
 import {
-  fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
+  applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
   mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
   targetWeeks, toContractLevel, toContractRoleId, toContractSkillId,
 } from '../src/services/api-contract.ts';
@@ -42,7 +42,7 @@ test('profile requests preserve structured occupation, interests, skills, and re
   const confirm = profileToConfirmRequest(profile);
   assert.equal(confirm.reviewed_by_user, true);
   assert.equal(confirm.profile_revision, 4);
-  assert.deepEqual(confirm.skills[0], { skill_id: 'skill_sql', level: 3, source: 'declared', confidence: 1 });
+  assert.deepEqual(confirm.skills[0], { skill_id: 'skill_sql', level: 3, source: 'confirmed', confidence: 1 });
 });
 
 test('profile requests do not invent backend IDs for frontend-only demo skills', () => {
@@ -71,6 +71,25 @@ test('normalized service profile maps back to editable UI fields', () => {
   assert.equal(mapped.revision, 2);
 });
 
+test('newly extracted skills remain unconfirmed until the user reviews them',()=>{
+  const draft={...emptyProfile,skills:[{id:'sql',level:'intermediate',source:'manual' as const,confirmed:true}]};
+  const normalized=mergeNormalizedProfile({profile_id:'profile_1',pipeline:'A',current_occupation:'Analyst',interests:[],reviewed_by_user:false,revision:1,skills:[
+    {skill_id:'skill_sql',level:3,source:'declared',confidence:1},
+    {skill_id:'skill_python',level:null,source:'inferred',confidence:.6},
+  ]},draft);
+  assert.equal(normalized.skills.find(skill=>skill.id==='sql')?.confirmed,true);
+  assert.equal(normalized.skills.find(skill=>skill.id==='python')?.confirmed,false);
+  assert.equal(normalized.skills.find(skill=>skill.id==='python')?.confidence,.6);
+  assert.deepEqual(profileToConfirmRequest(normalized).skills.map(skill=>skill.skill_id),['skill_sql']);
+  assert.deepEqual(profileToConfirmRequest({...normalized,skills:normalized.skills.map(skill=>skill.id==='python'?{...skill,confirmed:true}:skill)}).skills.map(skill=>skill.skill_id),['skill_sql','skill_python']);
+});
+
+test('normalization includes synthetic experience text for extraction',()=>{
+  const request=profileToNormalizeRequest({...emptyProfile,experience:'Built a Python script'});
+  assert.equal(request.text,'Built a Python script');
+  assert.equal(request.form.experience,'Built a Python script');
+});
+
 test('role trend signals use role_id from the backend contract', () => {
   const mapped = mapTrendRoles([
     { role_id: 'role_data_analyst', name: 'Data Analyst', trend_score: 78, signal_label: 'rising' },
@@ -78,6 +97,22 @@ test('role trend signals use role_id from the backend contract', () => {
   assert.equal(mapped[0].id, 'data-analyst');
   assert.equal(mapped[0].signal, 78);
   assert.equal(mapped[0].trend, 'rising');
+});
+
+test('real role trends do not inherit synthetic skills or a fabricated industry',()=>{
+  const mapped=mapTrendRoles([{role_id:'role_new',name:'New role',field_id:'field_health',trend_score:null,signal_label:'insufficient_evidence'}],[]);
+  assert.equal(mapped[0].domain,'health');
+  assert.equal(mapped[0].signalAvailable,false);
+  assert.equal(mapped[0].trend,'unknown');
+  assert.deepEqual(mapped[0].skills,[]);
+});
+
+test('bubble sizes require matching role and field IDs with a stated size basis',()=>{
+  const role=mapTrendRoles([{role_id:'role_data_analyst',name:'Data Analyst',field_id:'field_data',trend_score:78,signal_label:'current_snapshot'}],[]);
+  const bubbles={categories:[],roles:[{role_id:'role_data_analyst',field_id:'field_data',display_size:1,evidence_ids:[]}],size_basis:'Equal observed area',region:'MY'};
+  assert.equal(applyBubbleSizes(role,bubbles)?.[0].bubbleSize,1);
+  assert.equal(applyBubbleSizes(role,{...bubbles,roles:[{...bubbles.roles[0],field_id:'field_business'}]}),null);
+  assert.equal(applyBubbleSizes(role,{...bubbles,size_basis:''}),null);
 });
 
 test('roadmap response becomes a capacity-based local plan', () => {

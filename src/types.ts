@@ -2,7 +2,7 @@ export type Locale = 'en' | 'zh' | 'ms';
 export type Copy = readonly [string, string, string];
 export type Scenario = 'moderate' | 'fast';
 export type Origin = 'synthetic_fixture' | 'public_observed' | 'computed' | 'scenario_model' | 'llm_generated';
-export interface Skill { id: string; level: string; source: 'manual' | 'cv_extracted' | 'inferred'; confirmed: boolean }
+export interface Skill { id: string; level: string; source: 'manual' | 'cv_extracted' | 'inferred'; confirmed: boolean; confidence?: number; backendSupported?: boolean }
 export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
@@ -35,10 +35,12 @@ export interface Organization {
 }
 export interface Role {
   id: string; name: Copy; domain: string; description: Copy; skills: string[];
-  scores: Record<Scenario, number>; signal: number; trend: 'rising' | 'emerging' | 'stable'; sdgs: number[];
+  scores: Record<Scenario, number>; signal: number; trend: 'rising' | 'emerging' | 'stable' | 'declining' | 'unknown'; sdgs: number[];
   evidenceIds?: string[]; sourceWindow?: { from: string; to: string }; observedMetrics?: Record<string, number | null>;
   signalAvailable?: boolean; signalLabel?: string;
+  fieldId?: string; bubbleSize?: number;
 }
+export interface SkillTrend { id: string; name: string; score: number | null; label: string; change: number | null; evidenceIds: string[]; sourceWindow?: {from:string;to:string} }
 export interface Recommendation {
   roleId: string; roleName?: string; rank: number; matchScore: number | null; origin: Origin;
   strengths?: string[];
@@ -51,8 +53,8 @@ export interface ServiceMeta {
   requestId: string; snapshotId: string | null; generatedAt: string | null;
   dataLabel: string; isMock: boolean; modelVersion: string | null;
 }
-export interface TrendPackage { snapshotId: string; snapshotAt: string | null; region: string; origin: Origin; roles: Role[]; meta: ServiceMeta }
+export interface TrendPackage { snapshotId: string; snapshotAt: string | null; region: string; origin: Origin; roles: Role[]; meta: ServiceMeta; skills?: SkillTrend[]; bubbleSizeBasis?: string; warnings?: string[] }
 export interface AppState {
   locale: Locale; profile: Profile; scenario: Scenario; selectedRole: string; results: Recommendation[] | null;
-  snapshotId: string; serviceMeta?: ServiceMeta | null; trendPackage?: TrendPackage | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; tvet: Organization;
+  snapshotId: string; serviceMeta?: ServiceMeta | null; trendPackage?: TrendPackage | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; hrProfileSaved: boolean; tvet: Organization;
 }
