@@ -39,7 +39,19 @@ export function Shell({children}:{children:ReactNode}) {
 export function PageHeader({title,description,action,back}:{title:string;description?:string;action?:ReactNode;back?:string}){
   const {t}=useApp();return <header className="page-heading">{back&&<Link to={back} className="back-link"><ArrowLeft size={16}/>{t('Back','返回','Kembali')}</Link>}<div className="heading-row"><div><h1>{title}</h1>{description&&<p>{description}</p>}</div>{action}</div></header>;
 }
-export function DemoNotice(){const {t,state}=useApp();const mocked=isDemo||(state.serviceMeta?.isMock??false);return <details className="demo-notice"><summary><span className="status-dot"/>{mocked?t('Synthetic demo data','合成演示数据','Data demo sintetik'):t('Connected service','已连接服务','Perkhidmatan disambungkan')}<Info size={14}/></summary><p>{mocked?t('Profiles and analysis examples are synthetic. Market signals and match scores are illustrative fixtures, not live forecasts. No real personal records are needed.','人物资料与分析示例为合成数据。市场信号与匹配分为界面测试样本，不代表实时预测。请勿输入真实个人敏感资料。','Profil dan contoh analisis adalah sintetik. Isyarat pasaran dan skor padanan ialah contoh, bukan ramalan langsung. Jangan masukkan rekod peribadi sebenar.'):t('The interface is connected to the versioned API. Scores remain modelled explanations, not hiring probabilities.','界面已连接版本化 API。评分仍是可解释模型结果，不代表录用概率。','Antara muka disambungkan kepada API berversi. Skor ialah penerangan model, bukan kebarangkalian pengambilan.')}</p></details>;}
+export function DemoNotice(){
+  const {t,state}=useApp();
+  const label=isDemo?'synthetic_demo':state.serviceMeta?.dataLabel;
+  const title=label==='mixed_demo'?t('Observed sources + demo model','公开来源与演示模型','Sumber awam + model demo')
+    :label==='synthetic_demo'?t('Synthetic demo data','合成演示数据','Data demo sintetik')
+    :label==='public_open'?t('Public source data','公开来源数据','Data sumber awam')
+    :t('API data pending','等待 API 数据','Menunggu data API');
+  const explanation=label==='mixed_demo'?t('Market signals use the reviewed snapshot; matching remains a heuristic demo. Check each Evidence link and its limitations.','市场信号来自已审核快照；匹配仍是启发式演示。请核对每条 Evidence 的来源和局限。','Isyarat pasaran menggunakan gambaran disemak; padanan masih demonstrasi heuristik. Semak sumber dan batasan bukti.')
+    :label==='public_open'?t('Public source records are shown with their dates and limitations. A score is not a hiring probability.','公开来源记录附有日期与局限；评分不代表录用概率。','Rekod awam menunjukkan tarikh dan batasan. Skor bukan kebarangkalian pekerjaan.')
+    :label==='synthetic_demo'?t('This page contains synthetic examples. Scores are not live forecasts. Do not enter sensitive personal records.','此页包含合成样例；评分不是实时预测。请勿输入敏感个人资料。','Halaman ini mengandungi contoh sintetik. Skor bukan ramalan langsung.')
+    :t('The connected API has not returned evidence for this page yet.','此页尚未从 API 取得依据。','API belum memulangkan bukti untuk halaman ini.');
+  return <details className="demo-notice"><summary><span className="status-dot"/>{title}<Info size={14}/></summary><p>{explanation}</p></details>;
+}
 export function ButtonLink({to,children,secondary=false,className='',onClick}:{to:string;children:ReactNode;secondary?:boolean;className?:string;onClick?:()=>void}){return <Link className={`button ${secondary?'secondary':''} ${className}`} to={to} onClick={onClick}>{children}</Link>;}
 export function SkillChip({id,tone=''}:{id:string;tone?:string}){const {copy}=useApp();return <span className={`skill-chip ${tone}`}>{skillNames[id]?copy(skillNames[id]):id}</span>;}
 export function ScenarioSwitcher(){const {state,setState,t}=useApp();return <div className="scenario-control"><span>{t('AI scenario','AI 发展情景','Senario AI')}</span><div className="segmented" aria-label={t('AI scenario','AI 发展情景','Senario AI')}>{(['moderate','fast'] as const).map(s=><button key={s} aria-pressed={state.scenario===s} className={state.scenario===s?'selected':''} onClick={()=>setState(v=>({...v,scenario:s}))}>{s==='moderate'?t('Moderate','中等','Sederhana'):t('Fast','快速','Pantas')}</button>)}</div></div>;}

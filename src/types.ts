@@ -36,12 +36,17 @@ export interface Organization {
 export interface Role {
   id: string; name: Copy; domain: string; description: Copy; skills: string[];
   scores: Record<Scenario, number>; signal: number; trend: 'rising' | 'emerging' | 'stable'; sdgs: number[];
+  evidenceIds?: string[]; sourceWindow?: { from: string; to: string }; observedMetrics?: Record<string, number | null>;
+  signalAvailable?: boolean; signalLabel?: string;
 }
 export interface Recommendation {
-  roleId: string; rank: number; matchScore: number | null; origin: Origin;
+  roleId: string; roleName?: string; rank: number; matchScore: number | null; origin: Origin;
   strengths?: string[];
   skillGaps?: Array<{ skillId: string; name: string; currentLevel: number | null; targetLevel: number; importance: string }>;
+  reason?: string; evidenceIds?: string[]; scenarioAssumptions?: string[]; uncertainty?: string;
+  scoreBreakdown?: Record<string, number | null>;
 }
+export interface Evidence { evidenceId: string; title: string; sourceUrl: string | null; sourceType: string; publishedOrCollectedAt: string; retrievedAt: string; region: string | null; limitations: string | null }
 export interface ServiceMeta {
   requestId: string; snapshotId: string | null; generatedAt: string | null;
   dataLabel: string; isMock: boolean; modelVersion: string | null;
@@ -49,5 +54,5 @@ export interface ServiceMeta {
 export interface TrendPackage { snapshotId: string; snapshotAt: string | null; region: string; origin: Origin; roles: Role[]; meta: ServiceMeta }
 export interface AppState {
   locale: Locale; profile: Profile; scenario: Scenario; selectedRole: string; results: Recommendation[] | null;
-  snapshotId: string; serviceMeta?: ServiceMeta | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; tvet: Organization;
+  snapshotId: string; serviceMeta?: ServiceMeta | null; trendPackage?: TrendPackage | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; tvet: Organization;
 }

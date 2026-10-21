@@ -34,6 +34,9 @@ export interface ApiRoleSignal {
   name: string;
   trend_score: number | null;
   signal_label?: string;
+  evidence_ids?: string[];
+  source_window?: { from: string; to: string };
+  observed_metrics?: Record<string, number | null>;
 }
 
 export interface ApiRoleData {
@@ -42,6 +45,8 @@ export interface ApiRoleData {
   field_id: string;
   summary: string;
   required_skills: Array<{ skill_id: string; name: string; target_level: number; importance: string }>;
+  evidence_ids: string[];
+  sdg_links: Array<{ sdg: number; rationale: string }>;
 }
 
 export interface ApiRecommendation {
@@ -173,6 +178,7 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
 export function mapRecommendations(items: ApiRecommendation[]): Recommendation[] {
   return items.map(item => ({
     roleId: fromContractRoleId(item.role_id),
+    roleName: item.role_name,
     rank: item.rank,
     matchScore: item.match_score,
     origin: 'computed',
@@ -184,6 +190,11 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
       targetLevel: gap.target_level,
       importance: gap.importance,
     })),
+    reason: item.reason,
+    evidenceIds: item.evidence_ids,
+    scenarioAssumptions: item.scenario_assumptions,
+    uncertainty: item.uncertainty,
+    scoreBreakdown: item.score_breakdown,
   }));
 }
 
@@ -194,8 +205,8 @@ export function mapTrendRoles(items: ApiRoleSignal[], knownRoles: Role[]): Role[
     const trend = item.signal_label === 'rising' ? 'rising' : item.signal_label === 'stable' ? 'stable' : 'emerging';
     const signal = item.trend_score ?? 0;
     return known
-      ? { ...known, name: [item.name, known.name[1], known.name[2]], signal, trend }
-      : { id, name: [item.name, item.name, item.name], domain: 'technology', description: [item.name, item.name, item.name], skills: [], scores: { moderate: signal, fast: signal }, signal, trend, sdgs: [] };
+      ? { ...known, name: [item.name, known.name[1], known.name[2]], signal, trend, signalAvailable: item.trend_score !== null, signalLabel: item.signal_label, evidenceIds: item.evidence_ids, sourceWindow: item.source_window, observedMetrics: item.observed_metrics }
+      : { id, name: [item.name, item.name, item.name], domain: 'technology', description: [item.name, item.name, item.name], skills: [], scores: { moderate: 0, fast: 0 }, signal, trend, sdgs: [], signalAvailable: item.trend_score !== null, signalLabel: item.signal_label, evidenceIds: item.evidence_ids, sourceWindow: item.source_window, observedMetrics: item.observed_metrics };
   });
 }
 

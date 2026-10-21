@@ -33,7 +33,7 @@ src/services/api.ts 已定义请求适配器；默认 demo 不产生网络分析
 |POST /organizations/hr/analyze|HR／L&D 合成群体分析|
 |POST /organizations/career_centre/analyze|院校合成群体分析|
 
-适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐、Roadmap、进度和机构路径实现。还需后端认证、授权、持久化、完整 schema 验证、错误本地化、幂等键、文件解析、真实趋势来源和 snapshot 历史、确定性匹配算法及版本并发控制。真实 mode 下 Radar、Role 与 MindMap 的部分说明仍保留静态展示文案，必须在端到端集成测试后才可视为生产接入。API 失败不得静默回退为演示数据。
+适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐和 Roadmap 路径实现。real 模式的 Radar、Recommendations、RoleDetail 从 API 读取信号、解释和 Evidence，并在 API 失败时显示错误；MindMap、组织分析和学习进度仍属于未完成的 P1 接入。还需后端认证、授权、持久化、完整 schema 验证、错误本地化、幂等键、真实趋势来源和 snapshot 历史、文件解析及版本并发控制。不得把 real 模式等同于生产模式。
 
 当前费用、工时和可行性均为标明的示例。学习时间、预算、语言、日期、已有基础可编辑并保存；真实课程价格和排期约束需要后端求解。用户任务确认是自我报告，不是认证或能力判定。
 
@@ -53,4 +53,4 @@ Sites project_id: appgprj_6ad79e021d708191ad91460917418cd5。保持所有者私�
 - HR 输入改成部门优先：职责、状态、挑战、目标、申报人数；员工资料可选。员工 CSV 支持列映射、预览、唯一编号/部门校验和显式确认。XLSX、PDF/DOCX 解析仍待解析库/服务。
 - HR 概览显示用户申报人数、部门、员工资料数和人工实施状态，并保留用户提交的本地规划快照版本。该预览不是 AI 分析。
 - localStorage 保存仍仅限此浏览器/设备；尚无机构账号隔离、服务端鉴权或同步。缺失后端时，机构 AI 分析与学习进度服务在 real mode 明确报不可用，不返回伪造成功。
-- 验证：TypeScript `--noEmit`、Vite production build 和 17 个 Node 测试通过。执行 `pnpm` 时受 minimum-release-age 检查阻止：锁文件中的 `electron-to-chromium@1.5.461` 尚未达到策略年龄；没有放宽策略或改锁文件。已使用当前已链接依赖直接运行检查。
+- 验证：TypeScript、Vite production build、17 个 Node 测试、44 个后端测试及 1 个本地 HTTP 跨栈测试通过。`pnpm install --frozen-lockfile` 已通过：将传递依赖固定到过等待期的 `electron-to-chromium@1.5.459`，并显式允许构建所需的 esbuild 安装脚本；未放宽最短发布年龄策略。

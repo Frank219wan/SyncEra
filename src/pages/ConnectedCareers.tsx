@@ -1,0 +1,126 @@
+import {useEffect,useState} from 'react';
+import {Link,useParams} from 'react-router-dom';
+import {api} from '../services/api';
+import {fromContractSkillId,type ApiRoleData} from '../services/api-contract';
+import {useApp} from '../store';
+import type {Evidence,Recommendation,TrendPackage} from '../types';
+import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
+
+function EvidenceSources({ids}:{ids:string[]}) {
+  const {t}=useApp();
+  const [items,setItems]=useState<Array<{evidence:Evidence;isMock:boolean}>>([]);
+  const [error,setError]=useState('');
+  useEffect(()=>{
+    let active=true;
+    setItems([]);setError('');
+    if(!ids.length)return;
+    Promise.all(ids.map(id=>api.evidence(id))).then(rows=>{
+      if(active)setItems(rows.map(row=>({evidence:row.evidence,isMock:row.meta.isMock})));
+    }).catch(e=>{if(active)setError((e as Error).message);});
+    return()=>{active=false;};
+  },[ids.join('|')]);
+  if(!ids.length)return <p className="muted">{t('No source IDs were supplied for this result.','此结果未提供来源 ID。','Tiada ID sumber untuk hasil ini.')}</p>;
+  return <div className="connected-evidence">
+    {error&&<ErrorState message={error}/>}
+    {!error&&!items.length&&<p className="muted">{t('Loading source records…','正在加载来源记录…','Memuatkan rekod sumber…')}</p>}
+    {items.map(({evidence,isMock})=><article className="surface" key={evidence.evidenceId}>
+      <h4>{evidence.title}</h4>
+      <p>{isMock?t('Synthetic example','合成样例','Contoh sintetik'):t('Public source','公开来源','Sumber awam')} · {evidence.sourceType} · {evidence.publishedOrCollectedAt}</p>
+      {evidence.sourceUrl?.startsWith('https://')&&<a href={evidence.sourceUrl} target="_blank" rel="noreferrer">{t('Open source','打开来源','Buka sumber')}</a>}
+      {evidence.limitations&&<p>{t('Limitations','局限','Batasan')}: {evidence.limitations}</p>}
+    </article>)}
+  </div>;
+}
+
+export function ConnectedRadar(){
+  const {state,setState,t,copy}=useApp();
+  const [data,setData]=useState<TrendPackage|null>(null);
+  const [error,setError]=useState('');
+  const [attempt,setAttempt]=useState(0);
+  const [query,setQuery]=useState('');
+  useEffect(()=>{
+    let active=true;
+    setData(null);setError('');
+    api.trends().then(packageData=>{
+      if(!active)return;
+      setData(packageData);
+      setState(previous=>({...previous,snapshotId:packageData.snapshotId,serviceMeta:packageData.meta,trendPackage:packageData}));
+    }).catch(e=>{if(active)setError((e as Error).message);});
+    return()=>{active=false;};
+  },[attempt,setState]);
+  const shown=data?.roles.filter(role=>copy(role.name).toLowerCase().includes(query.toLowerCase()))??[];
+  return <>
+    <PageHeader title={t('Career radar','职业雷达','Radar kerjaya')} description={t('Signals from the connected snapshot. A score is not a job count.','数据来自已连接快照；信号分数不是招聘数量。','Isyarat daripada gambaran yang disambungkan; skor bukan jumlah pekerjaan.')} action={<DemoNotice/>}/>
+    {error&&<ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>}
+    {data&&<><p className="muted">{t('Snapshot','快照','Gambaran')}: {data.snapshotId} · {data.meta.dataLabel} · {data.snapshotAt??t('Date unavailable','日期不可用','Tarikh tiada')}</p>
+      <label className="search-box"><input value={query} onChange={event=>setQuery(event.target.value)} placeholder={t('Find a career','搜索职业','Cari kerjaya')} aria-label={t('Find a career','搜索职业','Cari kerjaya')}/></label>
+      <div className="radar-list surface">{shown.map(role=><Link className="radar-list-row" key={role.id} to={`/individual/roles/${role.id}`} onClick={()=>setState(previous=>({...previous,selectedRole:role.id}))}>
+        <div><strong>{copy(role.name)}</strong><span>{role.signalLabel??t('Current snapshot','当前快照','Gambaran semasa')}</span></div>
+        <span>{role.signalAvailable?`${role.signal} / 100`:t('No comparable signal','暂无可比信号','Tiada isyarat sebanding')}</span>
+      </Link>)}</div>
+      {!shown.length&&<EmptyState title={t('No careers found','未找到职业','Tiada kerjaya')} description={t('Try another search.','换个关键词试试。','Cuba carian lain.')}/>}
+    </>}
+    {!error&&!data&&<p className="muted">{t('Loading the current snapshot…','正在加载当前快照…','Memuatkan gambaran semasa…')}</p>}
+  </>;
+}
+
+export function ConnectedRecommendations(){
+  const {state,setState,t}=useApp();
+  const eligible=Boolean(state.snapshotId&&state.results?.length&&state.results.every(item=>item.origin==='computed'));
+  const [results,setResults]=useState<Recommendation[]|null>(eligible?state.results:null);
+  const [error,setError]=useState('');
+  const [busy,setBusy]=useState(false);
+  const [attempt,setAttempt]=useState(0);
+  useEffect(()=>{
+    if(!eligible)return;
+    let active=true;
+    setResults(null);setError('');setBusy(true);
+    api.recommendDetailed(state.profile,state.scenario,state.selectedRole,state.snapshotId).then(({results:rows,meta})=>{
+      if(active){setResults(rows);setState(previous=>({...previous,results:rows,serviceMeta:meta}));}
+    }).catch(e=>{if(active)setError((e as Error).message);}).finally(()=>{if(active)setBusy(false);});
+    return()=>{active=false;};
+  },[eligible,state.profile.id,state.scenario,state.snapshotId,attempt,setState]);
+  if(!eligible)return <EmptyState title={t('Confirm your profile first','请先确认画像','Sahkan profil dahulu')} description={t('A connected recommendation requires a confirmed profile and a current snapshot.','连接服务的推荐需要已确认画像和当前快照。','Cadangan memerlukan profil disahkan dan gambaran semasa.')} action={<ButtonLink to="/individual/intake">{t('Build my profile','创建画像','Bina profil')}</ButtonLink>}/>;
+  return <>
+    <PageHeader title={t('Career matches','职业推荐','Padanan kerjaya')} description={t('Relative fit from the selected snapshot and scenario.','基于所选快照和情景的相对匹配。','Padanan relatif daripada gambaran dan senario terpilih.')} action={<DemoNotice/>}/>
+    <div className="results-context"><div><strong>{t('Current snapshot','当前快照','Gambaran semasa')}: {state.snapshotId}</strong><p>{state.serviceMeta?.dataLabel} · {t('Scores are not hiring probabilities.','评分不代表录用概率。','Skor bukan kebarangkalian diambil bekerja.')}</p></div><ScenarioSwitcher/></div>
+    {error&&<ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>}
+    {busy&&<p className="muted">{t('Checking this scenario…','正在计算此情景…','Mengira senario ini…')}</p>}
+    {results&&!error&&<div className="career-grid">{results.map(item=><article className="career-card" key={item.roleId}>
+      <div className="career-top"><span className="rank-number">{item.rank}</span><span className="fit-score">{item.matchScore??'—'}<small>{t('relative fit / 100','相对匹配 / 100','padanan relatif / 100')}</small></span></div>
+      <h2><Link to={`/individual/roles/${item.roleId}`}>{item.roleName??item.roleId}</Link></h2>
+      <p>{item.reason}</p>
+      <div className="skill-row">{item.strengths?.map(id=><SkillChip key={id} id={id} tone="strength"/>)}</div>
+      <details className="why-details"><summary>{t('Evidence and assumptions','依据与假设','Bukti dan andaian')}</summary>
+        {item.scenarioAssumptions?.map((assumption,index)=><p key={index}>{assumption}</p>)}
+        {item.uncertainty&&<p>{t('Uncertainty','不确定性','Ketidakpastian')}: {item.uncertainty}</p>}
+        <EvidenceSources ids={item.evidenceIds??[]}/>
+      </details>
+    </article>)}</div>}
+  </>;
+}
+
+export function ConnectedRoleDetail(){
+  const {roleId}=useParams();
+  const {state,setState,t}=useApp();
+  const [role,setRole]=useState<ApiRoleData|null>(null);
+  const [error,setError]=useState('');
+  useEffect(()=>{
+    if(!roleId)return;
+    let active=true;
+    setRole(null);setError('');
+    api.role(roleId).then(row=>{if(active)setRole(row.role);}).catch(e=>{if(active)setError((e as Error).message);});
+    return()=>{active=false;};
+  },[roleId]);
+  const result=state.results?.find(item=>item.roleId===roleId&&item.origin==='computed');
+  return <>
+    <PageHeader title={role?.name??t('Career detail','职业详情','Butiran kerjaya')} description={role?.summary} back="/individual/recommendations" action={<DemoNotice/>}/>
+    {error&&<ErrorState message={error}/>}
+    {role&&<><section className="surface"><h2>{t('Required skills','所需技能','Kemahiran diperlukan')}</h2>
+      {role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {skill.importance}</span></div>)}
+      {result&&<p>{t('Your relative fit','你的相对匹配','Padanan relatif anda')}: {result.matchScore??'—'} / 100 · {result.reason}</p>}
+    </section>
+    <section className="surface"><h2>{t('Source evidence','来源依据','Bukti sumber')}</h2><EvidenceSources ids={role.evidence_ids}/></section>
+    <div className="form-actions"><ButtonLink to="/individual/roadmap/draft" onClick={()=>setState(previous=>({...previous,selectedRole:roleId??''}))}>{t('Build my learning plan','制定学习计划','Bina pelan belajar')}</ButtonLink></div></>}
+  </>;
+}

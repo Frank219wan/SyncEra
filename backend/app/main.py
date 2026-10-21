@@ -1,13 +1,15 @@
 from __future__ import annotations
 import os
 import json
+from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
 from fastapi import FastAPI, Request, Query, UploadFile, File, Form
 from pydantic import ValidationError
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
@@ -18,10 +20,23 @@ from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
 
 ERROR_CODES={400:'BAD_REQUEST',404:'NOT_FOUND',409:'SNAPSHOT_CONFLICT',422:'VALIDATION_ERROR',429:'RATE_LIMITED',502:'MODEL_INVALID_OUTPUT',503:'SOURCE_UNAVAILABLE',504:'MODEL_TIMEOUT'}
+
+class SPAStaticFiles(StaticFiles):
+    async def get_response(self,path,scope):
+        try:
+            response=await super().get_response(path,scope)
+            if response.status_code!=404: return response
+        except StarletteHTTPException as exc:
+            if exc.status_code!=404: raise
+        clean=scope.get('path',path).lstrip('/')
+        if clean.startswith('api/') or '.' in Path(clean).name:
+            raise StarletteHTTPException(status_code=404,detail='Not Found')
+        return FileResponse(Path(self.directory)/'index.html')
+
 def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
-def create_app(store=None,adapter=None,market=None,resources=None):
+def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
     app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
     app.state.store=store or ProfileStore()
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
@@ -167,7 +182,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
             except Exception: raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching model failed')
         else:
             raw=svc.demo_recommendations(scoring_profile,snap,payload.ai_scenario,selected_field,payload.top_k)
-        recommendations=svc.validate_recommendations(raw,snap,payload.ai_scenario)
+        recommendations=svc.validate_recommendations(raw,snap,payload.ai_scenario,scoring_profile)
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
@@ -199,6 +214,9 @@ def create_app(store=None,adapter=None,market=None,resources=None):
     @app.post('/api/v1/admin/trends/refresh',status_code=503,response_model=APIErrorEnvelope)
     def refresh(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 trend refresh is disabled')
 
+    root=Path(site_dir or os.getenv('WEB_DIST_DIR',Path(__file__).resolve().parents[2]/'dist'))
+    if (root/'index.html').is_file():
+        app.mount('/',SPAStaticFiles(directory=str(root),html=True),name='web')
     return app
 
 app=create_app()

@@ -118,15 +118,45 @@ def demo_recommendations(profile,snap,scenario,field_id,top_k):
     results.sort(key=lambda r:(-r.match_score,r.role_id))
     return [r.model_copy(update={'rank':i}).model_dump() for i,r in enumerate(results[:top_k],1)]
 
-def validate_recommendations(raw,snap,scenario):
+def validate_recommendations(raw,snap,scenario,profile):
+    """Reject plausible-looking model output that contradicts the confirmed inputs."""
     try:
         values=[Recommendation.model_validate(x) for x in raw]
+        if not isinstance(raw,list) or not values:
+            raise ValueError('recommendations must be a nonempty list')
+        if [r.rank for r in values]!=list(range(1,len(values)+1)):
+            raise ValueError('rank must be contiguous and ordered')
+        if len({r.role_id for r in values})!=len(values):
+            raise ValueError('duplicate role')
+        if any(left.match_score<right.match_score for left,right in zip(values,values[1:])):
+            raise ValueError('rank contradicts match score')
+        levels={skill.skill_id:skill.level for skill in profile.skills}
+        assumptions=snap.scenario_assumptions[scenario]
         for r in values:
             role=require_role(r.role_id)
-            if r.role_id not in snap.role_scores or r.evidence_ids!=snap.role_evidence_ids[r.role_id]: raise ValueError('evidence provenance mismatch')
-            if any(g.skill_id not in {s.skill_id for s in role.required_skills} for g in r.skill_gaps): raise ValueError('invalid skill gap')
-            if any(s not in SKILLS for s in r.strengths): raise ValueError('invalid strength')
+            observed=snap.role_scores.get(r.role_id)
+            if observed is None or r.role_id not in assumptions:
+                raise ValueError('role has no scenario signal')
+            if r.evidence_ids!=snap.role_evidence_ids[r.role_id]:
+                raise ValueError('evidence provenance mismatch')
+            expected_outlook=round(max(0,min(100,observed*assumptions[r.role_id])),2)
+            if abs(r.score_breakdown.scenario_outlook-expected_outlook)>.01:
+                raise ValueError('scenario outlook contradicts snapshot')
+            required={skill.skill_id:skill for skill in role.required_skills}
+            expected_gaps={sid for sid,skill in required.items() if levels.get(sid) is None or levels[sid]<skill.target_level}
+            gaps={gap.skill_id for gap in r.skill_gaps}
+            if len(gaps)!=len(r.skill_gaps) or gaps!=expected_gaps:
+                raise ValueError('skill gaps contradict profile or role')
+            for gap in r.skill_gaps:
+                skill=required[gap.skill_id]
+                if (gap.name,gap.current_level,gap.target_level,gap.importance)!=(skill.name,levels.get(gap.skill_id),skill.target_level,skill.importance):
+                    raise ValueError('skill gap details contradict catalogue')
+            expected_strengths=set(required)-expected_gaps
+            if len(set(r.strengths))!=len(r.strengths) or set(r.strengths)!=expected_strengths:
+                raise ValueError('strengths contradict profile or role')
             if r.role_name!=role.name: raise ValueError('role name mismatch')
+            if r.sdg_links!=role.sdg_links or not r.reason.strip() or not r.uncertainty.strip() or not r.scenario_assumptions:
+                raise ValueError('recommendation explanation is incomplete')
         return [x.model_dump() for x in values]
     except Exception:
         raise APIError(502,'MODEL_INVALID_OUTPUT','Matching output failed catalogue or score validation')

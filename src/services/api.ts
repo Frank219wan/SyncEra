@@ -1,4 +1,4 @@
-import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization } from '../types';
+import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import {
@@ -115,8 +115,23 @@ export const api = {
     };
   },
 
-  recommend: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<Recommendation[]> => {
-    if (isDemo) return demoRecommendations(profile, scenario);
+  evidence: async (evidenceId: string): Promise<{ evidence: Evidence; meta: ReturnType<typeof toServiceMeta> }> => {
+    if (!/^[A-Za-z0-9_-]+$/.test(evidenceId)) throw new ApiError(400, 'BAD_REQUEST', 'Invalid evidence ID.');
+    const response = await request<{ evidence: {
+      evidence_id: string; title: string; source_url: string | null; source_type: string;
+      published_or_collected_at: string; retrieved_at: string; region: string | null; limitations: string | null;
+    } }>(`/evidence/${evidenceId}`);
+    const item = response.data.evidence;
+    return { evidence: { evidenceId: item.evidence_id, title: item.title, sourceUrl: item.source_url, sourceType: item.source_type, publishedOrCollectedAt: item.published_or_collected_at, retrievedAt: item.retrieved_at, region: item.region, limitations: item.limitations }, meta: toServiceMeta(response.meta) };
+  },
+
+  role: async (roleId: string): Promise<{ role: ApiRoleData; meta: ReturnType<typeof toServiceMeta> }> => {
+    const response = await request<ApiRoleData>(`/roles/${toContractRoleId(roleId)}`);
+    return { role: response.data, meta: toServiceMeta(response.meta) };
+  },
+
+  recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>}> => {
+    if (isDemo) return {results: demoRecommendations(profile, scenario), meta: demoMeta(snapshotId)};
     const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[] }>('/recommendations', {
       body: {
         profile_id: profile.id,
@@ -127,8 +142,11 @@ export const api = {
       },
     });
     if (!Array.isArray(response.data.recommendations)) throw new ApiError(502, 'INVALID_RESPONSE', 'Missing recommendations in service response.');
-    return mapRecommendations(response.data.recommendations);
+    return {results: mapRecommendations(response.data.recommendations), meta: toServiceMeta(response.meta)};
   },
+
+  recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> =>
+    (await api.recommendDetailed(profile, scenario, selectedRole, snapshotId)).results,
 
   skillMap: async (profileId: string, roleId: string, skillId: string, language: string, budgetAmount: number) => {
     return request<{

@@ -1,1 +1,1 @@
-run = "sh -c 'cd backend && python -m pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
+run = "sh -c 'corepack pnpm install --frozen-lockfile && VITE_API_MODE=real VITE_API_BASE_URL= corepack pnpm build && cd backend && python -m pip install -r requirements.txt && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
