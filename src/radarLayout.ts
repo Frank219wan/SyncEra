@@ -6,12 +6,13 @@ export interface RadarGroup extends Circle { domain:string; children:RadarChild[
 
 const PADDING=18;
 const GAP=5;
+const baseRadius=(role:Role)=>role.bubbleSize===undefined?(100+role.signal*.65)/1.8:55*Math.sqrt(role.bubbleSize);
 
 function placeChildren(roles:Role[],parentRadius:number,scale:number):RadarChild[]|null{
   const placed:RadarChild[]=[];
   const ordered=[...roles].sort((a,b)=>b.signal-a.signal||a.id.localeCompare(b.id));
   if(ordered.length===2||ordered.length===3){
-    const radii=ordered.map(role=>(100+role.signal*.65)/1.8*scale);
+    const radii=ordered.map(role=>baseRadius(role)*scale);
     const separation=Math.max(...radii.flatMap((radius,i)=>radii.slice(i+1).map(other=>radius+other+GAP)));
     const ring=ordered.length===3?separation/Math.sqrt(3):separation/2;
     const centers=ordered.length===3
@@ -22,7 +23,7 @@ function placeChildren(roles:Role[],parentRadius:number,scale:number):RadarChild
   }
   for(const role of ordered){
     // Use more of each industry's available interior while retaining signal ratios.
-    const radius=(100+role.signal*.65)/1.8*scale;
+    const radius=baseRadius(role)*scale;
     const limit=parentRadius-PADDING-radius;
     if(limit<0)return null;
     let center:{x:number;y:number}|null=null;
@@ -91,7 +92,7 @@ export function layoutRadar(roles:Role[],width:number,height:number,focusedDomai
   // In the overview, all occupation radii share a single scale so signals remain comparable across industries.
   const globalScale=isFocused?1:Math.min(1,...circles.map(parent=>{
     const first=packRadarChildren(groups.get(parent.domain)!,parent.radius)[0];
-    return first?first.radius/((100+first.role.signal*.65)/1.8):1;
+    return first?first.radius/baseRadius(first.role):1;
   }));
   return circles.map(parent=>{
     const children=isFocused?packRadarChildren(groups.get(parent.domain)!,parent.radius)

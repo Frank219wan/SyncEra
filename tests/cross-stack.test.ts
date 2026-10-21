@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyProfile,roles} from '../src/data.ts';
 import {
-  mapRecommendations,mapTrendRoles,mergeNormalizedProfile,
+  applyBubbleSizes,mapRecommendations,mapTrendRoles,mergeNormalizedProfile,
   profileToConfirmRequest,profileToNormalizeRequest,
 } from '../src/services/api-contract.ts';
 
@@ -31,6 +31,14 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   assert.ok(trends.meta.snapshot_id);
   const visible=mapTrendRoles(trends.data.items,roles);
   assert.ok(visible.length>0);
+  const snapshot=encodeURIComponent(trends.meta.snapshot_id!);
+  const bubbles=await envelope<Parameters<typeof applyBubbleSizes>[1]>(`/explore/bubbles?region=MY&snapshot_id=${snapshot}`);
+  const skills=await envelope<{items:Array<{skill_id:string;signal_label:string;observed_metrics:{change_pp:number|null}}> }>(`/trends/skills?region=MY&snapshot_id=${snapshot}&limit=50`);
+  assert.equal(bubbles.meta.snapshot_id,trends.meta.snapshot_id);
+  assert.equal(skills.meta.snapshot_id,trends.meta.snapshot_id);
+  assert.deepEqual(new Set(bubbles.data.roles.map(role=>role.role_id)),new Set(trends.data.items.map(role=>role.role_id)));
+  assert.ok(applyBubbleSizes(visible,bubbles.data));
+  assert.ok(skills.data.items.every(skill=>skill.signal_label==='current_snapshot'||skill.observed_metrics.change_pp!==null));
 
   const recommended=await envelope<{recommendations:Parameters<typeof mapRecommendations>[0]}>('/recommendations',{
     profile_id:ready.id,region:'MY',ai_scenario:'moderate',top_k:5,snapshot_id:trends.meta.snapshot_id,

@@ -3,6 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {PageHeader,DemoNotice,Field,icons} from '../components';
 import {sampleProfile,skillNames} from '../data';
 import {useApp} from '../store';
+import {isDemo} from '../services/api';
 import type {Profile,Skill} from '../types';
 
 const {ArrowRight,ArrowLeft,X}=icons;
@@ -28,7 +29,7 @@ export function ProfileEdit(){
   }
   function save(){
     const changed=JSON.stringify(draft)!==JSON.stringify(state.profile);
-    setState(current=>changed?({...current,profile:{...draft,revision:(current.profile.revision||0)+1},results:null,plan:current.plan?{...current.plan,revisionPending:true}:null}):current);
+    setState(current=>changed?({...current,profile:{...draft,id:isDemo?draft.id:'',revision:(current.profile.revision||0)+1},results:null,plan:current.plan?{...current.plan,revisionPending:true}:null}):current);
     toast(changed?t('Profile saved. Calculate matches from your current information.','画像已保存；请根据当前资料重新计算职业推荐。','Profil disimpan. Kira padanan daripada maklumat semasa.'):t('Profile unchanged.','画像未作修改。','Profil tidak berubah.'));
     nav('/individual/intake');
   }
