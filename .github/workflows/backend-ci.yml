@@ -1,0 +1,79 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Backend tests (Python 3.12)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Check installed dependencies
+        run: python -m pip check
+
+      - name: Run backend tests
+        run: python -m pytest tests -q
+
+      - name: Verify FastAPI app import
+        run: python -c "from app.main import app; assert app is not None"
+
+      - name: Verify runtime OpenAPI and P0 routes
+        run: |
+          python - <<'PY'
+          from app.main import app
+
+          paths = app.openapi()['paths']
+          required = {
+              'get': {
+                  '/api/v1/health',
+                  '/api/v1/explore/bubbles',
+                  '/api/v1/trends/roles',
+                  '/api/v1/trends/skills',
+                  '/api/v1/roles/{role_id}',
+                  '/api/v1/roles/{role_id}/tasks',
+                  '/api/v1/evidence/{evidence_id}',
+              },
+              'post': {
+                  '/api/v1/profiles/normalize',
+                  '/api/v1/profiles/upload',
+                  '/api/v1/profiles/confirm',
+                  '/api/v1/recommendations',
+                  '/api/v1/learning/skill-map',
+                  '/api/v1/learning/roadmap',
+              },
+          }
+          missing = sorted(
+              f'{method.upper()} {path}'
+              for method, expected in required.items()
+              for path in expected
+              if method not in paths.get(path, {})
+          )
+          assert not missing, f'Missing P0 routes: {missing}'
+          print(f'Runtime OpenAPI generated; {sum(map(len, required.values()))} P0 routes found.')
+          PY
