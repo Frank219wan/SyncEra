@@ -1,0 +1,116 @@
+{
+  "method": "GET",
+  "path": "/api/v1/trends/skills",
+  "status": 200,
+  "request": null,
+  "response": {
+    "data": {
+      "items": [
+        {
+          "skill_id": "skill_sql",
+          "name": "SQL",
+          "rank": 1,
+          "trend_score": 75.0,
+          "signal_label": "current_snapshot",
+          "observed_metrics": {
+            "mention_rate": null,
+            "change_pp": null,
+            "coverage": null
+          },
+          "evidence_ids": [
+            "ev_demo_001"
+          ],
+          "source_window": {
+            "from": "2026-10-01",
+            "to": "2026-10-21"
+          }
+        },
+        {
+          "skill_id": "skill_python",
+          "name": "Python",
+          "rank": 2,
+          "trend_score": 72.0,
+          "signal_label": "current_snapshot",
+          "observed_metrics": {
+            "mention_rate": null,
+            "change_pp": null,
+            "coverage": null
+          },
+          "evidence_ids": [
+            "ev_demo_001"
+          ],
+          "source_window": {
+            "from": "2026-10-01",
+            "to": "2026-10-21"
+          }
+        },
+        {
+          "skill_id": "skill_validation",
+          "name": "AI Output Validation",
+          "rank": 3,
+          "trend_score": 68.0,
+          "signal_label": "current_snapshot",
+          "observed_metrics": {
+            "mention_rate": null,
+            "change_pp": null,
+            "coverage": null
+          },
+          "evidence_ids": [
+            "ev_demo_001"
+          ],
+          "source_window": {
+            "from": "2026-10-01",
+            "to": "2026-10-21"
+          }
+        },
+        {
+          "skill_id": "skill_excel",
+          "name": "Excel",
+          "rank": 4,
+          "trend_score": 61.0,
+          "signal_label": "current_snapshot",
+          "observed_metrics": {
+            "mention_rate": null,
+            "change_pp": null,
+            "coverage": null
+          },
+          "evidence_ids": [
+            "ev_demo_001"
+          ],
+          "source_window": {
+            "from": "2026-10-01",
+            "to": "2026-10-21"
+          }
+        },
+        {
+          "skill_id": "skill_communication",
+          "name": "Communication",
+          "rank": 5,
+          "trend_score": 59.0,
+          "signal_label": "current_snapshot",
+          "observed_metrics": {
+            "mention_rate": null,
+            "change_pp": null,
+            "coverage": null
+          },
+          "evidence_ids": [
+            "ev_demo_001"
+          ],
+          "source_window": {
+            "from": "2026-10-01",
+            "to": "2026-10-21"
+          }
+        }
+      ],
+      "next_cursor": null
+    },
+    "meta": {
+      "request_id": "req_a70de9a9d5ac4e629605a127e8e0133c",
+      "snapshot_id": "snap_my_20261021_01",
+      "generated_at": "2026-10-21T06:56:25.204698Z",
+      "data_label": "synthetic_demo",
+      "is_mock": true,
+      "model_version": "rules-v0.1"
+    }
+  }
+}

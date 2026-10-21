@@ -1,0 +1,2620 @@
+openapi: 3.0.3
+info:
+  title: FutureProof AI — Unified REST Contract
+  version: 1.0.0
+  description: Proposed development specification aligned with FutureProof AI PRD v1.3. Not a claim that
+    endpoints already exist. Synthetic fixture values are illustrative, not job-market evidence.
+servers:
+- url: http://localhost:8000/api/v1
+  description: Local FastAPI
+- url: https://YOUR-REPLIT-DEPLOYMENT/api/v1
+  description: Replace before delivery; do not claim published URL exists
+tags:
+- name: Public Discovery
+- name: Individual
+- name: Learning
+- name: Organization
+- name: Administration
+paths:
+  /health:
+    get:
+      tags:
+      - Public Discovery
+      summary: Deployment health check
+      operationId: get_health
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /explore/bubbles:
+    get:
+      tags:
+      - Public Discovery
+      summary: Category and role bubbles from the observed trend snapshot
+      operationId: get_explore_bubbles
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BubblesEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      parameters:
+      - &id001
+        name: region
+        in: query
+        required: false
+        description: ISO country code; MVP limited to MY
+        schema:
+          type: string
+          default: MY
+      - &id002
+        name: snapshot_id
+        in: query
+        required: false
+        description: Pinned snapshot ID (optional)
+        schema:
+          type: string
+      - name: field_id
+        in: query
+        required: false
+        description: Optional career category ID
+        schema:
+          type: string
+  /trends/roles:
+    get:
+      tags:
+      - Public Discovery
+      summary: Observed market career rankings with dated evidence
+      operationId: get_trends_roles
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolesEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      description: Observed market rankings do not change merely because the user switches moderate/fast
+        AI future scenarios.
+      parameters:
+      - *id001
+      - *id002
+      - name: field_id
+        in: query
+        required: false
+        description: Optional career field ID
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: Results per page (1–50)
+        schema:
+          type: integer
+          default: 10
+      - name: cursor
+        in: query
+        required: false
+        description: Opaque pagination cursor
+        schema:
+          type: string
+  /trends/skills:
+    get:
+      tags:
+      - Public Discovery
+      summary: Observed market skill rankings with dated evidence
+      operationId: get_trends_skills
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      parameters:
+      - *id001
+      - *id002
+      - name: limit
+        in: query
+        required: false
+        description: Results per page (1–50)
+        schema:
+          type: integer
+          default: 10
+      - name: cursor
+        in: query
+        required: false
+        description: Opaque pagination cursor
+        schema:
+          type: string
+  /roles/{role_id}:
+    get:
+      tags:
+      - Public Discovery
+      summary: Details, required skills and meaningful SDG links
+      operationId: get_roles_role_id
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      parameters:
+      - &id003
+        name: role_id
+        in: path
+        required: true
+        description: Canonical role ID
+        schema:
+          type: string
+  /roles/{role_id}/tasks:
+    get:
+      tags:
+      - Public Discovery
+      summary: 'AI Task X-Ray: task-level impact hypotheses'
+      operationId: get_roles_role_id_tasks
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TasksEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      parameters:
+      - *id003
+      - name: ai_scenario
+        in: query
+        required: false
+        description: AI adoption pace hypothesis
+        schema:
+          type: string
+          default: moderate
+          enum:
+          - moderate
+          - fast
+  /evidence/{evidence_id}:
+    get:
+      tags:
+      - Public Discovery
+      summary: Resolve a displayed evidence ID to its original date/source
+      operationId: get_evidence_evidence_id
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvidenceEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      parameters:
+      - name: evidence_id
+        in: path
+        required: true
+        description: Evidence ID
+        schema:
+          type: string
+  /profiles/normalize:
+    post:
+      tags:
+      - Individual
+      summary: Normalize a synthetic CV/text/guided questionnaire
+      operationId: post_profiles_normalize
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NormalizeEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NormalizeRequest'
+            example:
+              pipeline: A
+              input_type: guided_text
+              synthetic_input: true
+              text: I know SQL and Excel and want to explore data analysis.
+              preferred_field_id: field_data
+              psychology:
+                intrinsic_motivators:
+                - mastery
+              study_constraints:
+                weekly_hours: 5
+                budget_amount: 100
+                currency: MYR
+                language: en
+                target_weeks: 12
+                learning_pace: focused
+  /profiles/confirm:
+    post:
+      tags:
+      - Individual
+      summary: User confirms and edits extracted skill profile
+      operationId: post_profiles_confirm
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmRequest'
+            example:
+              profile_id: profile_demo_001
+              skills:
+              - skill_id: skill_sql
+                level: 3
+                source: declared
+                confidence: 1.0
+              reviewed_by_user: true
+  /recommendations:
+    post:
+      tags:
+      - Individual
+      summary: Two-input, evidence-grounded personal career matching
+      operationId: post_recommendations
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      description: Backend fetches a date-stamped NormalizedTrendPackage, combines with confirmed profile,
+        and verifies deterministic match scores and evidence IDs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendRequest'
+            example:
+              profile_id: profile_demo_001
+              region: MY
+              ai_scenario: fast
+              preferred_field_id: field_data
+              top_k: 5
+              snapshot_id: snap_my_20261021_01
+  /learning/skill-map:
+    post:
+      tags:
+      - Learning
+      summary: Build ONE selected skill mind map with vetted resources
+      operationId: post_learning_skill-map
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillMapEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillMapRequest'
+            example:
+              profile_id: profile_demo_001
+              role_id: role_data_analyst
+              skill_id: skill_python
+              language: en
+              budget_amount: 100
+              currency: MYR
+  /learning/roadmap:
+    post:
+      tags:
+      - Learning
+      summary: Build complete reality-aware learning roadmap AFTER selected skills
+      operationId: post_learning_roadmap
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoadmapEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoadmapRequest'
+            example:
+              profile_id: profile_demo_001
+              role_id: role_data_analyst
+              selected_skill_ids:
+              - skill_python
+              - skill_validation
+              study_constraints:
+                weekly_hours: 5
+                budget_amount: 100
+                currency: MYR
+                language: en
+                target_weeks: 12
+                learning_pace: focused
+  /progress/skills:
+    post:
+      tags:
+      - Learning
+      summary: Record practice or confirmed skill; confirmed new skills grow bamboo
+      operationId: post_progress_skills
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProgressRequest'
+            example:
+              profile_id: profile_demo_001
+              skill_id: skill_python
+              event_type: skill_confirmed
+              confirmation_method: self_report_plus_practice
+              evidence_note: Completed short project
+  /organizations/{mode}/analyze:
+    post:
+      tags:
+      - Organization
+      summary: B1 HR or B2 university/career-centre group analysis
+      operationId: post_organizations_mode_analyze
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      description: Only fictional/aggregate cohorts permitted for hackathon demo. HR and campus result
+        subsets are distinct while all use shared role/skill IDs.
+      parameters:
+      - name: mode
+        in: path
+        required: true
+        description: hr=B1 or career_centre=B2
+        schema:
+          type: string
+          enum:
+          - hr
+          - career_centre
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgRequest'
+            example:
+              region: MY
+              ai_scenario: moderate
+              synthetic_input: true
+              organization_name: Demo Finance Organization
+              groups:
+              - cohort_id: cohort_finance
+                kind: employee_department
+                label: Finance
+                size: 20
+                current_role_ids:
+                - role_accountant
+                skill_distribution:
+                - skill_id: skill_excel
+                  count: 18
+              optional_goals:
+              - Explore AI-assisted finance reporting
+  /admin/trends/refresh:
+    post:
+      tags:
+      - Administration
+      summary: 'Protected: activate a vetted versioned snapshot for demo refresh'
+      operationId: post_admin_trends_refresh
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshEnvelope'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '409':
+          description: Snapshot conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '502':
+          description: Model invalid output
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '503':
+          description: External source unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '504':
+          description: Model timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+      description: This route must be protected or disabled for public deployment. Never accept made-up
+        job-market numbers as unvalidated external evidence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              snapshot_id: snap_my_20261021_02
+              activate: true
+              reason: Illustrative controlled demo snapshot comparison
+      security:
+      - AdminBearer: []
+components:
+  schemas:
+    ResponseMeta:
+      type: object
+      properties:
+        request_id:
+          type: string
+        snapshot_id:
+          type: string
+          nullable: true
+        generated_at:
+          type: string
+          format: date-time
+        data_label:
+          type: string
+          enum:
+          - public_open
+          - synthetic_demo
+          - mixed_demo
+        is_mock:
+          type: boolean
+        model_version:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - request_id
+      - generated_at
+      - data_label
+      - is_mock
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+        reason:
+          type: string
+      additionalProperties: false
+      required:
+      - field
+      - reason
+    ErrorInfo:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+        retryable:
+          type: boolean
+      additionalProperties: false
+      required:
+      - code
+      - message
+      - retryable
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorInfo'
+        meta:
+          type: object
+          properties:
+            request_id:
+              type: string
+          additionalProperties: false
+          required:
+          - request_id
+      additionalProperties: false
+      required:
+      - error
+      - meta
+    SDGLink:
+      type: object
+      properties:
+        sdg:
+          type: integer
+          minimum: 1
+          maximum: 17
+        rationale:
+          type: string
+      additionalProperties: false
+      required:
+      - sdg
+      - rationale
+    Evidence:
+      type: object
+      properties:
+        evidence_id:
+          type: string
+        title:
+          type: string
+        source_url:
+          type: string
+          nullable: true
+        source_type:
+          type: string
+          enum:
+          - job_posting
+          - dataset
+          - research
+          - ai_capability
+        published_or_collected_at:
+          type: string
+          format: date
+        retrieved_at:
+          type: string
+          format: date-time
+        region:
+          type: string
+          nullable: true
+        limitations:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - evidence_id
+      - title
+      - source_url
+      - source_type
+      - published_or_collected_at
+      - retrieved_at
+    RequiredSkill:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        name:
+          type: string
+        target_level:
+          type: integer
+          minimum: 0
+          maximum: 5
+        importance:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+      additionalProperties: false
+      required:
+      - skill_id
+      - target_level
+      - importance
+    SkillSignal:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        name:
+          type: string
+        rank:
+          type: integer
+          minimum: 1
+        trend_score:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        signal_label:
+          type: string
+          enum:
+          - current_snapshot
+          - rising
+          - stable
+          - declining
+          - emerging
+          - insufficient_evidence
+        observed_metrics:
+          type: object
+          properties:
+            mention_rate:
+              type: number
+              nullable: true
+            change_pp:
+              type: number
+              nullable: true
+            coverage:
+              type: number
+              nullable: true
+          additionalProperties: false
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        source_window:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+          additionalProperties: false
+          required:
+          - from
+          - to
+      additionalProperties: false
+      required:
+      - skill_id
+      - name
+      - rank
+      - signal_label
+      - evidence_ids
+    RoleSignal:
+      type: object
+      properties:
+        role_id:
+          type: string
+        name:
+          type: string
+        field_id:
+          type: string
+        rank:
+          type: integer
+          minimum: 1
+        trend_score:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        signal_label:
+          type: string
+          enum:
+          - current_snapshot
+          - rising
+          - stable
+          - declining
+          - emerging
+          - insufficient_evidence
+        observed_metrics:
+          type: object
+          properties:
+            valid_postings:
+              type: integer
+              minimum: 0
+              nullable: true
+            delta_percent:
+              type: number
+              nullable: true
+          additionalProperties: false
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        source_window:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+          additionalProperties: false
+          required:
+          - from
+          - to
+      additionalProperties: false
+      required:
+      - role_id
+      - name
+      - field_id
+      - rank
+      - signal_label
+      - evidence_ids
+    BubblesData:
+      type: object
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              field_id:
+                type: string
+              name:
+                type: string
+              display_size:
+                type: number
+                minimum: 0
+            additionalProperties: false
+            required:
+            - field_id
+            - name
+            - display_size
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              role_id:
+                type: string
+              name:
+                type: string
+              field_id:
+                type: string
+              display_size:
+                type: number
+                minimum: 0
+              trend_score:
+                type: number
+                nullable: true
+              signal_label:
+                type: string
+              evidence_ids:
+                type: array
+                items:
+                  type: string
+            additionalProperties: false
+            required:
+            - role_id
+            - name
+            - field_id
+            - display_size
+            - evidence_ids
+        size_basis:
+          type: string
+        region:
+          type: string
+      additionalProperties: false
+      required:
+      - categories
+      - roles
+      - size_basis
+      - region
+    RolesData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleSignal'
+        next_cursor:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - items
+      - next_cursor
+    SkillsData:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillSignal'
+        next_cursor:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - items
+      - next_cursor
+    RoleData:
+      type: object
+      properties:
+        role_id:
+          type: string
+        name:
+          type: string
+        field_id:
+          type: string
+        summary:
+          type: string
+        required_skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequiredSkill'
+        sdg_links:
+          type: array
+          items:
+            $ref: '#/components/schemas/SDGLink'
+        evidence_ids:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - role_id
+      - name
+      - field_id
+      - required_skills
+      - sdg_links
+      - evidence_ids
+    TaskImpact:
+      type: object
+      properties:
+        task_id:
+          type: string
+        title:
+          type: string
+        impact_type:
+          type: string
+          enum:
+          - automation_candidate
+          - ai_augmented
+          - human_led_oversight
+        reason:
+          type: string
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        uncertainty:
+          type: string
+      additionalProperties: false
+      required:
+      - task_id
+      - title
+      - impact_type
+      - reason
+      - evidence_ids
+      - uncertainty
+    TasksData:
+      type: object
+      properties:
+        role_id:
+          type: string
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskImpact'
+      additionalProperties: false
+      required:
+      - role_id
+      - tasks
+    EvidenceData:
+      type: object
+      properties:
+        evidence:
+          $ref: '#/components/schemas/Evidence'
+      additionalProperties: false
+      required:
+      - evidence
+    StudyConstraints:
+      type: object
+      properties:
+        weekly_hours:
+          type: number
+          minimum: 1
+          maximum: 80
+        budget_amount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+        language:
+          type: string
+          enum:
+          - en
+          - ms
+          - zh
+        target_weeks:
+          type: integer
+          minimum: 1
+          maximum: 104
+        learning_pace:
+          type: string
+          enum:
+          - focused
+          - deep
+      additionalProperties: false
+      required:
+      - weekly_hours
+      - budget_amount
+      - currency
+      - language
+      - target_weeks
+      - learning_pace
+    Psychology:
+      type: object
+      properties:
+        mbti:
+          type: string
+          nullable: true
+        character_notes:
+          type: string
+          nullable: true
+        adaptability_self_report:
+          type: string
+          nullable: true
+        intrinsic_motivators:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      description: Optional reflective context; never hard-filter career access.
+    ProfileSkill:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        level:
+          type: integer
+          minimum: 0
+          maximum: 5
+          nullable: true
+        source:
+          type: string
+          enum:
+          - declared
+          - inferred
+          - confirmed
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+      additionalProperties: false
+      required:
+      - skill_id
+      - level
+      - source
+      - confidence
+    NormalizedProfile:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        pipeline:
+          type: string
+          enum:
+          - A
+        current_occupation:
+          type: string
+          nullable: true
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSkill'
+        interests:
+          type: array
+          items:
+            type: string
+        preferred_field_id:
+          type: string
+          nullable: true
+        study_constraints:
+          $ref: '#/components/schemas/StudyConstraints'
+        psychology:
+          $ref: '#/components/schemas/Psychology'
+        reviewed_by_user:
+          type: boolean
+        revision:
+          type: integer
+          minimum: 1
+      additionalProperties: false
+      required:
+      - profile_id
+      - pipeline
+      - skills
+      - interests
+      - study_constraints
+      - reviewed_by_user
+    NormalizeRequest:
+      type: object
+      properties:
+        pipeline:
+          type: string
+          enum:
+          - A
+        input_type:
+          type: string
+          enum:
+          - guided_text
+          - form
+          - synthetic_cv_text
+        synthetic_input:
+          type: boolean
+          enum:
+          - true
+        text:
+          type: string
+          nullable: true
+        form:
+          type: object
+          nullable: true
+          additionalProperties: true
+        preferred_field_id:
+          type: string
+          nullable: true
+        psychology:
+          $ref: '#/components/schemas/Psychology'
+        study_constraints:
+          $ref: '#/components/schemas/StudyConstraints'
+      additionalProperties: false
+      required:
+      - pipeline
+      - input_type
+      - synthetic_input
+      - study_constraints
+    NormalizeData:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/NormalizedProfile'
+        extraction_warnings:
+          type: array
+          items:
+            type: string
+        unrecognized_skill_terms:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - profile
+      - extraction_warnings
+      - unrecognized_skill_terms
+    ConfirmRequest:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSkill'
+        reviewed_by_user:
+          type: boolean
+          enum:
+          - true
+      additionalProperties: false
+      required:
+      - profile_id
+      - skills
+      - reviewed_by_user
+    ConfirmData:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/NormalizedProfile'
+        profile_revision:
+          type: integer
+          minimum: 1
+      additionalProperties: false
+      required:
+      - profile
+      - profile_revision
+    RecommendRequest:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        region:
+          type: string
+        ai_scenario:
+          type: string
+          enum:
+          - moderate
+          - fast
+        preferred_field_id:
+          type: string
+          nullable: true
+        top_k:
+          type: integer
+          minimum: 1
+          maximum: 20
+        snapshot_id:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - profile_id
+      - region
+      - ai_scenario
+    SkillGap:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        name:
+          type: string
+        current_level:
+          type: integer
+          minimum: 0
+          maximum: 5
+          nullable: true
+        target_level:
+          type: integer
+          minimum: 0
+          maximum: 5
+        importance:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+      additionalProperties: false
+      required:
+      - skill_id
+      - name
+      - target_level
+      - importance
+    ScoreBreakdown:
+      type: object
+      properties:
+        skill_compatibility:
+          type: number
+          minimum: 0
+          maximum: 100
+        interests_preferences:
+          type: number
+          minimum: 0
+          maximum: 100
+        scenario_outlook:
+          type: number
+          minimum: 0
+          maximum: 100
+        transition_feasibility:
+          type: number
+          minimum: 0
+          maximum: 100
+      additionalProperties: false
+      required:
+      - skill_compatibility
+      - interests_preferences
+      - scenario_outlook
+      - transition_feasibility
+    Recommendation:
+      type: object
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        role_id:
+          type: string
+        role_name:
+          type: string
+        match_score:
+          type: number
+          minimum: 0
+          maximum: 100
+          nullable: true
+        score_breakdown:
+          $ref: '#/components/schemas/ScoreBreakdown'
+        strengths:
+          type: array
+          items:
+            type: string
+        skill_gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillGap'
+        reason:
+          type: string
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        scenario_assumptions:
+          type: array
+          items:
+            type: string
+        uncertainty:
+          type: string
+        sdg_links:
+          type: array
+          items:
+            $ref: '#/components/schemas/SDGLink'
+      additionalProperties: false
+      required:
+      - rank
+      - role_id
+      - role_name
+      - match_score
+      - score_breakdown
+      - strengths
+      - skill_gaps
+      - reason
+      - evidence_ids
+      - scenario_assumptions
+      - uncertainty
+      - sdg_links
+    RecommendData:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        ai_scenario:
+          type: string
+          enum:
+          - moderate
+          - fast
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Recommendation'
+      additionalProperties: false
+      required:
+      - profile_id
+      - ai_scenario
+      - recommendations
+    Resource:
+      type: object
+      properties:
+        resource_id:
+          type: string
+        title:
+          type: string
+        provider:
+          type: string
+        url:
+          type: string
+          format: uri
+        language:
+          type: string
+          enum:
+          - en
+          - ms
+          - zh
+        cost_amount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+        estimated_hours:
+          type: number
+          minimum: 0
+        verified_at:
+          type: string
+          format: date
+      additionalProperties: false
+      required:
+      - resource_id
+      - title
+      - provider
+      - url
+      - language
+      - cost_amount
+      - currency
+      - estimated_hours
+      - verified_at
+    SkillMapRequest:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        role_id:
+          type: string
+        skill_id:
+          type: string
+        language:
+          type: string
+          enum:
+          - en
+          - ms
+          - zh
+        budget_amount:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+      additionalProperties: false
+      required:
+      - profile_id
+      - role_id
+      - skill_id
+      - language
+      - budget_amount
+      - currency
+    MapNode:
+      type: object
+      properties:
+        node_id:
+          type: string
+        node_type:
+          type: string
+          enum:
+          - prerequisite
+          - concept
+          - practice
+          - project
+          - checkpoint
+        title:
+          type: string
+        depends_on:
+          type: array
+          items:
+            type: string
+        estimated_hours:
+          type: number
+          minimum: 0
+        resource_id:
+          type: string
+          nullable: true
+        resource:
+          $ref: '#/components/schemas/Resource'
+      additionalProperties: false
+      required:
+      - node_id
+      - node_type
+      - title
+      - depends_on
+      - estimated_hours
+    SkillMapData:
+      type: object
+      properties:
+        skill_map_id:
+          type: string
+        role_id:
+          type: string
+        skill_id:
+          type: string
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MapNode'
+        next_actions:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - skill_map_id
+      - role_id
+      - skill_id
+      - nodes
+      - next_actions
+    RoadmapRequest:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        role_id:
+          type: string
+        selected_skill_ids:
+          type: array
+          items:
+            type: string
+        study_constraints:
+          $ref: '#/components/schemas/StudyConstraints'
+      additionalProperties: false
+      required:
+      - profile_id
+      - role_id
+      - selected_skill_ids
+      - study_constraints
+    RoadmapStep:
+      type: object
+      properties:
+        step_id:
+          type: string
+        skill_id:
+          type: string
+        title:
+          type: string
+        prerequisite_step_ids:
+          type: array
+          items:
+            type: string
+        estimated_hours:
+          type: number
+          minimum: 0
+        resource:
+          $ref: '#/components/schemas/Resource'
+        checkpoint:
+          type: string
+      additionalProperties: false
+      required:
+      - step_id
+      - skill_id
+      - title
+      - prerequisite_step_ids
+      - estimated_hours
+      - checkpoint
+    RoadmapData:
+      type: object
+      properties:
+        roadmap_id:
+          type: string
+        profile_id:
+          type: string
+        role_id:
+          type: string
+        total_estimated_hours:
+          type: number
+          minimum: 0
+        capacity_hours:
+          type: number
+          minimum: 0
+        feasibility:
+          type: string
+          enum:
+          - feasible
+          - stretch
+          - insufficient_time
+        ordered_steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoadmapStep'
+        warnings:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - roadmap_id
+      - profile_id
+      - role_id
+      - total_estimated_hours
+      - capacity_hours
+      - feasibility
+      - ordered_steps
+      - warnings
+    ProgressRequest:
+      type: object
+      properties:
+        profile_id:
+          type: string
+        skill_id:
+          type: string
+        event_type:
+          type: string
+          enum:
+          - activity_completed
+          - skill_confirmed
+        confirmation_method:
+          type: string
+          nullable: true
+        evidence_note:
+          type: string
+          nullable: true
+      additionalProperties: false
+      required:
+      - profile_id
+      - skill_id
+      - event_type
+    ProgressData:
+      type: object
+      properties:
+        skill_status:
+          type: string
+        bamboo_segments:
+          type: integer
+          minimum: 0
+        new_segment_added:
+          type: boolean
+        confirmed_at:
+          type: string
+          nullable: true
+          format: date-time
+      additionalProperties: false
+      required:
+      - skill_status
+      - bamboo_segments
+      - new_segment_added
+    SkillDistribution:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+      - skill_id
+      - count
+    OrgGroup:
+      type: object
+      properties:
+        cohort_id:
+          type: string
+        kind:
+          type: string
+          enum:
+          - employee_department
+          - student_cohort
+        label:
+          type: string
+        size:
+          type: integer
+          minimum: 1
+        current_role_ids:
+          type: array
+          items:
+            type: string
+        programmes:
+          type: array
+          items:
+            type: string
+        current_courses:
+          type: array
+          items:
+            type: string
+        skill_distribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillDistribution'
+      additionalProperties: false
+      required:
+      - cohort_id
+      - kind
+      - label
+      - size
+      - skill_distribution
+    OrgRequest:
+      type: object
+      properties:
+        region:
+          type: string
+        ai_scenario:
+          type: string
+          enum:
+          - moderate
+          - fast
+        synthetic_input:
+          type: boolean
+          enum:
+          - true
+        organization_name:
+          type: string
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgGroup'
+        optional_goals:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - region
+      - ai_scenario
+      - synthetic_input
+      - organization_name
+      - groups
+    OrgGroupRecommendation:
+      type: object
+      properties:
+        cohort_id:
+          type: string
+        task_impacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskImpact'
+        recommended_role_paths:
+          type: array
+          items:
+            type: string
+        priority_skill_gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillGap'
+        training_path:
+          type: array
+          items:
+            type: string
+        evidence_ids:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - cohort_id
+      - task_impacts
+      - recommended_role_paths
+      - priority_skill_gaps
+      - training_path
+      - evidence_ids
+    OrgData:
+      type: object
+      properties:
+        pipeline:
+          type: string
+          enum:
+          - B1
+          - B2
+        group_recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgGroupRecommendation'
+        student_pathways:
+          type: array
+          items:
+            type: string
+        cohort_skill_gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillGap'
+        proposed_workshops:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              target_gap:
+                type: string
+              evidence_ids:
+                type: array
+                items:
+                  type: string
+            additionalProperties: false
+            required:
+            - title
+            - target_gap
+            - evidence_ids
+        tutoring_focus:
+          type: array
+          items:
+            type: string
+        curriculum_supplements:
+          type: array
+          items:
+            type: object
+            properties:
+              course_name:
+                type: string
+              suggested_module:
+                type: string
+              reason:
+                type: string
+              evidence_ids:
+                type: array
+                items:
+                  type: string
+            additionalProperties: false
+            required:
+            - course_name
+            - suggested_module
+            - reason
+            - evidence_ids
+      additionalProperties: false
+      required:
+      - pipeline
+    RefreshRequest:
+      type: object
+      properties:
+        snapshot_id:
+          type: string
+        activate:
+          type: boolean
+        reason:
+          type: string
+      additionalProperties: false
+      required:
+      - snapshot_id
+      - activate
+      - reason
+    RefreshData:
+      type: object
+      properties:
+        old_snapshot_id:
+          type: string
+          nullable: true
+        new_snapshot_id:
+          type: string
+        changed_role_ids:
+          type: array
+          items:
+            type: string
+        changed_skill_ids:
+          type: array
+          items:
+            type: string
+        recompute_required:
+          type: boolean
+      additionalProperties: false
+      required:
+      - old_snapshot_id
+      - new_snapshot_id
+      - changed_role_ids
+      - changed_skill_ids
+      - recompute_required
+    HealthData:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - ok
+        api_version:
+          type: string
+      additionalProperties: false
+      required:
+      - status
+      - api_version
+    HealthEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/HealthData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    BubblesEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/BubblesData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    RolesEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RolesData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    SkillsEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SkillsData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    RoleEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RoleData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    TasksEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TasksData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    EvidenceEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EvidenceData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    NormalizeEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/NormalizeData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    ConfirmEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ConfirmData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    RecommendEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RecommendData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    SkillMapEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/SkillMapData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    RoadmapEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RoadmapData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    ProgressEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/ProgressData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    OrgEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+    RefreshEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/RefreshData'
+        meta:
+          $ref: '#/components/schemas/ResponseMeta'
+      additionalProperties: false
+      required:
+      - data
+      - meta
+  securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      description: Server-side admin secret. Disable privileged route if unavailable.

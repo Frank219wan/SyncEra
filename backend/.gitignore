@@ -1,0 +1,26 @@
+# Local Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Runtime state and logs
+*.sqlite
+*.sqlite3
+*.db
+*.log
+data/approved/
+data/uploads/
+uploads/
+.DS_Store

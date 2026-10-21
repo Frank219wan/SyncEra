@@ -1,0 +1,70 @@
+{
+  "method": "POST",
+  "path": "/api/v1/recommendations",
+  "status": 200,
+  "request": {
+    "profile_id": "profile_486cb28494d94790",
+    "ai_scenario": "moderate"
+  },
+  "response": {
+    "data": {
+      "profile_id": "profile_486cb28494d94790",
+      "ai_scenario": "moderate",
+      "recommendations": [
+        {
+          "rank": 1,
+          "role_id": "role_data_analyst",
+          "role_name": "Data Analyst",
+          "match_score": 37.47,
+          "score_breakdown": {
+            "skill_compatibility": 37.5,
+            "interests_preferences": 0.0,
+            "scenario_outlook": 78.0,
+            "transition_feasibility": 33.33
+          },
+          "strengths": [
+            "skill_sql"
+          ],
+          "skill_gaps": [
+            {
+              "skill_id": "skill_python",
+              "name": "Python",
+              "current_level": null,
+              "target_level": 3,
+              "importance": "high"
+            },
+            {
+              "skill_id": "skill_validation",
+              "name": "AI Output Validation",
+              "current_level": null,
+              "target_level": 2,
+              "importance": "medium"
+            }
+          ],
+          "reason": "Rule-only demo match using confirmed skills, interests, and scenario-adjusted dated signals.",
+          "evidence_ids": [
+            "ev_demo_001"
+          ],
+          "scenario_assumptions": [
+            "moderate assumption multiplier 1.0; observed signal remains 78.0"
+          ],
+          "uncertainty": "Synthetic fixture; no observed job-demand claim; rule-only demo fit heuristic is not empirically calibrated",
+          "sdg_links": [
+            {
+              "sdg": 8,
+              "rationale": "Data skills can support productive work when applied responsibly."
+            }
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "request_id": "req_c4120ce3f474416397215ec28ff70185",
+      "snapshot_id": "snap_my_20261021_01",
+      "generated_at": "2026-10-21T06:56:25.206654Z",
+      "data_label": "synthetic_demo",
+      "is_mock": true,
+      "model_version": "rules-v0.1"
+    }
+  }
+}

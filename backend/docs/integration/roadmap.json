@@ -1,0 +1,51 @@
+{
+  "method": "POST",
+  "path": "/api/v1/learning/roadmap",
+  "status": 200,
+  "request": {
+    "profile_id": "profile_486cb28494d94790",
+    "role_id": "role_data_analyst",
+    "selected_skill_ids": [
+      "skill_python"
+    ],
+    "study_constraints": {
+      "weekly_hours": 5,
+      "budget_amount": 100,
+      "currency": "MYR",
+      "language": "en",
+      "target_weeks": 12,
+      "learning_pace": "focused"
+    }
+  },
+  "response": {
+    "data": {
+      "roadmap_id": "roadmap_profile_486cb28494d94790_role_data_analyst",
+      "profile_id": "profile_486cb28494d94790",
+      "role_id": "role_data_analyst",
+      "total_estimated_hours": 10.0,
+      "capacity_hours": 60.0,
+      "feasibility": "feasible",
+      "ordered_steps": [
+        {
+          "step_id": "step_1_skill_python",
+          "skill_id": "skill_python",
+          "title": "Practice Python",
+          "prerequisite_step_ids": [],
+          "estimated_hours": 10.0,
+          "checkpoint": "Complete and review a synthetic Python task"
+        }
+      ],
+      "warnings": [
+        "No eligible reviewed resource for skill_python; self-directed synthetic practice only."
+      ]
+    },
+    "meta": {
+      "request_id": "req_43cea794871349e9a1a9c6b01f65bd9c",
+      "snapshot_id": "snap_my_20261021_01",
+      "generated_at": "2026-10-21T06:56:25.213084Z",
+      "data_label": "synthetic_demo",
+      "is_mock": true,
+      "model_version": "rules-v0.1"
+    }
+  }
+}

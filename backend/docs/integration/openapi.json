@@ -1,0 +1,3075 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FutureProof AI Backend",
+    "description": "Synthetic demo fallback. Public market data is served only after reviewed local import.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_HealthData_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/explore/bubbles": {
+      "get": {
+        "summary": "Bubbles",
+        "operationId": "bubbles_api_v1_explore_bubbles_get",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "MY",
+              "title": "Region"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BubblesData_"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/trends/roles": {
+      "get": {
+        "summary": "Trends Roles",
+        "operationId": "trends_roles_api_v1_trends_roles_get",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "MY",
+              "title": "Region"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RolesData_"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/trends/skills": {
+      "get": {
+        "summary": "Trends Skills",
+        "operationId": "trends_skills_api_v1_trends_skills_get",
+        "parameters": [
+          {
+            "name": "region",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "MY",
+              "title": "Region"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field Id"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_SkillsData_"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/roles/{role_id}": {
+      "get": {
+        "summary": "Role Detail",
+        "operationId": "role_detail_api_v1_roles__role_id__get",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Role Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RoleData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/roles/{role_id}/tasks": {
+      "get": {
+        "summary": "Role Tasks",
+        "operationId": "role_tasks_api_v1_roles__role_id__tasks_get",
+        "parameters": [
+          {
+            "name": "role_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Role Id"
+            }
+          },
+          {
+            "name": "snapshot_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Snapshot Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TasksData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/evidence/{evidence_id}": {
+      "get": {
+        "summary": "Evidence",
+        "operationId": "evidence_api_v1_evidence__evidence_id__get",
+        "parameters": [
+          {
+            "name": "evidence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Evidence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_EvidenceData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/normalize": {
+      "post": {
+        "summary": "Normalize",
+        "operationId": "normalize_api_v1_profiles_normalize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NormalizeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NormalizeData_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/upload": {
+      "post": {
+        "summary": "Upload Profile",
+        "operationId": "upload_profile_api_v1_profiles_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_profile_api_v1_profiles_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_NormalizeData_"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "CV exceeds upload limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported file type",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid, unreadable, or non-synthetic input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Extraction adapter invalid output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Extraction adapter timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/confirm": {
+      "post": {
+        "summary": "Confirm",
+        "operationId": "confirm_api_v1_profiles_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConfirmData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/recommendations": {
+      "post": {
+        "summary": "Recommend",
+        "operationId": "recommend_api_v1_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RecommendData_"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/learning/skill-map": {
+      "post": {
+        "summary": "Skill Map",
+        "operationId": "skill_map_api_v1_learning_skill_map_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillMapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_SkillMapData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/learning/roadmap": {
+      "post": {
+        "summary": "Roadmap",
+        "operationId": "roadmap_api_v1_learning_roadmap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoadmapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RoadmapData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/progress/skills": {
+      "post": {
+        "summary": "Progress",
+        "operationId": "progress_api_v1_progress_skills_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "503": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/organizations/{mode}/analyze": {
+      "post": {
+        "summary": "Organization",
+        "operationId": "organization_api_v1_organizations__mode__analyze_post",
+        "parameters": [
+          {
+            "name": "mode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Mode"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "503": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/trends/refresh": {
+      "post": {
+        "summary": "Refresh",
+        "operationId": "refresh_api_v1_admin_trends_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "503": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "APIErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Details"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "details",
+          "retryable"
+        ],
+        "title": "APIErrorBody"
+      },
+      "APIErrorEnvelope": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/APIErrorBody"
+          },
+          "meta": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error",
+          "meta"
+        ],
+        "title": "APIErrorEnvelope"
+      },
+      "Body_upload_profile_api_v1_profiles_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "synthetic_input": {
+            "type": "boolean",
+            "title": "Synthetic Input"
+          },
+          "study_constraints": {
+            "type": "string",
+            "title": "Study Constraints"
+          },
+          "preferred_field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Field Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "synthetic_input",
+          "study_constraints"
+        ],
+        "title": "Body_upload_profile_api_v1_profiles_upload_post"
+      },
+      "BubbleCategory": {
+        "properties": {
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_size": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Display Size"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "field_id",
+          "name",
+          "display_size"
+        ],
+        "title": "BubbleCategory"
+      },
+      "BubbleRole": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "display_size": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Display Size"
+          },
+          "trend_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trend Score"
+          },
+          "signal_label": {
+            "type": "string",
+            "title": "Signal Label"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "field_id",
+          "name",
+          "display_size",
+          "signal_label",
+          "evidence_ids"
+        ],
+        "title": "BubbleRole"
+      },
+      "BubblesData": {
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/BubbleCategory"
+            },
+            "type": "array",
+            "title": "Categories"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/BubbleRole"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "size_basis": {
+            "type": "string",
+            "title": "Size Basis"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "categories",
+          "roles",
+          "size_basis",
+          "region"
+        ],
+        "title": "BubblesData"
+      },
+      "ConfirmData": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/Profile"
+          },
+          "profile_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Profile Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile",
+          "profile_revision"
+        ],
+        "title": "ConfirmData"
+      },
+      "ConfirmRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileSkill"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "reviewed_by_user": {
+            "type": "boolean",
+            "const": true,
+            "title": "Reviewed By User"
+          },
+          "profile_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "skills",
+          "reviewed_by_user"
+        ],
+        "title": "ConfirmRequest"
+      },
+      "Envelope_BubblesData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BubblesData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[BubblesData]"
+      },
+      "Envelope_ConfirmData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConfirmData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[ConfirmData]"
+      },
+      "Envelope_EvidenceData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/EvidenceData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[EvidenceData]"
+      },
+      "Envelope_HealthData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HealthData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[HealthData]"
+      },
+      "Envelope_NormalizeData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/NormalizeData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[NormalizeData]"
+      },
+      "Envelope_RecommendData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RecommendData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RecommendData]"
+      },
+      "Envelope_RoadmapData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RoadmapData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RoadmapData]"
+      },
+      "Envelope_RoleData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RoleData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RoleData]"
+      },
+      "Envelope_RolesData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RolesData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[RolesData]"
+      },
+      "Envelope_SkillMapData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SkillMapData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[SkillMapData]"
+      },
+      "Envelope_SkillsData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SkillsData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[SkillsData]"
+      },
+      "Envelope_TasksData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TasksData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[TasksData]"
+      },
+      "Evidence": {
+        "properties": {
+          "evidence_id": {
+            "type": "string",
+            "title": "Evidence Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "job_posting",
+              "dataset",
+              "research",
+              "ai_capability"
+            ],
+            "title": "Source Type"
+          },
+          "published_or_collected_at": {
+            "type": "string",
+            "title": "Published Or Collected At"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Retrieved At"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region",
+            "default": "MY"
+          },
+          "limitations": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence_id",
+          "title",
+          "source_url",
+          "source_type",
+          "published_or_collected_at",
+          "retrieved_at"
+        ],
+        "title": "Evidence"
+      },
+      "EvidenceData": {
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evidence"
+        ],
+        "title": "EvidenceData"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthData": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "api_version": {
+            "type": "string",
+            "title": "Api Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "api_version"
+        ],
+        "title": "HealthData"
+      },
+      "MapNode": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "node_type": {
+            "type": "string",
+            "enum": [
+              "prerequisite",
+              "concept",
+              "practice",
+              "project",
+              "checkpoint"
+            ],
+            "title": "Node Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "depends_on": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Depends On"
+          },
+          "estimated_hours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Estimated Hours"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Resource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "node_id",
+          "node_type",
+          "title",
+          "depends_on",
+          "estimated_hours"
+        ],
+        "title": "MapNode"
+      },
+      "Meta": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "data_label": {
+            "type": "string",
+            "enum": [
+              "public_open",
+              "synthetic_demo",
+              "mixed_demo"
+            ],
+            "title": "Data Label"
+          },
+          "is_mock": {
+            "type": "boolean",
+            "title": "Is Mock"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version",
+            "default": "rules-v0.1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "generated_at",
+          "data_label",
+          "is_mock"
+        ],
+        "title": "Meta"
+      },
+      "NormalizeData": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/Profile"
+          },
+          "extraction_warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Extraction Warnings"
+          },
+          "unrecognized_skill_terms": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unrecognized Skill Terms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile",
+          "extraction_warnings",
+          "unrecognized_skill_terms"
+        ],
+        "title": "NormalizeData"
+      },
+      "NormalizeRequest": {
+        "properties": {
+          "pipeline": {
+            "type": "string",
+            "const": "A",
+            "title": "Pipeline"
+          },
+          "input_type": {
+            "type": "string",
+            "enum": [
+              "guided_text",
+              "form",
+              "synthetic_cv_text"
+            ],
+            "title": "Input Type"
+          },
+          "synthetic_input": {
+            "type": "boolean",
+            "const": true,
+            "title": "Synthetic Input"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "form": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Form"
+          },
+          "preferred_field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Field Id"
+          },
+          "psychology": {
+            "$ref": "#/components/schemas/Psychology",
+            "default": {
+              "intrinsic_motivators": []
+            }
+          },
+          "study_constraints": {
+            "$ref": "#/components/schemas/StudyConstraints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pipeline",
+          "input_type",
+          "synthetic_input",
+          "study_constraints"
+        ],
+        "title": "NormalizeRequest"
+      },
+      "Profile": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "pipeline": {
+            "type": "string",
+            "const": "A",
+            "title": "Pipeline",
+            "default": "A"
+          },
+          "current_occupation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Occupation"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/ProfileSkill"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "preferred_field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Field Id"
+          },
+          "study_constraints": {
+            "$ref": "#/components/schemas/StudyConstraints"
+          },
+          "psychology": {
+            "$ref": "#/components/schemas/Psychology",
+            "default": {
+              "intrinsic_motivators": []
+            }
+          },
+          "reviewed_by_user": {
+            "type": "boolean",
+            "title": "Reviewed By User",
+            "default": false
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision",
+            "default": 1
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "skills",
+          "interests",
+          "study_constraints"
+        ],
+        "title": "Profile"
+      },
+      "ProfileSkill": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "declared",
+              "inferred",
+              "confirmed"
+            ],
+            "title": "Source"
+          },
+          "confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "source",
+          "confidence"
+        ],
+        "title": "ProfileSkill"
+      },
+      "Psychology": {
+        "properties": {
+          "mbti": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mbti"
+          },
+          "character_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Character Notes"
+          },
+          "adaptability_self_report": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adaptability Self Report"
+          },
+          "intrinsic_motivators": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Intrinsic Motivators",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Psychology"
+      },
+      "RecommendData": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "ai_scenario": {
+            "type": "string",
+            "enum": [
+              "moderate",
+              "fast"
+            ],
+            "title": "Ai Scenario"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "ai_scenario",
+          "recommendations"
+        ],
+        "title": "RecommendData"
+      },
+      "RecommendRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "region": {
+            "type": "string",
+            "title": "Region",
+            "default": "MY"
+          },
+          "ai_scenario": {
+            "type": "string",
+            "enum": [
+              "moderate",
+              "fast"
+            ],
+            "title": "Ai Scenario"
+          },
+          "preferred_field_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Field Id"
+          },
+          "top_k": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 5
+          },
+          "snapshot_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "ai_scenario"
+        ],
+        "title": "RecommendRequest"
+      },
+      "Recommendation": {
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Rank"
+          },
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "role_name": {
+            "type": "string",
+            "title": "Role Name"
+          },
+          "match_score": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Match Score"
+          },
+          "score_breakdown": {
+            "$ref": "#/components/schemas/ScoreBreakdown"
+          },
+          "strengths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strengths"
+          },
+          "skill_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGap"
+            },
+            "type": "array",
+            "title": "Skill Gaps"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "scenario_assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Scenario Assumptions"
+          },
+          "uncertainty": {
+            "type": "string",
+            "title": "Uncertainty"
+          },
+          "sdg_links": {
+            "items": {
+              "$ref": "#/components/schemas/SDGLink"
+            },
+            "type": "array",
+            "title": "Sdg Links"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rank",
+          "role_id",
+          "role_name",
+          "match_score",
+          "score_breakdown",
+          "strengths",
+          "skill_gaps",
+          "reason",
+          "evidence_ids",
+          "scenario_assumptions",
+          "uncertainty",
+          "sdg_links"
+        ],
+        "title": "Recommendation"
+      },
+      "RequiredSkill": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "target_level": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Target Level"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Importance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name",
+          "target_level",
+          "importance"
+        ],
+        "title": "RequiredSkill"
+      },
+      "Resource": {
+        "properties": {
+          "resource_id": {
+            "type": "string",
+            "title": "Resource Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "cost_amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Cost Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "estimated_hours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Estimated Hours"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Verified At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "resource_id",
+          "title",
+          "provider",
+          "url",
+          "language",
+          "cost_amount",
+          "currency",
+          "estimated_hours",
+          "verified_at"
+        ],
+        "title": "Resource"
+      },
+      "RoadmapData": {
+        "properties": {
+          "roadmap_id": {
+            "type": "string",
+            "title": "Roadmap Id"
+          },
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "total_estimated_hours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Total Estimated Hours"
+          },
+          "capacity_hours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Capacity Hours"
+          },
+          "feasibility": {
+            "type": "string",
+            "enum": [
+              "feasible",
+              "stretch",
+              "insufficient_time"
+            ],
+            "title": "Feasibility"
+          },
+          "ordered_steps": {
+            "items": {
+              "$ref": "#/components/schemas/RoadmapStep"
+            },
+            "type": "array",
+            "title": "Ordered Steps"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "roadmap_id",
+          "profile_id",
+          "role_id",
+          "total_estimated_hours",
+          "capacity_hours",
+          "feasibility",
+          "ordered_steps",
+          "warnings"
+        ],
+        "title": "RoadmapData"
+      },
+      "RoadmapRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "selected_skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Selected Skill Ids"
+          },
+          "study_constraints": {
+            "$ref": "#/components/schemas/StudyConstraints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "role_id",
+          "selected_skill_ids",
+          "study_constraints"
+        ],
+        "title": "RoadmapRequest"
+      },
+      "RoadmapStep": {
+        "properties": {
+          "step_id": {
+            "type": "string",
+            "title": "Step Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "prerequisite_step_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Prerequisite Step Ids"
+          },
+          "estimated_hours": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Estimated Hours"
+          },
+          "resource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Resource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checkpoint": {
+            "type": "string",
+            "title": "Checkpoint"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "step_id",
+          "skill_id",
+          "title",
+          "prerequisite_step_ids",
+          "estimated_hours",
+          "checkpoint"
+        ],
+        "title": "RoadmapStep"
+      },
+      "RoleData": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "required_skills": {
+            "items": {
+              "$ref": "#/components/schemas/RequiredSkill"
+            },
+            "type": "array",
+            "title": "Required Skills"
+          },
+          "sdg_links": {
+            "items": {
+              "$ref": "#/components/schemas/SDGLink"
+            },
+            "type": "array",
+            "title": "Sdg Links"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "name",
+          "field_id",
+          "summary",
+          "required_skills",
+          "sdg_links",
+          "evidence_ids"
+        ],
+        "title": "RoleData"
+      },
+      "RoleSignal": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "field_id": {
+            "type": "string",
+            "title": "Field Id"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Rank"
+          },
+          "trend_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trend Score"
+          },
+          "signal_label": {
+            "type": "string",
+            "title": "Signal Label"
+          },
+          "observed_metrics": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Observed Metrics"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "source_window": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Source Window"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "name",
+          "field_id",
+          "rank",
+          "signal_label",
+          "observed_metrics",
+          "evidence_ids",
+          "source_window"
+        ],
+        "title": "RoleSignal"
+      },
+      "RolesData": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RoleSignal"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "RolesData"
+      },
+      "SDGLink": {
+        "properties": {
+          "sdg": {
+            "type": "integer",
+            "maximum": 17.0,
+            "minimum": 1.0,
+            "title": "Sdg"
+          },
+          "rationale": {
+            "type": "string",
+            "title": "Rationale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sdg",
+          "rationale"
+        ],
+        "title": "SDGLink"
+      },
+      "ScoreBreakdown": {
+        "properties": {
+          "skill_compatibility": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Skill Compatibility"
+          },
+          "interests_preferences": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Interests Preferences"
+          },
+          "scenario_outlook": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Scenario Outlook"
+          },
+          "transition_feasibility": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Transition Feasibility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_compatibility",
+          "interests_preferences",
+          "scenario_outlook",
+          "transition_feasibility"
+        ],
+        "title": "ScoreBreakdown"
+      },
+      "SkillGap": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "current_level": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 5.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Level"
+          },
+          "target_level": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Target Level"
+          },
+          "importance": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Importance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name",
+          "target_level",
+          "importance"
+        ],
+        "title": "SkillGap"
+      },
+      "SkillMapData": {
+        "properties": {
+          "skill_map_id": {
+            "type": "string",
+            "title": "Skill Map Id"
+          },
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/MapNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "next_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Next Actions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_map_id",
+          "role_id",
+          "skill_id",
+          "nodes",
+          "next_actions"
+        ],
+        "title": "SkillMapData"
+      },
+      "SkillMapRequest": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "budget_amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Budget Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "profile_id",
+          "role_id",
+          "skill_id",
+          "language",
+          "budget_amount",
+          "currency"
+        ],
+        "title": "SkillMapRequest"
+      },
+      "SkillSignal": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "rank": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Rank"
+          },
+          "trend_score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trend Score"
+          },
+          "signal_label": {
+            "type": "string",
+            "title": "Signal Label"
+          },
+          "observed_metrics": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Observed Metrics"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "source_window": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Source Window"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "name",
+          "rank",
+          "signal_label",
+          "observed_metrics",
+          "evidence_ids",
+          "source_window"
+        ],
+        "title": "SkillSignal"
+      },
+      "SkillsData": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SkillSignal"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "SkillsData"
+      },
+      "StudyConstraints": {
+        "properties": {
+          "weekly_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Weekly Hours"
+          },
+          "budget_amount": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Budget Amount"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "target_weeks": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Target Weeks"
+          },
+          "learning_pace": {
+            "type": "string",
+            "enum": [
+              "focused",
+              "deep"
+            ],
+            "title": "Learning Pace"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "weekly_hours",
+          "budget_amount",
+          "currency",
+          "language",
+          "target_weeks",
+          "learning_pace"
+        ],
+        "title": "StudyConstraints"
+      },
+      "TaskImpact": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "impact_type": {
+            "type": "string",
+            "enum": [
+              "automation_candidate",
+              "ai_augmented",
+              "human_led_oversight"
+            ],
+            "title": "Impact Type"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "uncertainty": {
+            "type": "string",
+            "title": "Uncertainty"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task_id",
+          "title",
+          "impact_type",
+          "reason",
+          "evidence_ids",
+          "uncertainty"
+        ],
+        "title": "TaskImpact"
+      },
+      "TasksData": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskImpact"
+            },
+            "type": "array",
+            "title": "Tasks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "tasks"
+        ],
+        "title": "TasksData"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

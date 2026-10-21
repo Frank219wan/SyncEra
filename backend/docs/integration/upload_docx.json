@@ -1,0 +1,67 @@
+{
+  "method": "POST",
+  "path": "/api/v1/profiles/upload",
+  "status": 200,
+  "request": {
+    "synthetic_input": "true",
+    "study_constraints": "{\"weekly_hours\": 5, \"budget_amount\": 100, \"currency\": \"MYR\", \"language\": \"en\", \"target_weeks\": 12, \"learning_pace\": \"focused\"}",
+    "preferred_field_id": "field_data",
+    "file": {
+      "name": "synthetic_engineer.docx",
+      "size_bytes": 36607
+    }
+  },
+  "response": {
+    "data": {
+      "profile": {
+        "profile_id": "profile_26f2ade5e8224c33",
+        "pipeline": "A",
+        "current_occupation": null,
+        "skills": [
+          {
+            "skill_id": "skill_python",
+            "level": null,
+            "source": "inferred",
+            "confidence": 0.6
+          },
+          {
+            "skill_id": "skill_communication",
+            "level": null,
+            "source": "inferred",
+            "confidence": 0.6
+          }
+        ],
+        "interests": [],
+        "preferred_field_id": "field_data",
+        "study_constraints": {
+          "weekly_hours": 5.0,
+          "budget_amount": 100.0,
+          "currency": "MYR",
+          "language": "en",
+          "target_weeks": 12,
+          "learning_pace": "focused"
+        },
+        "psychology": {
+          "mbti": null,
+          "character_notes": null,
+          "adaptability_self_report": null,
+          "intrinsic_motivators": []
+        },
+        "reviewed_by_user": false,
+        "revision": 1
+      },
+      "extraction_warnings": [
+        "Rule-only extraction; review every skill and level."
+      ],
+      "unrecognized_skill_terms": []
+    },
+    "meta": {
+      "request_id": "req_adc95750dc6e4bd4ae0a885f70ed36ca",
+      "snapshot_id": null,
+      "generated_at": "2026-10-21T06:56:25.198669Z",
+      "data_label": "synthetic_demo",
+      "is_mock": true,
+      "model_version": "rules-v0.1"
+    }
+  }
+}
