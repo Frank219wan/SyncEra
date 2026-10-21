@@ -1,0 +1,59 @@
+{
+  "method": "POST",
+  "path": "/api/v1/learning/skill-map",
+  "status": 200,
+  "request": {
+    "profile_id": "profile_486cb28494d94790",
+    "role_id": "role_data_analyst",
+    "skill_id": "skill_python",
+    "language": "en",
+    "budget_amount": 100,
+    "currency": "MYR"
+  },
+  "response": {
+    "data": {
+      "skill_map_id": "map_profile_486cb28494d94790_role_data_analyst_skill_python",
+      "role_id": "role_data_analyst",
+      "skill_id": "skill_python",
+      "nodes": [
+        {
+          "node_id": "node_skill_python_concept",
+          "node_type": "concept",
+          "title": "Review Python fundamentals",
+          "depends_on": [],
+          "estimated_hours": 3.0
+        },
+        {
+          "node_id": "node_skill_python_practice",
+          "node_type": "practice",
+          "title": "Practice Python on a synthetic task",
+          "depends_on": [
+            "node_skill_python_concept"
+          ],
+          "estimated_hours": 5.0
+        },
+        {
+          "node_id": "node_skill_python_checkpoint",
+          "node_type": "checkpoint",
+          "title": "Check a Python practice result",
+          "depends_on": [
+            "node_skill_python_practice"
+          ],
+          "estimated_hours": 2.0
+        }
+      ],
+      "next_actions": [
+        "Review Python fundamentals",
+        "Practice Python on a synthetic task"
+      ]
+    },
+    "meta": {
+      "request_id": "req_86286629f69d4e179bebae881edb4d6c",
+      "snapshot_id": "snap_my_20261021_01",
+      "generated_at": "2026-10-21T06:56:25.211722Z",
+      "data_label": "synthetic_demo",
+      "is_mock": true,
+      "model_version": "rules-v0.1"
+    }
+  }
+}

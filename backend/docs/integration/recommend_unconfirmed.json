@@ -1,0 +1,25 @@
+{
+  "method": "POST",
+  "path": "/api/v1/recommendations",
+  "status": 422,
+  "request": {
+    "profile_id": "profile_486cb28494d94790",
+    "ai_scenario": "moderate"
+  },
+  "response": {
+    "error": {
+      "code": "PROFILE_NOT_CONFIRMED",
+      "message": "Profile must be confirmed before this request",
+      "details": [
+        {
+          "field": "profile_id",
+          "reason": "not_confirmed"
+        }
+      ],
+      "retryable": false
+    },
+    "meta": {
+      "request_id": "req_16cc12e57a5a48da90d71fd657d541fa"
+    }
+  }
+}
