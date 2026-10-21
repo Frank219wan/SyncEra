@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyProfile } from '../src/data.ts';
 import {
-  fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
-  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
+  fromContractLevel, fromContractRoleId, fromContractSkillId, mapEvidence, mapRecommendations, mapRoadmap, mapTrendRoles,
+  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest, selectedRoleToFieldId,
   targetWeeks, toContractLevel, toContractRoleId, toContractSkillId,
 } from '../src/services/api-contract.ts';
 
@@ -12,6 +12,9 @@ test('contract IDs round-trip without leaking display names into keys', () => {
   assert.equal(fromContractRoleId('role_data_analyst'), 'data-analyst');
   assert.equal(toContractSkillId('python'), 'skill_python');
   assert.equal(fromContractSkillId('skill_python'), 'python');
+  assert.equal(selectedRoleToFieldId('data-analyst'), 'field_data');
+  assert.equal(selectedRoleToFieldId('business-analyst'), 'field_business');
+  assert.equal(selectedRoleToFieldId('learning-designer'), undefined);
 });
 
 test('skill levels preserve unknown as null', () => {
@@ -58,17 +61,23 @@ test('profile requests do not invent backend IDs for frontend-only demo skills',
 });
 
 test('normalized service profile maps back to editable UI fields', () => {
+  const fallback = {
+    ...emptyProfile,
+    skills: [{ id: 'analytics', level: 'intermediate', source: 'manual' as const, confirmed: true }],
+  };
   const mapped = mergeNormalizedProfile({
     profile_id: 'profile_demo_001', pipeline: 'A', current_occupation: 'Junior analyst',
     skills: [{ skill_id: 'skill_python', level: null, source: 'inferred', confidence: 0.6 }],
     interests: ['analytics', 'sustainability'], reviewed_by_user: false,
     revision: 2,
-  }, emptyProfile);
+  }, fallback);
   assert.equal(mapped.id, 'profile_demo_001');
   assert.equal(mapped.skills[0].id, 'python');
   assert.equal(mapped.skills[0].level, 'unknown');
   assert.equal(mapped.skills[0].confirmed, false);
   assert.equal(mapped.revision, 2);
+  assert.equal(mapped.skills[1].id, 'analytics');
+  assert.equal(mapped.skills[1].level, 'intermediate');
 });
 
 test('role trend signals use role_id from the backend contract', () => {
@@ -94,4 +103,36 @@ test('roadmap response becomes a capacity-based local plan', () => {
   assert.equal(plan.tasks[0].skill, 'python');
   assert.equal(plan.tasks[0].title[0], 'Foundations');
   assert.equal(plan.tasks[1].week, 1);
+  assert.equal(plan.totalEstimatedHours, 8);
+  assert.equal(plan.capacityHours, 20);
+  assert.equal(plan.feasibility, 'feasible');
+});
+
+test('recommendations and evidence preserve provenance and explanations', () => {
+  const [recommendation] = mapRecommendations([{
+    rank: 1,
+    role_id: 'role_data_analyst',
+    role_name: 'Data Analyst',
+    match_score: 72.5,
+    score_breakdown: { skill_compatibility: 80, interests_preferences: 70, scenario_outlook: 60, transition_feasibility: 70 },
+    strengths: ['skill_sql'],
+    skill_gaps: [{ skill_id: 'skill_python', name: 'Python', current_level: null, target_level: 3, importance: 'high' }],
+    reason: 'Confirmed skills and dated evidence support this result.',
+    evidence_ids: ['ev_public_1'],
+    scenario_assumptions: ['moderate scenario'],
+    uncertainty: 'Not outcome-calibrated.',
+    sdg_links: [{ sdg: 8, rationale: 'Supports productive work.' }],
+  }]);
+  assert.equal(recommendation.reason, 'Confirmed skills and dated evidence support this result.');
+  assert.deepEqual(recommendation.evidenceIds, ['ev_public_1']);
+  assert.equal(recommendation.scoreBreakdown?.skillCompatibility, 80);
+  assert.equal(recommendation.skillGaps?.[0].targetLevel, 3);
+
+  const evidence = mapEvidence({
+    evidence_id: 'ev_public_1', title: 'Public evidence', source_url: 'https://example.org/evidence',
+    source_type: 'dataset', published_or_collected_at: '2026-08-18', retrieved_at: '2026-10-21T00:00:00Z',
+    region: 'MY', limitations: 'Sample limitation.',
+  });
+  assert.equal(evidence.url, 'https://example.org/evidence');
+  assert.equal(evidence.publishedOrCollectedAt, '2026-08-18');
 });

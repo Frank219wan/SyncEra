@@ -376,7 +376,7 @@ $env:AI_ADAPTER_MODULE = "futureproof_ai.futureproof_adapter"
 ### Backend 可运行回归
 
 ```text
-36 passed, 0 failed
+37 passed, 0 failed
 ```
 
 最新 GitHub Backend 分支已经在 `backend/contracts/` 补齐 API Contract v1.0。为保证 Windows 与 Linux 均可读取其中的 UTF-8 字符，测试改为显式 `encoding='utf-8'`；包括原始 OpenAPI shape test、Adapter 契约和 request-level field 覆盖在内的完整套件现已全部通过。

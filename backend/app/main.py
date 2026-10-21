@@ -167,7 +167,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
             except Exception: raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching model failed')
         else:
             raw=svc.demo_recommendations(scoring_profile,snap,payload.ai_scenario,selected_field,payload.top_k)
-        recommendations=svc.validate_recommendations(raw,snap,payload.ai_scenario)
+        recommendations=svc.validate_recommendations(raw,snap,payload.ai_scenario,scoring_profile)
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]

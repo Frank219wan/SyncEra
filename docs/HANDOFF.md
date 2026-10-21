@@ -2,6 +2,12 @@
 
 更新时间：2026-10-21。用户最高需求依据：https://chatgpt.com/share/6ad79b9f-cc3c-83ec-8c8f-c23cfbff1670。
 
+## 2026-10-21 Tech 集成更新
+
+Individual 的 `real` 模式现已完成 A 主链契约映射：表单画像规范化 → 用户确认 → 趋势 Snapshot → Moderate/Fast 推荐 → Evidence 查询 → Skill Mind Map → Roadmap。UI 直接展示后端的分数拆解、匹配理由、优势与差距、Evidence ID／URL／日期／限制、情景假设与不确定性；路线图时长、容量、可行性、警告和进度分母均来自服务响应。后端拒绝与已确认画像、角色目录、Snapshot、情景公式或排序不一致的 Adapter 输出。
+
+`.github/workflows/backend-ci.yml` 现由 Backend、Frontend、Individual live contract 三个作业组成；根目录 `.replit` 通过 `scripts/run-replit.sh` 同时启动真实 Tech Adapter、FastAPI 和 Vite。候选 Snapshot／课程仍未取得 Team Lead reviewer-owned approval，不会自动激活；Organization 与进度写回仍属于 P1／演示范围。修复与外部评审项的对应关系见 `docs/REVIEW_RESOLUTION.md`。
+
 ## 已完成界面
 
 入口 /；个人 /individual、/radar、/intake、/intake/profile、/intake/review、/analyzing、/recommendations、/roles/:roleId、/skills/:skillId/mind-map、/roadmap/draft、/roadmap/:planId（后 10 个路径带 /individual 前缀）。
@@ -33,7 +39,7 @@ src/services/api.ts 已定义请求适配器；默认 demo 不产生网络分析
 |POST /organizations/hr/analyze|HR／L&D 合成群体分析|
 |POST /organizations/career_centre/analyze|院校合成群体分析|
 
-适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐、Roadmap、进度和机构路径实现。还需后端认证、授权、持久化、完整 schema 验证、错误本地化、幂等键、文件解析、真实趋势来源和 snapshot 历史、确定性匹配算法及版本并发控制。真实 mode 下 Radar、Role 与 MindMap 的部分说明仍保留静态展示文案，必须在端到端集成测试后才可视为生产接入。API 失败不得静默回退为演示数据。
+适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐、Roadmap、进度和机构路径实现。Individual real mode 的 Radar、Recommendation、Evidence、MindMap 和 Roadmap 已绑定服务数据并有跨栈联调测试。仍需认证、授权、生产持久化、错误本地化、幂等键、真实 Snapshot 历史、Team Lead 数据批准，以及 Organization／进度写回的 P1 服务。API 失败不得静默回退为演示数据。
 
 当前费用、工时和可行性均为标明的示例。学习时间、预算、语言、日期、已有基础可编辑并保存；真实课程价格和排期约束需要后端求解。用户任务确认是自我报告，不是认证或能力判定。
 

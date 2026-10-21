@@ -29,7 +29,7 @@ cd backend
 .venv/bin/python -m pytest tests -q
 ```
 
-Latest Backend + Tech result: **36 passed, 0 failed, 0 skipped** (including 5 Tech integration tests). If the sandbox reports `PermissionError: EEXIST ... mkdir .../T/pytest-of-unknown`, re-run with a fresh basetemp: `.venv/bin/python -m pytest tests -q --basetemp="$(mktemp -d)/fp_pytest"` — this is an environment artifact, not a test failure.
+Latest Backend + Tech result: **37 passed, 0 failed, 0 skipped** (including semantic rejection of plausible-looking but false adapter explanations). If the sandbox reports `PermissionError: EEXIST ... mkdir .../T/pytest-of-unknown`, re-run with a fresh basetemp: `.venv/bin/python -m pytest tests -q --basetemp="$(mktemp -d)/fp_pytest"` — this is an environment artifact, not a test failure.
 
 Tests cover all 16 route registrations, the synthetic vertical slice, actual PDF/DOCX multipart upload, original OpenAPI P0 response schemas, reviewed local import validation, source/resource approvals, snapshot/score consistency and AI adapter failure/loading. They make no paid model calls. Test-only URLs and approvals remain in temporary test storage; they are not production data.
 
@@ -50,4 +50,4 @@ P1 progress, organization and refresh routes are registered but disabled with HT
 
 ## Replit
 
-The SyncEra root `.replit` installs dependencies and runs Uvicorn from `backend/` on `0.0.0.0` and `${PORT:-8000}`. This backend was integrated on `feature/backend-integration` after the branch was updated to the latest frontend-bearing `main`. The existing frontend files and its root `.gitignore` were preserved. See [docs/integration/GITHUB_SYNC_INTEGRATION.md](docs/integration/GITHUB_SYNC_INTEGRATION.md) for the checkout and review status. No Replit deployment was performed. If the team later imports the repository as a Replit project, set `FRONTEND_ORIGINS`, add reviewed data files if approved, then verify `/api/v1/health` and `/docs` on the assigned URL. SQLite on ephemeral Replit storage is suitable only for a demo unless a persistent volume is configured.
+The SyncEra root `.replit` runs `scripts/run-replit.sh`, which installs the locked frontend and backend dependencies, starts Uvicorn with `futureproof_ai.futureproof_adapter` on loopback port 8000, and exposes Vite on `${PORT:-3000}` in `real` API mode. Vite proxies `/api` to the backend. No Replit deployment was performed. If the team imports the repository as a Replit project, add reviewed data only after approval, then verify the public UI and the proxied `/api/v1/health`. SQLite on ephemeral Replit storage is suitable only for a demo unless a persistent volume is configured.

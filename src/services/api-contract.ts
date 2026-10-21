@@ -1,4 +1,4 @@
-import type { Constraints, Plan, Profile, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
+import type { Constraints, EvidenceRecord, Plan, Profile, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
 
 export interface ApiMeta {
   request_id?: string;
@@ -59,6 +59,17 @@ export interface ApiRecommendation {
   sdg_links?: Array<{ sdg: number; rationale: string }>;
 }
 
+export interface ApiEvidence {
+  evidence_id: string;
+  title: string;
+  source_url: string | null;
+  source_type: string;
+  published_or_collected_at: string;
+  retrieved_at: string;
+  region: string | null;
+  limitations: string | null;
+}
+
 export interface ApiRoadmapStep {
   step_id: string;
   skill_id: string;
@@ -86,6 +97,7 @@ export const toContractSkillId = (id: string) => id.startsWith('skill_') ? id : 
 export const fromContractSkillId = (id: string) => id.replace(/^skill_/, '');
 export const toContractRoleId = (id: string) => id.startsWith('role_') ? id : `role_${id.replace(/-/g, '_')}`;
 export const fromContractRoleId = (id: string) => id.replace(/^role_/, '').replace(/_/g, '-');
+export const selectedRoleToFieldId = (id: string) => id === 'data-analyst' ? 'field_data' : id === 'business-analyst' ? 'field_business' : undefined;
 export const toContractLevel = (level: string) => levelToNumber[level] ?? null;
 export function fromContractLevel(level: number | null) {
   if (level === null || level === 0) return 'unknown';
@@ -154,6 +166,16 @@ export function profileToConfirmRequest(profile: Profile) {
 }
 
 export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: Profile): Profile {
+  const normalizedSkills = profile.skills.map(skill => ({
+    id: fromContractSkillId(skill.skill_id),
+    level: fromContractLevel(skill.level),
+    source: skill.source === 'declared' ? 'manual' as const : 'inferred' as const,
+    confirmed: profile.reviewed_by_user,
+  }));
+  const normalizedIds = new Set(normalizedSkills.map(skill => skill.id));
+  const localSkills = fallback.skills.filter(skill =>
+    !contractSkillIds.has(fromContractSkillId(skill.id)) && !normalizedIds.has(fromContractSkillId(skill.id))
+  );
   return {
     ...fallback,
     id: profile.profile_id,
@@ -161,12 +183,7 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     interests: profile.interests?.join(', ') || fallback.interests,
     mbti: profile.psychology?.mbti ?? fallback.mbti,
     revision: profile.revision,
-    skills: profile.skills.map(skill => ({
-      id: fromContractSkillId(skill.skill_id),
-      level: fromContractLevel(skill.level),
-      source: skill.source === 'declared' ? 'manual' : 'inferred',
-      confirmed: profile.reviewed_by_user,
-    })),
+    skills: [...normalizedSkills, ...localSkills],
   };
 }
 
@@ -176,6 +193,12 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
     rank: item.rank,
     matchScore: item.match_score,
     origin: 'computed',
+    scoreBreakdown: item.score_breakdown ? {
+      skillCompatibility: item.score_breakdown.skill_compatibility ?? null,
+      interestsPreferences: item.score_breakdown.interests_preferences ?? null,
+      scenarioOutlook: item.score_breakdown.scenario_outlook ?? null,
+      transitionFeasibility: item.score_breakdown.transition_feasibility ?? null,
+    } : undefined,
     strengths: item.strengths?.map(fromContractSkillId),
     skillGaps: item.skill_gaps?.map(gap => ({
       skillId: fromContractSkillId(gap.skill_id),
@@ -184,7 +207,25 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
       targetLevel: gap.target_level,
       importance: gap.importance,
     })),
+    reason: item.reason,
+    evidenceIds: item.evidence_ids,
+    scenarioAssumptions: item.scenario_assumptions,
+    uncertainty: item.uncertainty,
+    sdgLinks: item.sdg_links,
   }));
+}
+
+export function mapEvidence(item: ApiEvidence): EvidenceRecord {
+  return {
+    id: item.evidence_id,
+    title: item.title,
+    url: item.source_url,
+    sourceType: item.source_type,
+    publishedOrCollectedAt: item.published_or_collected_at,
+    retrievedAt: item.retrieved_at,
+    region: item.region,
+    limitations: item.limitations,
+  };
 }
 
 export function mapTrendRoles(items: ApiRoleSignal[], knownRoles: Role[]): Role[] {
@@ -232,5 +273,9 @@ export function mapRoadmap(data: ApiRoadmap, roleId: string, constraints: Constr
     revisionPending: false,
     offset: 0,
     history: [],
+    totalEstimatedHours: data.total_estimated_hours,
+    capacityHours: data.capacity_hours,
+    feasibility: data.feasibility,
+    warnings: data.warnings,
   };
 }

@@ -2,10 +2,10 @@ import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import {
-  mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
-  profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
+  mapEvidence, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
+  profileToConfirmRequest, profileToNormalizeRequest, selectedRoleToFieldId, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal,
+  type ApiEvidence, type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -115,8 +115,9 @@ export const api = {
     };
   },
 
-  recommend: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<Recommendation[]> => {
+  recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> => {
     if (isDemo) return demoRecommendations(profile, scenario);
+    const preferredFieldId = selectedRoleToFieldId(selectedRole);
     const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[] }>('/recommendations', {
       body: {
         profile_id: profile.id,
@@ -124,16 +125,27 @@ export const api = {
         ai_scenario: scenario,
         top_k: 5,
         snapshot_id: snapshotId,
+        ...(preferredFieldId ? { preferred_field_id: preferredFieldId } : {}),
       },
     });
     if (!Array.isArray(response.data.recommendations)) throw new ApiError(502, 'INVALID_RESPONSE', 'Missing recommendations in service response.');
-    return mapRecommendations(response.data.recommendations);
+    const recommendations = mapRecommendations(response.data.recommendations);
+    const evidenceIds = [...new Set(recommendations.flatMap(item => item.evidenceIds ?? []))];
+    const evidenceEntries = await Promise.all(evidenceIds.map(async evidenceId => {
+      const evidenceResponse = await request<{ evidence: ApiEvidence }>(`/evidence/${encodeURIComponent(evidenceId)}`);
+      return mapEvidence(evidenceResponse.data.evidence);
+    }));
+    const evidenceById = new Map(evidenceEntries.map(item => [item.id, item]));
+    return recommendations.map(item => ({
+      ...item,
+      evidence: (item.evidenceIds ?? []).map(id => evidenceById.get(id)).filter(item => item !== undefined),
+    }));
   },
 
   skillMap: async (profileId: string, roleId: string, skillId: string, language: string, budgetAmount: number) => {
     return request<{
       skill_map_id: string; role_id: string; skill_id: string;
-      nodes: Array<{ node_id: string; node_type: string; title: string; depends_on: string[]; estimated_hours: number; resource_id: string | null; resource?: { url: string; provider: string; language: string; cost_amount: number | null; verified_at: string } | null }>;
+      nodes: Array<{ node_id: string; node_type: string; title: string; depends_on: string[]; estimated_hours: number; resource_id: string | null; resource?: { resource_id: string; title: string; url: string; provider: string; language: string; cost_amount: number; currency: string; estimated_hours: number; verified_at: string } | null }>;
       next_actions: string[];
     }>('/learning/skill-map', { body: { profile_id: profileId, role_id: toContractRoleId(roleId), skill_id: toContractSkillId(skillId), language, budget_amount: budgetAmount, currency: 'MYR' } });
   },

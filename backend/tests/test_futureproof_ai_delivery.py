@@ -267,3 +267,73 @@ def test_request_level_preferred_field_override_reaches_adapter(tmp_path):
     recommendations = response.json()["data"]["recommendations"]
     assert recommendations
     assert {item["role_id"] for item in recommendations} == {"role_business_analyst"}
+
+
+def test_backend_rejects_semantically_false_adapter_explanation(tmp_path):
+    class SemanticallyWrongAdapter:
+        is_mock = False
+
+        def extract_profile(self, text, questionnaire):
+            return create_adapter().extract_profile(text, questionnaire)
+
+        def score_roles(self, profile, trend_package, scenario):
+            result = score_roles(profile, trend_package, scenario)
+            result[0]["strengths"] = ["skill_excel"]
+            result[0]["skill_gaps"][0].update(
+                {
+                    "name": "Wrong catalogue name",
+                    "current_level": 5,
+                    "target_level": 0,
+                    "importance": "low",
+                }
+            )
+            return result
+
+    client = TestClient(
+        create_app(
+            store=ProfileStore(str(tmp_path / "semantic_validation.sqlite")),
+            adapter=SemanticallyWrongAdapter(),
+        )
+    )
+    profile = _confirmed_profile(client)
+    response = client.post(
+        "/api/v1/recommendations",
+        json={
+            "profile_id": profile["profile_id"],
+            "region": "MY",
+            "ai_scenario": "moderate",
+            "preferred_field_id": "field_data",
+        },
+    )
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "MODEL_INVALID_OUTPUT"
+
+    class MisleadingNarrativeAdapter:
+        is_mock = False
+
+        def extract_profile(self, text, questionnaire):
+            return create_adapter().extract_profile(text, questionnaire)
+
+        def score_roles(self, profile, trend_package, scenario):
+            result = score_roles(profile, trend_package, scenario)
+            result[0]["reason"] = "Confirmed skill proves this candidate is guaranteed to be hired."
+            return result
+
+    narrative_client = TestClient(
+        create_app(
+            store=ProfileStore(str(tmp_path / "narrative_validation.sqlite")),
+            adapter=MisleadingNarrativeAdapter(),
+        )
+    )
+    narrative_profile = _confirmed_profile(narrative_client)
+    narrative_response = narrative_client.post(
+        "/api/v1/recommendations",
+        json={
+            "profile_id": narrative_profile["profile_id"],
+            "region": "MY",
+            "ai_scenario": "moderate",
+            "preferred_field_id": "field_data",
+        },
+    )
+    assert narrative_response.status_code == 502
+    assert narrative_response.json()["error"]["code"] == "MODEL_INVALID_OUTPUT"
