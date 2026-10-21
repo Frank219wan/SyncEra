@@ -1,1 +1,6 @@
 run = "sh scripts/run-replit.sh"
+
+[deployment]
+build = "sh scripts/build-replit.sh"
+run = "sh scripts/run-replit-production.sh"
+deploymentTarget = "cloudrun"

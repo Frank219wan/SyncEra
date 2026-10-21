@@ -2,12 +2,14 @@ from __future__ import annotations
 import os
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
-from fastapi import FastAPI, Request, Query, UploadFile, File, Form
+from fastapi import FastAPI, Request, Query, UploadFile, File, Form, HTTPException
 from pydantic import ValidationError
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
@@ -198,6 +200,29 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 organization analysis is not implemented')
     @app.post('/api/v1/admin/trends/refresh',status_code=503,response_model=APIErrorEnvelope)
     def refresh(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 trend refresh is disabled')
+
+    static_dir=os.getenv('STATIC_DIR','').strip()
+    if static_dir:
+        static_root=Path(static_dir).resolve()
+        index_file=static_root/'index.html'
+        if not index_file.is_file():
+            raise RuntimeError(f'STATIC_DIR does not contain index.html: {static_root}')
+        assets_dir=static_root/'assets'
+        if assets_dir.is_dir():
+            app.mount('/assets',StaticFiles(directory=assets_dir),name='frontend-assets')
+
+        @app.get('/',include_in_schema=False)
+        def frontend_root():
+            return FileResponse(index_file)
+
+        @app.get('/{full_path:path}',include_in_schema=False)
+        def frontend_route(full_path:str):
+            if full_path.startswith('api/'):
+                raise HTTPException(status_code=404,detail='Not Found')
+            candidate=(static_root/full_path).resolve()
+            if candidate.is_file() and static_root in candidate.parents:
+                return FileResponse(candidate)
+            return FileResponse(index_file)
 
     return app
 
