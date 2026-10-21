@@ -1,10 +1,10 @@
 # AI/Technical → Backend handoff
 
-Status: **awaiting real AI module, source package, and reviewed course catalogue**. The existing `/api/v1` contract remains unchanged. The Backend accepts only canonical IDs and reviewer-approved local imports; the browser cannot post a market package or approve links.
+Status: **Tech v0.1.0 candidate delivered; Team Lead source/resource approval and deployment integration remain pending**. The existing `/api/v1` contract remains unchanged. `futureproof_ai/` now supplies the deterministic callable adapter, and `tech_delivery/` supplies a real-source candidate Snapshot plus course resource. Files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` are test inputs, not governance approval. The Backend accepts only canonical IDs and reviewer-approved local imports; the browser cannot post a market package or approve links.
 
 ## Repository location and development commands
 
-Working source: `backend/` in the team SyncEra repository on `feature/backend-integration` (original development source: `/Users/wansiyu/Desktop/SDC 黑客松2026/backend`). Clone or fetch that branch after the GitHub delivery is published, then work from `backend/`. Python 3.10+ is required; Python 3.12 was used for the latest local tests. Install `requirements-dev.txt`, start `app.main:app`, and run the API/AI boundary tests with:
+Working source: `backend/` in the team SyncEra repository. Backend Phase 2 is based on `feature/backend-integration`; Tech v0.1.0 is delivered on `feature/tech-integration`. Python 3.10+ is required; Python 3.12 was used for the latest Backend run. Install `requirements-dev.txt`, start `app.main:app`, and run the API/AI boundary tests with:
 
 ```bash
 cd backend
@@ -14,7 +14,7 @@ python3.12 -m venv .venv
 .venv/bin/python -m pytest tests -q
 ```
 
-The adapter entry point is `app/ai_adapter.py`; Pydantic inputs/outputs are in `app/models.py`; canonical `role_id` and `skill_id` values are in `app/catalogue.py`; approved snapshot/evidence/resource import checks are in `app/approved_data.py`. `tests/test_approved_data.py` exercises a temporary configured AI module and rejected outputs, while `tests/test_api.py` verifies the full synthetic API flow. A real teammate module has not been supplied, so no actual AI integration test has run. Use `AI_ADAPTER_MODULE` only for an importable module present in the Python environment.
+The adapter entry point is `app/ai_adapter.py`; Pydantic inputs/outputs are in `app/models.py`; canonical `role_id` and `skill_id` values are in `app/catalogue.py`; approved snapshot/evidence/resource import checks are in `app/approved_data.py`. `futureproof_ai/` implements the callable Tech adapter, while `tests/test_futureproof_ai_delivery.py` verifies extraction, candidate imports, reproducible scoring and the A-flow resource handoff. Set `AI_ADAPTER_MODULE=futureproof_ai.futureproof_adapter` only after the intended data/provenance mode is understood.
 
 `POST /api/v1/profiles/upload` is a proposed additive v1 contract extension. It parses PDF/DOCX bytes in `app/cv_upload.py`, passes the extracted text through the same `services.normalize()` and `extract_profile()` path as the existing text endpoint, and returns `Envelope[NormalizeData]`. Multipart fields are `file`, `synthetic_input=true`, `study_constraints` (JSON-encoded `StudyConstraints`), and optional `preferred_field_id`. Its profile is unconfirmed and must use `/profiles/confirm` before matching. The adapter receives extracted text, not the binary file. Current `DemoAdapter` is rule-only and content-dependent; no LLM is connected. Only fictional synthetic CVs are allowed for the demo. See `tests/test_cv_upload.py` for HTTP multipart and confirmation tests.
 

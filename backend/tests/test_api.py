@@ -119,7 +119,7 @@ def test_original_openapi_response_shapes(client):
     candidates=[Path(__file__).resolve().parents[1]/'contracts'/'FutureProof_AI_OpenAPI_v1_0.yaml',Path(__file__).resolve().parents[2]/'FutureProof_AI_OpenAPI_v1_0.yaml']
     contract=next((p for p in candidates if p.exists()),None)
     assert contract is not None,'FutureProof_AI_OpenAPI_v1_0.yaml not found'
-    spec=yaml.safe_load(contract.read_text())
+    spec=yaml.safe_load(contract.read_text(encoding='utf-8'))
     def convert(value):
         if isinstance(value,list): return [convert(x) for x in value]
         if not isinstance(value,dict): return value

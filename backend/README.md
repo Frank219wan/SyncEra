@@ -1,6 +1,6 @@
 # FutureProof AI backend MVP
 
-Python 3.10+ / FastAPI backend. The default run is an explicitly labelled **synthetic demo**. No verified market snapshot, teammate AI module or approved course catalogue was present when this report was written. Do not submit real CVs, student records or employee records.
+Python 3.10+ / FastAPI backend. The default run remains an explicitly labelled **synthetic demo**. Tech v0.1.0 adds a deterministic adapter, a real-source candidate market package and a verified course candidate; none becomes active public data until Team Lead replaces the technical-precheck manifests with reviewer-owned approvals. Do not submit real CVs, student records or employee records.
 
 ## Run locally
 
@@ -29,7 +29,7 @@ cd backend
 .venv/bin/python -m pytest tests -q
 ```
 
-Latest local result: **31 passed, 0 failed, 0 skipped** (27 pre-existing + 4 CV upload tests). If the sandbox reports `PermissionError: EEXIST ... mkdir .../T/pytest-of-unknown`, re-run with a fresh basetemp: `.venv/bin/python -m pytest tests -q --basetemp="$(mktemp -d)/fp_pytest"` — this is an environment artifact, not a test failure.
+Latest Backend + Tech result: **35 passed, 0 failed, 0 skipped** (including 4 Tech integration tests). If the sandbox reports `PermissionError: EEXIST ... mkdir .../T/pytest-of-unknown`, re-run with a fresh basetemp: `.venv/bin/python -m pytest tests -q --basetemp="$(mktemp -d)/fp_pytest"` — this is an environment artifact, not a test failure.
 
 Tests cover all 16 route registrations, the synthetic vertical slice, actual PDF/DOCX multipart upload, original OpenAPI P0 response schemas, reviewed local import validation, source/resource approvals, snapshot/score consistency and AI adapter failure/loading. They make no paid model calls. Test-only URLs and approvals remain in temporary test storage; they are not production data.
 
@@ -41,6 +41,8 @@ Tests cover all 16 route registrations, the synthetic vertical slice, actual PDF
 - `app/ai_adapter.py`: configurable extraction/scoring boundary. A configured missing module fails startup; unconfigured mode uses an explicitly mock rule-only fallback.
 - `app/services.py`: server-built trend input, catalogue and score validation, basic skill map and roadmap. Review status and time feasibility remain visible.
 - `app/storage.py`: SQLite profile confirmation. Clients should send optional `profile_revision` to reject stale edits. Unconfirmed profiles cannot be recommended.
+- `futureproof_ai/`: deterministic `extract_profile`, `retrieve_trends`, `score_roles` and the Backend-loadable adapter factory.
+- `tech_delivery/`: DOSM/TalentCorp candidate Snapshot, Microsoft Learn resource, source/method notes and clearly labelled technical-precheck manifests pending Team Lead approval.
 
 Bubble areas remain equal when no comparable verified posting volume exists. The synthetic snapshot reports no observed job counts or growth percentages. Moderate/Fast changes scenario projections, not observed source metrics. A real imported source can be `public_open`; recommendations mixing synthetic user input and real market data are `mixed_demo`, and remain `is_mock=true` while rule-only scoring is used. Resources without matching manual approval cannot appear in map or roadmap output.
 
