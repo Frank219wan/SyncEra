@@ -33,4 +33,4 @@ node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node
 
 固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。PDF/DOCX 提取、真实评分、课程推荐和认证评估均尚待服务接入。TXT 可本地读取。
 
-VITE_API_MODE 默认 demo。real 模式只有适配器雏形，尚未完成真实数据的全界面绑定，不能直接视为生产模式。详见 docs/HANDOFF.md。
+VITE_API_MODE 默认 demo。real 模式的请求适配器遵循 `API.md` 的 `/api/v1`、`data/meta` 与 `error/meta` 规范；真实后端、来源数据和全链路集成仍需单独验证，不能仅因切换 real 就视为生产模式。详见 docs/HANDOFF.md。
