@@ -1,6 +1,7 @@
 import type { Copy, Profile, Person, Organization, Role } from './types';
 export const skillNames: Record<string, Copy> = {
   python: ['Python', 'Python', 'Python'], sql: ['SQL', 'SQL', 'SQL'],
+  excel: ['Excel', 'Excel', 'Excel'], validation: ['AI output validation', 'AI 输出验证', 'Pengesahan output AI'],
   analytics: ['Data analysis', '数据分析', 'Analisis data'], communication: ['Communication', '沟通协作', 'Komunikasi'],
   ai: ['Applied AI', 'AI 应用', 'AI gunaan'], visualization: ['Data storytelling', '数据叙事', 'Penceritaan data'],
   sustainability: ['Sustainability', '可持续发展', 'Kelestarian'], design: ['Learning design', '学习设计', 'Reka bentuk pembelajaran'],
@@ -9,7 +10,10 @@ export const skillNames: Record<string, Copy> = {
 export const roles: Role[] = [
   {id:'data-analyst',name:['Data Analyst','数据分析师','Penganalisis Data'],domain:'technology',
     description:['Turn information into decisions. Combine analytical thinking with clear, human communication.','把信息转化为决策，将分析思维与清晰的沟通相结合。','Tukar maklumat kepada keputusan melalui analisis dan komunikasi yang jelas.'],
-    skills:['analytics','sql','python','visualization','communication'],scores:{moderate:86,fast:79},signal:84,trend:'rising',sdgs:[8,9]},
+    skills:['sql','python','validation'],scores:{moderate:86,fast:79},signal:84,trend:'rising',sdgs:[8,9]},
+  {id:'business-analyst',name:['Business Analyst','业务分析师','Penganalisis Perniagaan'],domain:'business',
+    description:['Clarify business needs, connect evidence with decisions, and communicate practical improvements.','澄清业务需求，以证据支持决策，并推动可执行的改进。','Jelaskan keperluan perniagaan, hubungkan bukti dengan keputusan dan cadangkan penambahbaikan praktikal.'],
+    skills:['excel','communication','validation'],scores:{moderate:64,fast:61},signal:64,trend:'stable',sdgs:[8]},
   {id:'ai-workflow',name:['AI Workflow Designer','AI 工作流设计师','Pereka Aliran Kerja AI'],domain:'technology',
     description:['Design useful human–AI workflows, test their reliability, and help teams use them thoughtfully.','设计实用的人机协作流程，验证可靠性，并帮助团队合理使用 AI。','Reka aliran kerja manusia–AI yang berguna dan uji kebolehpercayaannya.'],
     skills:['ai','automation','python','communication'],scores:{moderate:80,fast:89},signal:90,trend:'emerging',sdgs:[8,9]},

@@ -21,16 +21,19 @@ src/services/api.ts 已定义请求适配器；默认 demo 不产生网络分析
 
 |请求|用途|
 |---|---|
-|GET /trends|趋势数据包及来源|
+|GET /health|部署健康检查|
+|GET /trends/roles|带快照与证据 ID 的职业趋势|
+|GET /trends/skills|带快照与证据 ID 的技能趋势|
 |POST /profiles/normalize|画像规范化|
 |POST /profiles/confirm|确认画像|
 |POST /recommendations|同一未来时间点的情景匹配|
-|POST /roadmaps/full|约束下的完整计划|
-|POST /roadmaps/:id/adopt|明确采纳|
-|PATCH /roadmaps/:id/tasks/:taskId|任务证据与完成|
-|POST /organizations/analyze|企业／院校分析|
+|POST /learning/skill-map|单技能学习图与核验资源|
+|POST /learning/roadmap|约束下的完整计划|
+|POST /progress/skills|活动／技能确认与竹节进度|
+|POST /organizations/hr/analyze|HR／L&D 合成群体分析|
+|POST /organizations/career_centre/analyze|院校合成群体分析|
 
-还需服务端认证、授权、持久化、完整 schema 验证、错误本地化、幂等键、文件解析、真实趋势来源和 snapshot 历史、确定性匹配算法、单技能资源接口、改期审批与版本并发控制。真实 mode 下 Radar、Role、MindMap 和组织说明仍有静态示例数据，必须完整接入和集成测试后才可启用。API 失败不得静默回退为演示数据。
+适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐、Roadmap、进度和机构路径实现。还需后端认证、授权、持久化、完整 schema 验证、错误本地化、幂等键、文件解析、真实趋势来源和 snapshot 历史、确定性匹配算法及版本并发控制。真实 mode 下 Radar、Role 与 MindMap 的部分说明仍保留静态展示文案，必须在端到端集成测试后才可视为生产接入。API 失败不得静默回退为演示数据。
 
 当前费用、工时和可行性均为标明的示例。学习时间、预算、语言、日期、已有基础可编辑并保存；真实课程价格和排期约束需要后端求解。用户任务确认是自我报告，不是认证或能力判定。
 
