@@ -14,8 +14,8 @@ import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
 import {Intake,ProfileInput,ProfileReview,Analyzing} from './pages/Intake';
 import {Radar,Recommendations,RoleDetail} from './pages/Careers';
-import {MindMap,RoadmapDraft,LearningJourney} from './pages/Learning';
-import {OrganizationPages} from './pages/Organization';
+import {MindMap,RoadmapDraft,LearningJourney,LearningJourneyOverview} from './pages/Learning';
+import {OrganizationPages,HRDepartmentDetails} from './pages/Organization';
 function NotFound(){const {t}=useApp();return <EmptyState title={t('This path isn’t here yet.','暂时没有这条路径。','Laluan ini belum tersedia.')} description={t('Return home to find your next step.','返回首页，找到你的下一步。','Kembali ke laman utama untuk langkah seterusnya.')} action={<ButtonLink to="/">{t('Return home','返回首页','Kembali ke utama')}</ButtonLink>}/>;}
 class ErrorBoundary extends React.Component<{children:React.ReactNode},{error:boolean}>{
   state={error:false};
@@ -34,8 +34,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><
   <Route path="/individual/skills/:skillId/mind-map" element={<MindMap/>}/>
   <Route path="/individual/roadmap/draft" element={<RoadmapDraft/>}/>
   <Route path="/individual/roadmap/:planId" element={<LearningJourney/>}/>
+  <Route path="/individual/learning-journey" element={<LearningJourneyOverview/>}/>
   <Route path="/organization" element={<OrganizationHome/>}/>
   {['intake','heatmap','mobility','training','dashboard'].map(p=><Route key={p} path={`/organization/hr/${p}`} element={<OrganizationPages key={`hr-${p}`}/>}/>)}
+  <Route path="/organization/hr/department/:departmentId" element={<HRDepartmentDetails/>}/>
   {['students','trends','gaps','cohort','insights'].map(p=><Route key={p} path={`/organization/tvet/${p}`} element={<OrganizationPages key={`tvet-${p}`}/>}/>)}
   <Route path="*" element={<NotFound/>}/>
 </Route></Routes></BrowserRouter></Provider></ErrorBoundary></React.StrictMode>);

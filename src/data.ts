@@ -7,6 +7,15 @@ export const skillNames: Record<string, Copy> = {
   sustainability: ['Sustainability', '可持续发展', 'Kelestarian'], design: ['Learning design', '学习设计', 'Reka bentuk pembelajaran'],
   research: ['User research', '用户研究', 'Penyelidikan pengguna'], automation: ['Workflow automation', '流程自动化', 'Automasi aliran kerja'],
 };
+export const organizationGoals: Array<{id:string;label:Copy}> = [
+  {id:'productivity',label:['Productivity','提升效率','Produktiviti']},
+  {id:'digital-transformation',label:['Digital transformation','数字化转型','Transformasi digital']},
+  {id:'internal-mobility',label:['Internal mobility','内部流动','Mobiliti dalaman']},
+  {id:'retention',label:['Retention & engagement','员工留任与参与度','Pengekalan & penglibatan']},
+  {id:'leadership',label:['Leadership development','领导力发展','Pembangunan kepimpinan']},
+  {id:'service-quality',label:['Service quality','服务质量','Kualiti perkhidmatan']},
+  {id:'resilience',label:['Operational resilience','运营韧性','Daya tahan operasi']},
+];
 export const roles: Role[] = [
   {id:'data-analyst',name:['Data Analyst','数据分析师','Penganalisis Data'],domain:'technology',
     description:['Turn information into decisions. Combine analytical thinking with clear, human communication.','把信息转化为决策，将分析思维与清晰的沟通相结合。','Tukar maklumat kepada keputusan melalui analisis dan komunikasi yang jelas.'],
@@ -30,7 +39,11 @@ export const roles: Role[] = [
 export const emptyProfile: Profile = {id:'demo-individual-001',stage:'',goal:'',occupation:'',education:'',experience:'',skills:[],interests:'',vision:'',preferences:'',mbti:'',region:'Malaysia',synthetic:true,sample:false};
 export const sampleProfile: Profile = {...emptyProfile,stage:'graduate',goal:'explore',occupation:'Business graduate',education:'Bachelor of Business Analytics (synthetic)',experience:'Built an Excel dashboard for a student project; presented findings to a team.',skills:[{id:'analytics',level:'intermediate',source:'cv_extracted',confirmed:false},{id:'communication',level:'intermediate',source:'inferred',confirmed:false},{id:'sql',level:'beginner',source:'cv_extracted',confirmed:false}],interests:'Technology, sustainability, solving practical problems',vision:'Use data to make useful decisions and continue learning.',sample:true};
 const person = (id:string, department:string, skills:string[], target:string): Person => ({id,department,skills,target,known:true,role:'Analyst',traits:'Collaboration, problem solving',aspiration:'Build applied digital skills',hours:4,courses:'Statistics, Information Systems',interests:'Data and technology',notes:'Synthetic record for interface demonstration',year:'Year 3'});
-export const hrSample: Organization = {name:'Canopy Works · Demo',sector:'Professional services',needs:['analytics','ai','automation','visualization'],budget:1200,weeks:8,people:[
+export const hrSample: Organization = {name:'Canopy Works · Demo',sector:'Professional services',needs:['analytics','ai','automation','visualization'],budget:1200,weeks:8,goals:['productivity','digital-transformation','internal-mobility'],departments:[
+  {id:'dept-operations',name:'Operations',responsibilities:'Deliver reliable internal workflows and services.',currentStatus:'Growing',challenges:'Manual reporting and disconnected tools.',goals:['productivity','digital-transformation'],headcount:2},
+  {id:'dept-marketing',name:'Marketing',responsibilities:'Understand audiences and communicate product value.',currentStatus:'Stable',challenges:'Limited analytics capacity and inconsistent campaign measurement.',goals:['digital-transformation','service-quality'],headcount:2},
+  {id:'dept-people',name:'People & Culture',responsibilities:'Support employee experience, development, and workforce planning.',currentStatus:'Growing',challenges:'Career pathways and learning needs are not yet consistently mapped.',goals:['internal-mobility','retention'],headcount:2},
+],people:[
   person('EMP-001','Operations',['analytics','communication'],'ai-workflow'),person('EMP-002','Operations',['sql','analytics'],'data-analyst'),
   person('EMP-003','Marketing',['communication','research'],'learning-designer'),person('EMP-004','Marketing',['analytics','visualization'],'data-analyst'),
   person('EMP-005','People & Culture',['communication','design'],'learning-designer'),person('EMP-006','People & Culture',['research','communication'],'research-analyst'),

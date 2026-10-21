@@ -14,15 +14,35 @@ export function cohortGaps(org: Organization) {
 export function validatePeople(org: Organization, school=false) {
   const errors: string[]=[];
   if (!org.name.trim()) errors.push('name');
-  if (!org.people.length) errors.push('people');
+  if (school && !org.people.length) errors.push('people');
   const ids=org.people.map(p=>p.id.trim());
   if (new Set(ids).size!==ids.length || ids.some(id=>!id)) errors.push('id');
   if (org.people.some(p=>!p.department.trim())) errors.push('department');
   if (org.people.some(p=>p.hours<1 || p.hours>40 || !Number.isFinite(p.hours))) errors.push('hours');
   if (org.people.some(p=>p.known && !p.skills.length)) errors.push('skills');
   if (school && org.people.some(p=>!p.target || !p.courses.trim())) errors.push('target');
-  if (!school && !org.needs.length) errors.push('needs');
+  if (!school) {
+    const departments=org.departments||[];
+    if (!departments.length) errors.push('departments');
+    if (!org.goals?.length) errors.push('goals');
+    if (new Set(departments.map(d=>d.name.trim().toLowerCase())).size!==departments.length || departments.some(d=>!d.name.trim())) errors.push('departmentNames');
+    if (departments.some(d=>!d.responsibilities.trim()||!d.currentStatus.trim()||!d.challenges.trim()||!d.goals.length||!Number.isFinite(d.headcount)||d.headcount<0)) errors.push('departmentDetails');
+    if (org.people.some(p=>!departments.some(d=>d.name.trim().toLowerCase()===p.department.trim().toLowerCase()))) errors.push('department');
+    if (!org.needs.length && !departments.some(d=>d.goals.length)) errors.push('needs');
+  }
   return errors;
+}
+export function parseCsv(text: string): string[][] {
+  const rows:string[][]=[];let row:string[]=[],cell='',quoted=false;
+  for(let i=0;i<text.length;i++){
+    const char=text[i];
+    if(char==='"'){if(quoted&&text[i+1]==='"'){cell+='"';i++;}else quoted=!quoted;}
+    else if(char===','&&!quoted){row.push(cell.trim());cell='';}
+    else if((char==='\n'||char==='\r')&&!quoted){if(char==='\r'&&text[i+1]==='\n')i++;row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell='';}
+    else cell+=char;
+  }
+  if(cell||row.length){row.push(cell.trim());if(row.some(Boolean))rows.push(row);}
+  return rows;
 }
 export function makePlan(roleId: string, constraints: Constraints): Plan {
   const role=roles.find(r=>r.id===roleId)||roles[0];

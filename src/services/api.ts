@@ -170,15 +170,17 @@ export const api = {
 
   adopt: async (plan: Plan): Promise<Plan> => ({ ...plan, adopted: true }),
 
-  // P1 organization endpoints deliberately return 503 in API v1. Keep this clearly local until P1 ships.
-  organization: async (org: Organization, _actor: 'hr' | 'tvet'): Promise<Organization> =>
-    ({ ...structuredClone(org), analyzedRevision: org.revision }),
+  // No organization-analysis endpoint is available in the connected API yet.
+  organization: async (org: Organization, _actor: 'hr' | 'tvet'): Promise<Organization> => {
+    if (!isDemo) throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'Organization analysis is not connected yet. Your inputs remain saved locally; no AI analysis was generated.');
+    return { ...structuredClone(org), analyzedRevision: org.revision };
+  },
 
   task: async (profileId: string, plan: Plan, taskId: string, evidence: string): Promise<void> => {
     if (isDemo) return;
     const task = plan.tasks.find(item => item.id === taskId);
     if (!task) throw new ApiError(404, 'NOT_FOUND', 'The selected learning step was not found.');
-    // P1 progress is browser-local for now; the backend route intentionally returns 503.
+    if (!isDemo) throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'Learning-progress synchronization is not connected yet. No server-side progress was recorded.');
     void profileId; void evidence;
   },
 };

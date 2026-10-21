@@ -4,15 +4,16 @@ import {ArrowRight,ArrowLeft,Check,ChevronRight,Compass,GraduationCap,LayoutDash
 import {useApp} from './store';
 import {skillNames} from './data';
 import {isDemo} from './services/api';
+import {routeContextFromPath} from './routing';
 export const icons={ArrowRight,ArrowLeft,Check,ChevronRight,Compass,GraduationCap,LayoutDashboard,Leaf,Map,Network,Search,Settings2,Sprout,Users,X,Info,AlertCircle,Building2,BookOpen,Globe2,BarChart3};
 export function LocaleSwitcher() {
   const {state,setState,t}=useApp();
   return <label className="locale"><Globe2 size={16}/><span className="sr-only">{t('Language','语言','Bahasa')}</span><select value={state.locale} onChange={e=>setState(s=>({...s,locale:e.target.value as typeof s.locale}))}><option value="en">English</option><option value="zh">简体中文</option><option value="ms">Bahasa Melayu</option></select></label>;
 }
-export function Brand(){return <Link to="/" className="brand" aria-label="FutureProof AI home"><span className="brand-symbol"><Sprout size={24} strokeWidth={1.4}/></span><span>futureproof<span className="brand-ai"> AI</span></span></Link>;}
+export function Brand(){return <Link to="/" className="brand" aria-label="Back to Home" title="Back to Home"><span className="brand-symbol"><Sprout size={24} strokeWidth={1.4}/></span><span>futureproof<span className="brand-ai"> AI</span></span></Link>;}
 export function Shell({children}:{children:ReactNode}) {
-  const {t,state}=useApp(); const {pathname}=useLocation();
-  const hr=pathname.startsWith('/organization/hr'),tvet=pathname.startsWith('/organization/tvet'),org=pathname.startsWith('/organization');
+  const {t}=useApp(); const {pathname}=useLocation();
+  const context=routeContextFromPath(pathname);const hr=context.program==='hr',tvet=context.program==='tvet',org=context.workspace==='organization';
   const nav=hr?[
     ['/organization/hr/dashboard',LayoutDashboard,t('Overview','工作台','Gambaran')],
     ['/organization/hr/intake',Users,t('Team profile','团队资料','Profil pasukan')],
@@ -30,10 +31,10 @@ export function Shell({children}:{children:ReactNode}) {
     ['/individual/radar',Compass,t('Career radar','职业雷达','Radar kerjaya')],
     ['/individual/intake',Users,t('My profile','我的画像','Profil saya')],
     ['/individual/recommendations',Network,t('Career matches','职业推荐','Padanan kerjaya')],
-    [state.plan?.adopted?`/individual/roadmap/${state.plan.id}`:'/individual/roadmap/draft',Map,t('Learning journey','学习旅程','Perjalanan belajar')],
+    ['/individual/learning-journey',Map,t('Learning journey','学习旅程','Perjalanan belajar')],
   ];
   useEffect(()=>{window.scrollTo(0,0);},[pathname]);
-  return <div className="app-shell"><a className="skip-link" href="#main">{t('Skip to content','跳至内容','Langkau ke kandungan')}</a><aside className="sidebar"><Brand/><Link className="workspace-switch" to={org?'/organization':'/'}><span className="workspace-icon">{org?<Building2 size={18}/>:<Sprout size={18}/>}</span><span>{hr?'HR / L&D':tvet?'TVET / University':org?t('Organization','机构','Organisasi'):t('Individual','个人','Individu')}</span><ChevronRight size={15}/></Link><nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{nav.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;return <NavLink key={url as string} to={url as string} end={url==='/individual'} className={({isActive})=>isActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav><div className="sidebar-bottom"><div className="growth-note"><Leaf size={20}/><p>{t('A little growth, every day.','每天，向上生长一点。','Berkembang sedikit, setiap hari.')}</p></div><Link className="nav-link" to={org?'/individual':'/organization'}>{org?<Sprout size={18}/>:<Building2 size={18}/>}<span>{org?t('Individual space','个人空间','Ruang individu'):t('Organization space','机构空间','Ruang organisasi')}</span></Link><span className="local-note">{t('Your progress is saved on this device','进度保存在当前设备','Kemajuan disimpan pada peranti ini')}</span></div></aside><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>{org?t('Organization','机构','Organisasi'):t('Your personal space','个人成长空间','Ruang peribadi anda')}</span><ChevronRight size={13}/><span>{hr?'HR / L&D':tvet?'TVET / University':t('Connected growth','共同成长','Pertumbuhan terhubung')}</span></div><LocaleSwitcher/></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div></div>;
+  return <div className="app-shell"><a className="skip-link" href="#main">{t('Skip to content','跳至内容','Langkau ke kandungan')}</a><aside className="sidebar"><Brand/><nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{nav.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;return <NavLink key={url as string} to={url as string} end={url==='/individual'} className={({isActive})=>isActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav><div className="sidebar-bottom"><div className="growth-note"><Leaf size={20}/><p>{t('A little growth, every day.','每天，向上生长一点。','Berkembang sedikit, setiap hari.')}</p></div><span className="local-note">{t('Your progress is saved on this device','进度保存在当前设备','Kemajuan disimpan pada peranti ini')}</span></div></aside><div className="main-area"><header className="topbar"><div className="breadcrumb"><span>{org?t('Organization','机构','Organisasi'):t('Your personal space','个人成长空间','Ruang peribadi anda')}</span><ChevronRight size={13}/><span>{hr?'HR / L&D':tvet?'TVET / University':t('Connected growth','共同成长','Pertumbuhan terhubung')}</span></div><LocaleSwitcher/></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div></div>;
 }
 export function PageHeader({title,description,action,back}:{title:string;description?:string;action?:ReactNode;back?:string}){
   const {t}=useApp();return <header className="page-heading">{back&&<Link to={back} className="back-link"><ArrowLeft size={16}/>{t('Back','返回','Kembali')}</Link>}<div className="heading-row"><div><h1>{title}</h1>{description&&<p>{description}</p>}</div>{action}</div></header>;

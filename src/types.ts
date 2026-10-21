@@ -18,10 +18,20 @@ export interface Person {
   id: string; department: string; role: string; skills: string[]; known: boolean; traits: string; aspiration: string;
   hours: number; courses: string; interests: string; notes: string; year: string; target: string;
 }
+export interface Department {
+  id: string; name: string; responsibilities: string; currentStatus: string;
+  challenges: string; goals: string[]; headcount: number;
+  implementationStatus?: 'not_started' | 'in_progress' | 'completed';
+}
+export interface DepartmentPlanVersion {
+  version: number; createdAt: string; organizationGoals: string[]; skills: string[];
+  departments: Department[]; budget: number; weeks: number;
+}
 export interface Organization {
   name: string; sector: string; needs: string[]; budget: number; weeks: number;
   people: Person[]; selected: string[]; revision: number; analyzedRevision: number;
   training: Record<string, string[]>;
+  departments?: Department[]; goals?: string[]; planningVersions?: DepartmentPlanVersion[];
 }
 export interface Role {
   id: string; name: Copy; domain: string; description: Copy; skills: string[];
