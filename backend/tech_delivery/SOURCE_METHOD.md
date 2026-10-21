@@ -4,7 +4,7 @@
 
 This folder contains a technically validated candidate snapshot and learning resource for the A (Individual) P0 flow. They use API Contract v1.0 IDs and Backend Phase 2 schemas.
 
-The files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` are **not governance approval**. They allow reproducible schema and integration testing. Before production-like activation, the Team Lead must independently open each exact URL, review the mapping and limitations, replace `reviewed_by`, and record a new timezone-aware `reviewed_at` after that review.
+The files named `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` are **not governance approval**. They allow reproducible schema and integration testing. Editing their `reviewed_by` or `reviewed_at` strings cannot authenticate a reviewer. The current candidate snapshot and resource IDs are blocked from normal import even after such an edit. Before activation, the Team Lead must inspect the original sources, figures, mapping and limitations, then authorize new immutable IDs and manifests through a separately controlled release process. Protect the approval files, approved-data directory and deployment configuration from the candidate author; maintain a human review record. The backend checks manifest consistency but cannot authenticate the human reviewer on its own.
 
 ## 2. Market sources
 
@@ -41,7 +41,7 @@ Skill score calculation:
 skill_sql trend_score = 70
 ```
 
-`70` is a controlled taxonomy score: SQL is a direct canonical member of the official broader database-skill family. It must not be presented as SQL mention rate or growth. `mention_rate` and `change_pp` remain null.
+`70` is a controlled taxonomy score: SQL is a direct canonical member of the official broader database-skill family. It must not be presented as SQL mention rate or growth. `mention_rate`, `change_pp` and `coverage` remain null. Coverage has no supported numerator, denominator or external validation; the UI must not render null as 100%.
 
 ## 3. Moderate and Fast
 

@@ -55,7 +55,7 @@
       "observed_metrics": {
         "mention_rate": null,
         "change_pp": null,
-        "coverage": 1.0
+        "coverage": null
       },
       "score_basis": "Controlled taxonomy score 70/100: canonical SQL is directly nested in the official top specific skill family 'data, analytics and database skills'; this is not a prevalence or growth statistic."
     }

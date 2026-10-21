@@ -112,6 +112,8 @@ def test_candidate_snapshot_and_resource_pass_backend_import_boundary():
     assert snapshot.data_label == "mixed_demo"
     assert snapshot.role_metrics["role_data_analyst"]["valid_postings"] == 3053
     assert snapshot.role_scores["role_data_analyst"] == 46.5
+    assert snapshot.skill_metrics["skill_sql"]["coverage"] is None
+    assert snapshot.skill_scores["skill_sql"] == 70.0  # Labelled taxonomy heuristic, not an observed rate.
     resource = resources.select("skill_python", "en", "MYR", 0)
     assert resource is not None
     assert resource.cost_amount == 0
@@ -136,6 +138,33 @@ def test_precheck_requires_explicit_test_import_and_is_never_approved_by_default
     assert not (tmp_path / "approved" / "snapshots").exists()
 
 
+def test_candidate_ids_cannot_be_promoted_by_editing_reviewer_text(tmp_path, monkeypatch):
+    snapshot = _read("snapshot_dosm_mycol_my_2026q2_v1.json")
+    source = _read("source_approvals_TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION.json")
+    resources = _read("resources_python_p1.json")
+    approvals = _read("resource_approvals_TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION.json")
+    for item in source + approvals:
+        item["reviewed_by"] = "self-filled-reviewer"
+
+    with pytest.raises(ImportRejected, match="technical precheck"):
+        MarketRepository().import_public(snapshot, source)
+    with pytest.raises(ImportRejected, match="technical precheck"):
+        ResourceRepository().import_approved(resources, approvals)
+
+    staged = MarketRepository().import_public(snapshot, source, allow_technical_precheck=True)
+    assert staged.data_label == "mixed_demo" and staged.is_mock is True
+
+    import json
+    approved = tmp_path / "approved"
+    (approved / "snapshots").mkdir(parents=True)
+    (approved / "approvals").mkdir()
+    (approved / "snapshots" / "candidate.json").write_text(json.dumps(snapshot))
+    (approved / "approvals" / "candidate.json").write_text(json.dumps(source))
+    monkeypatch.setenv("APPROVED_DATA_DIR", str(approved))
+    with pytest.raises(ImportRejected, match="technical precheck"):
+        create_app(store=ProfileStore(str(tmp_path / "profiles.sqlite")))
+
+
 def test_candidate_http_provenance_never_claims_formal_approval(tmp_path):
     market, resources = _repositories()
     client = TestClient(create_app(store=ProfileStore(str(tmp_path / "profiles.sqlite")),
@@ -145,6 +174,9 @@ def test_candidate_http_provenance_never_claims_formal_approval(tmp_path):
     assert role.status_code == evidence.status_code == 200
     assert role.json()["meta"]["data_label"] == evidence.json()["meta"]["data_label"] == "mixed_demo"
     assert role.json()["meta"]["is_mock"] is evidence.json()["meta"]["is_mock"] is True
+    skill = client.get("/api/v1/trends/skills", params={"snapshot_id": "snap_my_dosm_mycol_2026q2_v1"})
+    assert skill.status_code == 200
+    assert skill.json()["data"]["items"][0]["observed_metrics"]["coverage"] is None
 
 
 def test_retrieve_and_score_are_reproducible():
@@ -192,6 +224,7 @@ def test_retrieve_and_score_are_reproducible():
 
 def test_a_flow_real_snapshot_adapter_and_skill_resource(tmp_path):
     market, resources = _repositories()
+    assert create_adapter().scoring_policy == 'tech-v1'
     client = TestClient(
         create_app(
             store=ProfileStore(str(tmp_path / "profiles.sqlite")),

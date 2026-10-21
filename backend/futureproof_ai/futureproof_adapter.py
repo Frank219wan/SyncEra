@@ -20,6 +20,7 @@ class FutureProofAdapter:
     """
 
     is_mock = False
+    scoring_policy = 'tech-v1'
 
     def extract_profile(
         self,

@@ -23,6 +23,10 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
 ID_RE = re.compile(r'^[A-Za-z0-9_-]{1,128}$')
+# Immutable technical fixtures must never be promoted in place by editing reviewer text.
+# A genuinely reviewed release needs a new ID and an independently owned manifest.
+TECHNICAL_CANDIDATE_SNAPSHOT_IDS = {'snap_my_dosm_mycol_2026q2_v1'}
+TECHNICAL_CANDIDATE_RESOURCE_IDS = {'resource_mslearn_python_fundamentals_p1'}
 
 class SourceApproval(Strict):
     evidence_id: str
@@ -159,7 +163,8 @@ class MarketRepository:
             approvals = [SourceApproval.model_validate(a) for a in raw_approvals]
         except Exception as exc:
             raise ImportRejected(f'invalid package schema: {exc}') from exc
-        precheck = _technical_precheck(approvals)
+        candidate = package.snapshot_id in TECHNICAL_CANDIDATE_SNAPSHOT_IDS
+        precheck = _technical_precheck(approvals) or candidate
         if precheck and not allow_technical_precheck:
             raise ImportRejected('technical precheck is not reviewer-owned approval')
         if not ID_RE.fullmatch(package.snapshot_id):
@@ -265,7 +270,8 @@ class ResourceRepository:
             approvals=[ResourceApproval.model_validate(a) for a in raw_approvals]
         except Exception as exc:
             raise ImportRejected(f'invalid resource schema: {exc}') from exc
-        if _technical_precheck(approvals) and not allow_technical_precheck:
+        candidate = any(e.resource.resource_id in TECHNICAL_CANDIDATE_RESOURCE_IDS for e in entries)
+        if (_technical_precheck(approvals) or candidate) and not allow_technical_precheck:
             raise ImportRejected('technical precheck is not reviewer-owned resource approval')
         ids=[e.resource.resource_id for e in entries]
         if any(not ID_RE.fullmatch(rid) for rid in ids):

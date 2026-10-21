@@ -30,11 +30,11 @@ cd backend
 .venv/bin/python scripts/generate_phase4_http_evidence.py
 ```
 
-After Team Lead review, create new reviewer-owned manifests, import via `python -m app.import_data`, then set:
+After Team Lead review of the original sources, figures and method, publish a **new immutable snapshot and resource ID** with independently owned approval manifests through a protected release process. The candidate IDs in this folder remain technical fixtures and cannot be promoted by editing `reviewed_by`. Import the new package via `python -m app.import_data`; only then set:
 
 ```powershell
 APPROVED_DATA_DIR=data/approved
-ACTIVE_SNAPSHOT_ID=snap_my_dosm_mycol_2026q2_v1
+ACTIVE_SNAPSHOT_ID=<new_team_lead_approved_snapshot_id>
 AI_ADAPTER_MODULE=futureproof_ai.futureproof_adapter
 ```
 
@@ -54,7 +54,7 @@ Match Score = 0.45 × Skill Compatibility
 - Level-to-time estimate: 20 study hours per missing proficiency level.
 - Skill Gap: every required role skill with missing/unknown level or current level below target.
 
-Backend independently validates the weighted arithmetic and exact Evidence IDs.
+Backend independently derives each component, the complete gap and strength sets, the total and Evidence IDs from the confirmed profile, catalogue, snapshot and scenario. The Tech adapter declares scoring policy `tech-v1`; the older DemoAdapter uses the separate `demo-v1` policy.
 
 ## 5. Current P0 boundary
 
@@ -62,9 +62,9 @@ This delivery closes the minimum A-flow AI/data gap for:
 
 1. synthetic guided text/form extraction;
 2. user confirmation;
-3. reviewed Snapshot retrieval;
+3. technically validated candidate Snapshot retrieval in an isolated test;
 4. Moderate/Fast deterministic recommendations;
 5. Evidence-backed score display;
-6. one real resource attached to a Python Skill Mind Map.
+6. one candidate Microsoft Learn resource attached to a Python Skill Mind Map in that test.
 
 B1 HR, B2 Career Centre, progress tracking and trend refresh remain P1 and are intentionally not implemented here.

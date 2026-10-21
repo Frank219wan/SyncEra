@@ -16,6 +16,7 @@ from .ai_adapter import load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
+from .upload_guard import UploadBodyLimitMiddleware
 
 ERROR_CODES={400:'BAD_REQUEST',404:'NOT_FOUND',409:'SNAPSHOT_CONFLICT',422:'VALIDATION_ERROR',429:'RATE_LIMITED',502:'MODEL_INVALID_OUTPUT',503:'SOURCE_UNAVAILABLE',504:'MODEL_TIMEOUT'}
 def documented_errors(*codes):
@@ -33,6 +34,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         if resources is None: app.state.resources.load_dir(approved_dir)
     app.state.market.validate_active()
     origins=[x.strip() for x in os.getenv('FRONTEND_ORIGINS','http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173').split(',') if x.strip()]
+    app.add_middleware(UploadBodyLimitMiddleware)
     app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST'],allow_headers=['Content-Type','X-Request-ID'],expose_headers=['X-Request-ID'])
 
     @app.middleware('http')
@@ -125,6 +127,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         return success(request,data,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/profiles/upload',response_model=Envelope[NormalizeData],responses={
+        400:{'model':APIErrorEnvelope,'description':'Invalid request length'},
         413:{'model':APIErrorEnvelope,'description':'CV exceeds upload limit'},
         415:{'model':APIErrorEnvelope,'description':'Unsupported file type'},
         422:{'model':APIErrorEnvelope,'description':'Invalid, unreadable, or non-synthetic input'},
@@ -170,9 +173,11 @@ def create_app(store=None,adapter=None,market=None,resources=None):
             try: raw=app.state.adapter.score_roles(scoring_profile,package,payload.ai_scenario)
             except TimeoutError: raise svc.APIError(504,'MODEL_TIMEOUT','Matching model timed out',retryable=True)
             except Exception: raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching model failed')
+            scoring_policy=getattr(app.state.adapter,'scoring_policy',None)
         else:
             raw=svc.demo_recommendations(scoring_profile,snap,payload.ai_scenario,selected_field,payload.top_k)
-        recommendations=svc.validate_recommendations(raw,snap,payload.ai_scenario)
+            scoring_policy='demo-v1'
+        recommendations=svc.validate_recommendations(raw,scoring_profile,snap,payload.ai_scenario,scoring_policy)
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
