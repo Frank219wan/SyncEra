@@ -183,7 +183,7 @@ export const api = {
   skillMap: async (profileId: string, roleId: string, skillId: string, language: string, budgetAmount: number) => {
     return request<{
       skill_map_id: string; role_id: string; skill_id: string;
-      nodes: Array<{ node_id: string; node_type: string; title: string; depends_on: string[]; estimated_hours: number; resource_id: string | null; resource?: { url: string; provider: string; language: string; cost_amount: number | null; verified_at: string } | null }>;
+      nodes: Array<{ node_id: string; node_type: string; title: string; depends_on: string[]; estimated_hours: number; resource_id: string | null; resource?: { resource_id: string; title: string; url: string; provider: string; language: string; cost_amount: number; currency: string; estimated_hours: number; verified_at: string } | null }>;
       next_actions: string[];
     }>('/learning/skill-map', { body: { profile_id: profileId, role_id: toContractRoleId(roleId), skill_id: toContractSkillId(skillId), language, budget_amount: budgetAmount, currency: 'MYR' } });
   },

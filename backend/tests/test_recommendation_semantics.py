@@ -29,7 +29,7 @@ def recommendation_inputs():
 
 def test_valid_recommendations_match_confirmed_inputs(recommendation_inputs):
     profile, snapshot, output = recommendation_inputs
-    checked = validate_recommendations(output, snapshot, "moderate", profile)
+    checked = validate_recommendations(output, profile, snapshot, "moderate", "demo-v1")
     assert [item["rank"] for item in checked] == list(range(1, len(output) + 1))
 
 
@@ -46,6 +46,6 @@ def test_semantically_false_model_output_is_rejected(recommendation_inputs, chan
     malformed = deepcopy(output)
     change(malformed)
     with pytest.raises(APIError) as raised:
-        validate_recommendations(malformed, snapshot, "moderate", profile)
+        validate_recommendations(malformed, profile, snapshot, "moderate", "demo-v1")
     assert raised.value.status == 502
     assert raised.value.code == "MODEL_INVALID_OUTPUT"

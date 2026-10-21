@@ -13,6 +13,8 @@ export interface Task { id: string; skill: string; title: Copy; hours: number; d
 export interface Plan {
   id: string; roleId: string; version: number; adopted: boolean; constraints: Constraints; tasks: Task[];
   earned: number; revisionPending: boolean; offset: number; history: { version: number; offset: number; at: string }[];
+  totalEstimatedHours?: number; capacityHours?: number;
+  feasibility?: 'feasible' | 'stretch' | 'insufficient_time'; warnings?: string[];
 }
 export interface Person {
   id: string; department: string; role: string; skills: string[]; known: boolean; traits: string; aspiration: string;
@@ -47,6 +49,7 @@ export interface Recommendation {
   skillGaps?: Array<{ skillId: string; name: string; currentLevel: number | null; targetLevel: number; importance: string }>;
   reason?: string; evidenceIds?: string[]; scenarioAssumptions?: string[]; uncertainty?: string;
   scoreBreakdown?: Record<string, number | null>;
+  sdgLinks?: Array<{ sdg: number; rationale: string }>;
 }
 export interface Evidence { evidenceId: string; title: string; sourceUrl: string | null; sourceType: string; publishedOrCollectedAt: string; retrievedAt: string; region: string | null; limitations: string | null }
 export interface ServiceMeta {

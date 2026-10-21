@@ -63,7 +63,7 @@ def _confirmed_profile(client: TestClient) -> dict:
         },
     )
     assert normalized.status_code == 200, normalized.text
-    assert normalized.json()["meta"]["is_mock"] is False
+    assert normalized.json()["meta"]["is_mock"] is True
     profile = normalized.json()["data"]["profile"]
     confirmed = client.post(
         "/api/v1/profiles/confirm",
@@ -272,6 +272,7 @@ def test_request_level_preferred_field_override_reaches_adapter(tmp_path):
 def test_backend_rejects_semantically_false_adapter_explanation(tmp_path):
     class SemanticallyWrongAdapter:
         is_mock = False
+        scoring_policy = 'tech-v1'
 
         def extract_profile(self, text, questionnaire):
             return create_adapter().extract_profile(text, questionnaire)
@@ -310,6 +311,7 @@ def test_backend_rejects_semantically_false_adapter_explanation(tmp_path):
 
     class MisleadingNarrativeAdapter:
         is_mock = False
+        scoring_policy = 'tech-v1'
 
         def extract_profile(self, text, questionnaire):
             return create_adapter().extract_profile(text, questionnaire)

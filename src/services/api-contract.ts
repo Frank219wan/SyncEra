@@ -202,6 +202,7 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
     scenarioAssumptions: item.scenario_assumptions,
     uncertainty: item.uncertainty,
     scoreBreakdown: item.score_breakdown,
+    sdgLinks: item.sdg_links,
   }));
 }
 
@@ -262,5 +263,9 @@ export function mapRoadmap(data: ApiRoadmap, roleId: string, constraints: Constr
     revisionPending: false,
     offset: 0,
     history: [],
+    totalEstimatedHours: data.total_estimated_hours,
+    capacityHours: data.capacity_hours,
+    feasibility: data.feasibility,
+    warnings: data.warnings,
   };
 }
