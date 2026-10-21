@@ -1,7 +1,7 @@
 import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
 import type {AppState,Copy,Locale} from './types';
 import {emptyProfile,hrSample,tvetSample} from './data';
-const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',plan:null,hr:hrSample,tvet:tvetSample};
+const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',serviceMeta:null,plan:null,hr:hrSample,tvet:tvetSample};
 function read():AppState {
   try { const saved=JSON.parse(localStorage.getItem('futureproof-v1')||'null'); return saved?.schema===1?{...initial,...saved.state}:structuredClone(initial); }
   catch {return structuredClone(initial);}
