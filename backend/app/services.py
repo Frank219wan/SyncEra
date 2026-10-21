@@ -2,6 +2,7 @@ from __future__ import annotations
 from uuid import uuid4
 from .models import Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
 from .catalogue import SKILLS, ROLES, FIELDS
+from .scoring_validation import validate_scored_recommendations
 
 class APIError(Exception):
     def __init__(self,status:int,code:str,message:str,details=None,retryable=False):
@@ -85,6 +86,9 @@ def normalize(adapter,req,store):
 
 def confirm(store,req):
     profile=require_profile(store,req.profile_id)
+    if profile.reviewed_by_user and req.profile_revision is None:
+        raise APIError(409,'PROFILE_REVISION_REQUIRED','profile_revision is required to update a confirmed profile',
+                       [{'field':'profile_revision','reason':'required_for_update'}])
     if req.profile_revision is not None and req.profile_revision!=profile.revision:
         raise APIError(409,'SNAPSHOT_CONFLICT','Profile revision changed',[{'field':'profile_revision','reason':'stale'}],True)
     ids=[x.skill_id for x in req.skills]
@@ -118,16 +122,9 @@ def demo_recommendations(profile,snap,scenario,field_id,top_k):
     results.sort(key=lambda r:(-r.match_score,r.role_id))
     return [r.model_copy(update={'rank':i}).model_dump() for i,r in enumerate(results[:top_k],1)]
 
-def validate_recommendations(raw,snap,scenario):
+def validate_recommendations(raw,profile,snap,scenario,scoring_policy):
     try:
-        values=[Recommendation.model_validate(x) for x in raw]
-        for r in values:
-            role=require_role(r.role_id)
-            if r.role_id not in snap.role_scores or r.evidence_ids!=snap.role_evidence_ids[r.role_id]: raise ValueError('evidence provenance mismatch')
-            if any(g.skill_id not in {s.skill_id for s in role.required_skills} for g in r.skill_gaps): raise ValueError('invalid skill gap')
-            if any(s not in SKILLS for s in r.strengths): raise ValueError('invalid strength')
-            if r.role_name!=role.name: raise ValueError('role name mismatch')
-        return [x.model_dump() for x in values]
+        return validate_scored_recommendations(raw,profile,snap,scenario,scoring_policy)
     except Exception:
         raise APIError(502,'MODEL_INVALID_OUTPUT','Matching output failed catalogue or score validation')
 
