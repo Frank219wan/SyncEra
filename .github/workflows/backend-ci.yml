@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/backend-integration
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
@@ -42,6 +43,11 @@ jobs:
 
       - name: Verify FastAPI app import
         run: python -c "from app.main import app; assert app is not None"
+
+      - name: Verify configured Tech adapter loads
+        env:
+          AI_ADAPTER_MODULE: futureproof_ai.futureproof_adapter
+        run: python -c "from app.main import app; from futureproof_ai.futureproof_adapter import FutureProofAdapter; assert isinstance(app.state.adapter, FutureProofAdapter)"
 
       - name: Verify runtime OpenAPI and P0 routes
         run: |

@@ -34,3 +34,9 @@ node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node
 固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。PDF/DOCX 提取、真实评分、课程推荐和认证评估均尚待服务接入。TXT 可本地读取。
 
 VITE_API_MODE 默认 demo。real 模式只有适配器雏形，尚未完成真实数据的全界面绑定，不能直接视为生产模式。详见 docs/HANDOFF.md。
+
+## Backend 与 Tech 集成
+
+`feature/backend-ai-integration` 分支以 Backend 分支为基础，整合了 Tech v0.1.0 确定性 Adapter、DOSM／TalentCorp 候选 Snapshot、Microsoft Learn 课程候选资源及联调测试。进入 `backend/` 后按 [Backend README](backend/README.md) 和 [Tech Integration](backend/tech_delivery/INTEGRATION.md) 操作。前端现有文件保留，`real` 模式尚待与这些接口逐页联调。
+
+候选来源与课程已经完成结构和隔离 HTTP 技术预检，但 `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` 不是 Team Lead 治理批准。正常导入命令会拒绝这些预检清单。替换为真实 reviewer-owned approval manifest 前，不得把候选数据声明为已批准生产数据或在评委演示中标记课程为 verified。当前前端 `real` 模式仍待完成 API 全界面绑定。

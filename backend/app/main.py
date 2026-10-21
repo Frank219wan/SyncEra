@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
-from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
+from .catalogue import ROLES, SKILLS, FIELDS
 from .storage import ProfileStore
 from .ai_adapter import load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
@@ -80,7 +80,10 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         used_fields={r['field_id'] for r in signals}
         cats=[{'field_id':fid,'name':name,'display_size':1.0} for fid,name in FIELDS.items() if fid in used_fields]
         roles=[{'role_id':r['role_id'],'field_id':r['field_id'],'name':r['name'],'display_size':1.0,'trend_score':r['trend_score'],'signal_label':r['signal_label'],'evidence_ids':r['evidence_ids']} for r in signals]
-        return success(request,{'categories':cats,'roles':roles,'size_basis':'Equal bubble area: synthetic fixture, no verified demand volume.' if snap.is_mock else 'Equal bubble area: no comparable verified posting volume; scores use approved source methodology.','region':region},snap,BubblesData)
+        size_basis = ('Equal bubble area: synthetic fixture, no verified demand volume.' if snap.data_label == 'synthetic_demo'
+                      else 'Equal bubble area: candidate source data pending formal review.' if snap.data_label == 'mixed_demo'
+                      else 'Equal bubble area: no comparable verified posting volume; scores use approved source methodology.')
+        return success(request,{'categories':cats,'roles':roles,'size_basis':size_basis,'region':region},snap,BubblesData)
 
     @app.get('/api/v1/trends/roles',response_model=Envelope[RolesData],responses=documented_errors(400,409,422))
     def trends_roles(request:Request,region:str='MY',limit:int=Query(10,ge=1,le=50),field_id:str|None=None,cursor:str|None=None,snapshot_id:str|None=None):
@@ -101,25 +104,27 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         snap=app.state.market.get_snapshot()
         data=role.model_dump(exclude={'tasks','interests'})
         if role_id in snap.role_evidence_ids: data['evidence_ids']=snap.role_evidence_ids[role_id]
-        label='mixed_demo' if not snap.is_mock and role_id in snap.role_evidence_ids else 'synthetic_demo'
+        label='mixed_demo' if snap.data_label != 'synthetic_demo' and role_id in snap.role_evidence_ids else 'synthetic_demo'
         return success(request,data,snap if role_id in snap.role_evidence_ids else None,RoleData,data_label=label,is_mock=True)
 
     @app.get('/api/v1/roles/{role_id}/tasks',response_model=Envelope[TasksData],responses=documented_errors(404,409,422))
     def role_tasks(role_id:str,request:Request,snapshot_id:str|None=None):
         role=svc.require_role(role_id); snap=svc.require_snapshot(app.state.market,snapshot_id)
-        return success(request,{'role_id':role_id,'tasks':[x.model_dump() for x in role.tasks]},snap,TasksData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True)
+        return success(request,{'role_id':role_id,'tasks':[x.model_dump() for x in role.tasks]},snap,TasksData,data_label='mixed_demo' if snap.data_label != 'synthetic_demo' else 'synthetic_demo',is_mock=True)
 
     @app.get('/api/v1/evidence/{evidence_id}',response_model=Envelope[EvidenceData],responses=documented_errors(404,422))
     def evidence(evidence_id:str,request:Request):
         item=app.state.market.get_evidence(evidence_id)
         if not item: raise svc.APIError(404,'NOT_FOUND','Unknown evidence_id',[{'field':'evidence_id','reason':'unknown'}])
-        real=evidence_id not in EVIDENCE
-        return success(request,{'evidence':item.model_dump()},data_model=EvidenceData,data_label='public_open' if real else 'synthetic_demo',is_mock=not real)
+        approved=any(evidence_id in snap.evidence and snap.data_label == 'public_open' for snap in app.state.market.snapshots.values())
+        candidate=any(evidence_id in snap.evidence and snap.data_label == 'mixed_demo' for snap in app.state.market.snapshots.values())
+        label='public_open' if approved else 'mixed_demo' if candidate else 'synthetic_demo'
+        return success(request,{'evidence':item.model_dump()},data_model=EvidenceData,data_label=label,is_mock=not approved)
 
     @app.post('/api/v1/profiles/normalize',response_model=Envelope[NormalizeData],responses=documented_errors(400,422,502,504))
     def normalize(payload:NormalizeRequest,request:Request):
         data=svc.normalize(app.state.adapter,payload,app.state.store)
-        return success(request,data,data_model=NormalizeData,is_mock=getattr(app.state.adapter,'is_mock',True))
+        return success(request,data,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/profiles/upload',response_model=Envelope[NormalizeData],responses={
         400:{'model':APIErrorEnvelope,'description':'Invalid request length'},
@@ -150,7 +155,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         text=extract_cv_text(file.filename,data)
         payload=NormalizeRequest(pipeline='A',input_type='synthetic_cv_text',synthetic_input=True,text=text,preferred_field_id=preferred_field_id,study_constraints=payload_constraints)
         result=svc.normalize(app.state.adapter,payload,app.state.store)
-        return success(request,result,data_model=NormalizeData,is_mock=getattr(app.state.adapter,'is_mock',True))
+        return success(request,result,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/profiles/confirm',response_model=Envelope[ConfirmData],responses=documented_errors(404,409,422))
     def confirm(payload:ConfirmRequest,request:Request):
@@ -176,7 +181,7 @@ def create_app(store=None,adapter=None,market=None,resources=None):
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
-        return success(request,{'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations},snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True)
+        return success(request,{'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations},snap,RecommendData,data_label='mixed_demo' if snap.data_label != 'synthetic_demo' else 'synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/learning/skill-map',response_model_exclude_none=True,response_model=Envelope[SkillMapData],responses=documented_errors(404,422))
     def skill_map(payload:SkillMapRequest,request:Request):

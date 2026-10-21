@@ -1,0 +1,73 @@
+{
+  "snapshot_id": "snap_my_dosm_mycol_2026q2_v1",
+  "region": "MY",
+  "window_start": "2026-04-01",
+  "window_end": "2026-06-30",
+  "collected_at": "2026-10-21T03:20:00+00:00",
+  "method_version": "fp-trend-dosm-mycol-v0.1.0",
+  "data_label": "public_open",
+  "evidence": [
+    {
+      "evidence_id": "ev_dosm_jmi_2026q2_business_data_analyst",
+      "title": "DOSM Big Data Analytics: Job Market Insights, Q2 2026",
+      "source_url": "https://www.dosm.gov.my/uploads/release-content/file_20260818075305.pdf",
+      "source_type": "dataset",
+      "published_or_collected_at": "2026-08-18",
+      "retrieved_at": "2026-10-21T03:10:00+00:00",
+      "region": "MY",
+      "limitations": "Counts are online job offerings captured from major Malaysian private recruitment platforms, not all vacancies. The role mapping uses DOSM's Business Data Analyst (MASCO 2524-16) as the API Contract role_data_analyst proxy. No historical change is claimed."
+    },
+    {
+      "evidence_id": "ev_talentcorp_mycol_2024_2025_data_professionals",
+      "title": "TalentCorp MyMahir Malaysia Critical Occupations List 2024/2025: Data Professionals",
+      "source_url": "https://www.talentcorp.com.my/images/uploads/publication/204/MyMahir-Malaysia-Critical-Occupations-List-MyCOL20242025-1773385490.pdf",
+      "source_type": "research",
+      "published_or_collected_at": "2026-10-21",
+      "retrieved_at": "2026-10-21T03:12:00+00:00",
+      "region": "MY",
+      "limitations": "Report period is 2024/2025; the field stores this run's collection date because an exact publication date was not asserted. MyCOL identifies Data Professionals as critical and names data, analytics and database skills as a top specific skill family. Mapping that broader family to canonical skill_sql is a documented human-reviewed taxonomy mapping, not a measured SQL prevalence rate."
+    }
+  ],
+  "role_signals": [
+    {
+      "role_id": "role_data_analyst",
+      "trend_score": 46.5,
+      "signal_label": "current_snapshot",
+      "evidence_ids": [
+        "ev_dosm_jmi_2026q2_business_data_analyst",
+        "ev_talentcorp_mycol_2024_2025_data_professionals"
+      ],
+      "observed_metrics": {
+        "valid_postings": 3053,
+        "delta_percent": null
+      },
+      "score_basis": "100 * 3,053 / 6,565 = 46.50. The denominator is the highest Q2 2026 online-job-offering count among the five STEM popular jobs shown by DOSM; this is a within-table normalized signal, not market share."
+    }
+  ],
+  "skill_signals": [
+    {
+      "skill_id": "skill_sql",
+      "trend_score": 70.0,
+      "signal_label": "current_snapshot",
+      "evidence_ids": [
+        "ev_talentcorp_mycol_2024_2025_data_professionals"
+      ],
+      "observed_metrics": {
+        "mention_rate": null,
+        "change_pp": null,
+        "coverage": null
+      },
+      "score_basis": "Controlled taxonomy score 70/100: canonical SQL is directly nested in the official top specific skill family 'data, analytics and database skills'; this is not a prevalence or growth statistic."
+    }
+  ],
+  "scenario_assumptions": {
+    "moderate": {
+      "role_data_analyst": 1.0
+    },
+    "fast": {
+      "role_data_analyst": 1.05
+    }
+  },
+  "assumption_basis": "Phase-1 scenario stress test: Moderate preserves the dated observed role score; Fast adds a bounded 5 percent uplift to projected outlook only. Neither scenario changes valid_postings or any other observed metric.",
+  "uncertainty": "Single-quarter public source and one contract role mapping. The normalized role score is useful for reproducible ranking inside the shown DOSM table but is not vacancy market share. The skill score is a transparent taxonomy heuristic. Results must display evidence and should not be interpreted as a hiring forecast."
+}

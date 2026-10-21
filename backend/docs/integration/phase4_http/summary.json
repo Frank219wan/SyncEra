@@ -1,0 +1,34 @@
+{
+  "health": 200,
+  "docs": 200,
+  "openapi": 200,
+  "api_paths": 16,
+  "pdf_upload": 200,
+  "docx_upload": 200,
+  "unconfirmed_recommendation": 422,
+  "confirmed_revision": 2,
+  "stale_revision": 409,
+  "candidate_snapshot": "snap_my_dosm_mycol_2026q2_v1",
+  "observed_valid_postings": 3053,
+  "observed_metrics_unchanged": true,
+  "moderate_outlook": 46.5,
+  "fast_outlook": 48.83,
+  "moderate_match_score": 54.08,
+  "fast_match_score": 54.54,
+  "score_arithmetic_valid": true,
+  "evidence_ids_resolved": [
+    "ev_dosm_jmi_2026q2_business_data_analyst",
+    "ev_talentcorp_mycol_2024_2025_data_professionals"
+  ],
+  "skill_gap_python": true,
+  "skill_map": 200,
+  "resource_id": "resource_mslearn_python_fundamentals_p1",
+  "roadmap": 200,
+  "p1_statuses": {
+    "progress": 503,
+    "organization": 503,
+    "refresh": 503
+  },
+  "response_provenance": "mixed_demo / is_mock=true",
+  "formal_approval": false
+}
