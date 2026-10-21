@@ -1,4 +1,7 @@
+packages:
+  - .
+
 allowBuilds:
-  esbuild: set this to true or false
-onlyBuiltDependencies:
-  - esbuild
+  esbuild: true
+overrides:
+  electron-to-chromium: 1.5.459

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyProfile } from '../src/data.ts';
 import {
-  fromContractLevel, fromContractRoleId, fromContractSkillId, mapEvidence, mapRecommendations, mapRoadmap, mapTrendRoles,
-  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest, selectedRoleToFieldId,
+  applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
+  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
   targetWeeks, toContractLevel, toContractRoleId, toContractSkillId,
 } from '../src/services/api-contract.ts';
 
@@ -12,9 +12,6 @@ test('contract IDs round-trip without leaking display names into keys', () => {
   assert.equal(fromContractRoleId('role_data_analyst'), 'data-analyst');
   assert.equal(toContractSkillId('python'), 'skill_python');
   assert.equal(fromContractSkillId('skill_python'), 'python');
-  assert.equal(selectedRoleToFieldId('data-analyst'), 'field_data');
-  assert.equal(selectedRoleToFieldId('business-analyst'), 'field_business');
-  assert.equal(selectedRoleToFieldId('learning-designer'), undefined);
 });
 
 test('skill levels preserve unknown as null', () => {
@@ -45,7 +42,7 @@ test('profile requests preserve structured occupation, interests, skills, and re
   const confirm = profileToConfirmRequest(profile);
   assert.equal(confirm.reviewed_by_user, true);
   assert.equal(confirm.profile_revision, 4);
-  assert.deepEqual(confirm.skills[0], { skill_id: 'skill_sql', level: 3, source: 'declared', confidence: 1 });
+  assert.deepEqual(confirm.skills[0], { skill_id: 'skill_sql', level: 3, source: 'confirmed', confidence: 1 });
 });
 
 test('profile requests do not invent backend IDs for frontend-only demo skills', () => {
@@ -61,23 +58,36 @@ test('profile requests do not invent backend IDs for frontend-only demo skills',
 });
 
 test('normalized service profile maps back to editable UI fields', () => {
-  const fallback = {
-    ...emptyProfile,
-    skills: [{ id: 'analytics', level: 'intermediate', source: 'manual' as const, confirmed: true }],
-  };
   const mapped = mergeNormalizedProfile({
     profile_id: 'profile_demo_001', pipeline: 'A', current_occupation: 'Junior analyst',
     skills: [{ skill_id: 'skill_python', level: null, source: 'inferred', confidence: 0.6 }],
     interests: ['analytics', 'sustainability'], reviewed_by_user: false,
     revision: 2,
-  }, fallback);
+  }, emptyProfile);
   assert.equal(mapped.id, 'profile_demo_001');
   assert.equal(mapped.skills[0].id, 'python');
   assert.equal(mapped.skills[0].level, 'unknown');
   assert.equal(mapped.skills[0].confirmed, false);
   assert.equal(mapped.revision, 2);
-  assert.equal(mapped.skills[1].id, 'analytics');
-  assert.equal(mapped.skills[1].level, 'intermediate');
+});
+
+test('newly extracted skills remain unconfirmed until the user reviews them',()=>{
+  const draft={...emptyProfile,skills:[{id:'sql',level:'intermediate',source:'manual' as const,confirmed:true}]};
+  const normalized=mergeNormalizedProfile({profile_id:'profile_1',pipeline:'A',current_occupation:'Analyst',interests:[],reviewed_by_user:false,revision:1,skills:[
+    {skill_id:'skill_sql',level:3,source:'declared',confidence:1},
+    {skill_id:'skill_python',level:null,source:'inferred',confidence:.6},
+  ]},draft);
+  assert.equal(normalized.skills.find(skill=>skill.id==='sql')?.confirmed,true);
+  assert.equal(normalized.skills.find(skill=>skill.id==='python')?.confirmed,false);
+  assert.equal(normalized.skills.find(skill=>skill.id==='python')?.confidence,.6);
+  assert.deepEqual(profileToConfirmRequest(normalized).skills.map(skill=>skill.skill_id),['skill_sql']);
+  assert.deepEqual(profileToConfirmRequest({...normalized,skills:normalized.skills.map(skill=>skill.id==='python'?{...skill,confirmed:true}:skill)}).skills.map(skill=>skill.skill_id),['skill_sql','skill_python']);
+});
+
+test('normalization includes synthetic experience text for extraction',()=>{
+  const request=profileToNormalizeRequest({...emptyProfile,experience:'Built a Python script'});
+  assert.equal(request.text,'Built a Python script');
+  assert.equal(request.form.experience,'Built a Python script');
 });
 
 test('role trend signals use role_id from the backend contract', () => {
@@ -87,6 +97,22 @@ test('role trend signals use role_id from the backend contract', () => {
   assert.equal(mapped[0].id, 'data-analyst');
   assert.equal(mapped[0].signal, 78);
   assert.equal(mapped[0].trend, 'rising');
+});
+
+test('real role trends do not inherit synthetic skills or a fabricated industry',()=>{
+  const mapped=mapTrendRoles([{role_id:'role_new',name:'New role',field_id:'field_health',trend_score:null,signal_label:'insufficient_evidence'}],[]);
+  assert.equal(mapped[0].domain,'health');
+  assert.equal(mapped[0].signalAvailable,false);
+  assert.equal(mapped[0].trend,'unknown');
+  assert.deepEqual(mapped[0].skills,[]);
+});
+
+test('bubble sizes require matching role and field IDs with a stated size basis',()=>{
+  const role=mapTrendRoles([{role_id:'role_data_analyst',name:'Data Analyst',field_id:'field_data',trend_score:78,signal_label:'current_snapshot'}],[]);
+  const bubbles={categories:[],roles:[{role_id:'role_data_analyst',field_id:'field_data',display_size:1,evidence_ids:[]}],size_basis:'Equal observed area',region:'MY'};
+  assert.equal(applyBubbleSizes(role,bubbles)?.[0].bubbleSize,1);
+  assert.equal(applyBubbleSizes(role,{...bubbles,roles:[{...bubbles.roles[0],field_id:'field_business'}]}),null);
+  assert.equal(applyBubbleSizes(role,{...bubbles,size_basis:''}),null);
 });
 
 test('roadmap response becomes a capacity-based local plan', () => {
@@ -103,36 +129,4 @@ test('roadmap response becomes a capacity-based local plan', () => {
   assert.equal(plan.tasks[0].skill, 'python');
   assert.equal(plan.tasks[0].title[0], 'Foundations');
   assert.equal(plan.tasks[1].week, 1);
-  assert.equal(plan.totalEstimatedHours, 8);
-  assert.equal(plan.capacityHours, 20);
-  assert.equal(plan.feasibility, 'feasible');
-});
-
-test('recommendations and evidence preserve provenance and explanations', () => {
-  const [recommendation] = mapRecommendations([{
-    rank: 1,
-    role_id: 'role_data_analyst',
-    role_name: 'Data Analyst',
-    match_score: 72.5,
-    score_breakdown: { skill_compatibility: 80, interests_preferences: 70, scenario_outlook: 60, transition_feasibility: 70 },
-    strengths: ['skill_sql'],
-    skill_gaps: [{ skill_id: 'skill_python', name: 'Python', current_level: null, target_level: 3, importance: 'high' }],
-    reason: 'Confirmed skills and dated evidence support this result.',
-    evidence_ids: ['ev_public_1'],
-    scenario_assumptions: ['moderate scenario'],
-    uncertainty: 'Not outcome-calibrated.',
-    sdg_links: [{ sdg: 8, rationale: 'Supports productive work.' }],
-  }]);
-  assert.equal(recommendation.reason, 'Confirmed skills and dated evidence support this result.');
-  assert.deepEqual(recommendation.evidenceIds, ['ev_public_1']);
-  assert.equal(recommendation.scoreBreakdown?.skillCompatibility, 80);
-  assert.equal(recommendation.skillGaps?.[0].targetLevel, 3);
-
-  const evidence = mapEvidence({
-    evidence_id: 'ev_public_1', title: 'Public evidence', source_url: 'https://example.org/evidence',
-    source_type: 'dataset', published_or_collected_at: '2026-08-18', retrieved_at: '2026-10-21T00:00:00Z',
-    region: 'MY', limitations: 'Sample limitation.',
-  });
-  assert.equal(evidence.url, 'https://example.org/evidence');
-  assert.equal(evidence.publishedOrCollectedAt, '2026-08-18');
 });

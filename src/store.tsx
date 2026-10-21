@@ -1,9 +1,15 @@
 import {createContext,useContext,useEffect,useState,type ReactNode} from 'react';
 import type {AppState,Copy,Locale} from './types';
-import {emptyProfile,hrSample,tvetSample} from './data';
-const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',serviceMeta:null,plan:null,hr:hrSample,tvet:tvetSample};
+import {emptyProfile,emptyHr,tvetSample} from './data';
+import {restoreHr} from './hrState';
+const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',serviceMeta:null,plan:null,hr:emptyHr,hrProfileSaved:false,tvet:tvetSample};
 function read():AppState {
-  try { const saved=JSON.parse(localStorage.getItem('futureproof-v1')||'null'); return saved?.schema===1?{...initial,...saved.state}:structuredClone(initial); }
+  try {
+    const saved=JSON.parse(localStorage.getItem('futureproof-v1')||'null');
+    if(saved?.schema!==1)return structuredClone(initial);
+    const state={...initial,...saved.state};
+    return {...state,...restoreHr(saved.state?.hr,saved.state?.hrProfileSaved)};
+  }
   catch {return structuredClone(initial);}
 }
 type Store={state:AppState;setState:React.Dispatch<React.SetStateAction<AppState>>;t:(en:string,zh:string,ms:string)=>string;copy:(copy:Copy)=>string;toast:(message:string)=>void};

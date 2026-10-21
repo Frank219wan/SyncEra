@@ -4,12 +4,15 @@ on:
   pull_request:
     branches:
       - main
+      - feature/tech-integration
+      - feature/backend-integration
     paths:
       - 'backend/**'
       - 'src/**'
       - 'tests/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
       - 'tsconfig*.json'
       - 'vite.config.ts'
       - '.github/workflows/backend-ci.yml'
@@ -50,6 +53,11 @@ jobs:
 
       - name: Verify FastAPI app import
         run: python -c "from app.main import app; assert app is not None"
+
+      - name: Verify configured Tech adapter and scoring policy
+        env:
+          AI_ADAPTER_MODULE: futureproof_ai.futureproof_adapter
+        run: python -c "from app.main import app; from futureproof_ai.futureproof_adapter import FutureProofAdapter; assert isinstance(app.state.adapter, FutureProofAdapter); assert app.state.adapter.scoring_policy == 'tech-v1'"
 
       - name: Verify runtime OpenAPI and P0 routes
         run: |
@@ -98,8 +106,6 @@ jobs:
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10.28.2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

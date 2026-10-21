@@ -1,11 +1,11 @@
-import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization } from '../types';
+import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import {
-  mapEvidence, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
-  profileToConfirmRequest, profileToNormalizeRequest, selectedRoleToFieldId, targetWeeks,
+  applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
+  fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiEvidence, type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -96,7 +96,7 @@ export const api = {
   },
 
   confirm: async (profile: Profile): Promise<Profile> => {
-    if (isDemo) return { ...structuredClone(profile), skills: profile.skills.map(skill => ({ ...skill, confirmed: true })) };
+    if (isDemo) return { ...structuredClone(profile), skills: profile.skills.filter(skill => skill.confirmed) };
     const response = await request<{ profile: ApiNormalizedProfile; profile_revision: number }>('/profiles/confirm', { body: profileToConfirmRequest(profile) });
     return mergeNormalizedProfile(response.data.profile, profile);
   },
@@ -108,16 +108,62 @@ export const api = {
     }
     const response = await request<{ items: ApiRoleSignal[]; next_cursor: string | null }>('/trends/roles?region=MY&limit=50');
     const meta = toServiceMeta(response.meta);
+    if (!meta.snapshotId) throw new ApiError(502, 'MISSING_SNAPSHOT', 'Role trends did not include a snapshot ID.');
     return {
       snapshotId: meta.snapshotId ?? '', snapshotAt: meta.generatedAt,
       region: 'MY', origin: meta.isMock ? 'synthetic_fixture' : 'public_observed',
-      roles: mapTrendRoles(response.data.items, roles), meta,
+      roles: mapTrendRoles(response.data.items, roles).map(role=>({...role,bubbleSize:1})), meta,
     };
   },
 
-  recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> => {
-    if (isDemo) return demoRecommendations(profile, scenario);
-    const preferredFieldId = selectedRoleToFieldId(selectedRole);
+  discovery: async (): Promise<TrendPackage> => {
+    const trends = await api.trends();
+    if (isDemo) return trends;
+    const query = `?region=MY&snapshot_id=${encodeURIComponent(trends.snapshotId)}`;
+    const [bubbleResult,skillResult] = await Promise.allSettled([
+      request<ApiBubblesData>(`/explore/bubbles${query}`),
+      request<{items:ApiSkillSignal[];next_cursor:string|null}>(`/trends/skills${query}&limit=50`),
+    ]);
+    const warnings:string[]=[];
+    let mapped=trends.roles;
+    let bubbleSizeBasis:string|undefined;
+    if(bubbleResult.status==='fulfilled'){
+      const {data,meta}=bubbleResult.value;
+      if(meta.snapshot_id===trends.snapshotId&&Boolean(meta.is_mock)===trends.meta.isMock){
+        const sized=applyBubbleSizes(mapped,data);
+        if(sized){mapped=sized;bubbleSizeBasis=data.size_basis;}
+        else warnings.push('Bubble data is incomplete or has non-comparable sizes; showing neutral bubbles.');
+      }else warnings.push('Bubble data does not match the role snapshot or source label.');
+    }else warnings.push(`Bubble API unavailable: ${(bubbleResult.reason as Error).message}`);
+    let skills:TrendPackage['skills'];
+    if(skillResult.status==='fulfilled'){
+      const {data,meta}=skillResult.value;
+      if(meta.snapshot_id===trends.snapshotId&&Boolean(meta.is_mock)===trends.meta.isMock){
+        skills=data.items.map(item=>({id:fromContractSkillId(item.skill_id),name:item.name,score:item.trend_score,
+          label:item.signal_label,change:item.observed_metrics?.change_pp??null,
+          evidenceIds:item.evidence_ids,sourceWindow:item.source_window}));
+      }else warnings.push('Skill data does not match the role snapshot or source label.');
+    }else warnings.push(`Skill trends API unavailable: ${(skillResult.reason as Error).message}`);
+    return {...trends,roles:mapped,skills,bubbleSizeBasis,warnings};
+  },
+
+  evidence: async (evidenceId: string): Promise<{ evidence: Evidence; meta: ReturnType<typeof toServiceMeta> }> => {
+    if (!/^[A-Za-z0-9_-]+$/.test(evidenceId)) throw new ApiError(400, 'BAD_REQUEST', 'Invalid evidence ID.');
+    const response = await request<{ evidence: {
+      evidence_id: string; title: string; source_url: string | null; source_type: string;
+      published_or_collected_at: string; retrieved_at: string; region: string | null; limitations: string | null;
+    } }>(`/evidence/${evidenceId}`);
+    const item = response.data.evidence;
+    return { evidence: { evidenceId: item.evidence_id, title: item.title, sourceUrl: item.source_url, sourceType: item.source_type, publishedOrCollectedAt: item.published_or_collected_at, retrievedAt: item.retrieved_at, region: item.region, limitations: item.limitations }, meta: toServiceMeta(response.meta) };
+  },
+
+  role: async (roleId: string): Promise<{ role: ApiRoleData; meta: ReturnType<typeof toServiceMeta> }> => {
+    const response = await request<ApiRoleData>(`/roles/${toContractRoleId(roleId)}`);
+    return { role: response.data, meta: toServiceMeta(response.meta) };
+  },
+
+  recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>}> => {
+    if (isDemo) return {results: demoRecommendations(profile, scenario), meta: demoMeta(snapshotId)};
     const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[] }>('/recommendations', {
       body: {
         profile_id: profile.id,
@@ -125,22 +171,14 @@ export const api = {
         ai_scenario: scenario,
         top_k: 5,
         snapshot_id: snapshotId,
-        ...(preferredFieldId ? { preferred_field_id: preferredFieldId } : {}),
       },
     });
     if (!Array.isArray(response.data.recommendations)) throw new ApiError(502, 'INVALID_RESPONSE', 'Missing recommendations in service response.');
-    const recommendations = mapRecommendations(response.data.recommendations);
-    const evidenceIds = [...new Set(recommendations.flatMap(item => item.evidenceIds ?? []))];
-    const evidenceEntries = await Promise.all(evidenceIds.map(async evidenceId => {
-      const evidenceResponse = await request<{ evidence: ApiEvidence }>(`/evidence/${encodeURIComponent(evidenceId)}`);
-      return mapEvidence(evidenceResponse.data.evidence);
-    }));
-    const evidenceById = new Map(evidenceEntries.map(item => [item.id, item]));
-    return recommendations.map(item => ({
-      ...item,
-      evidence: (item.evidenceIds ?? []).map(id => evidenceById.get(id)).filter(item => item !== undefined),
-    }));
+    return {results: mapRecommendations(response.data.recommendations), meta: toServiceMeta(response.meta)};
   },
+
+  recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> =>
+    (await api.recommendDetailed(profile, scenario, selectedRole, snapshotId)).results,
 
   skillMap: async (profileId: string, roleId: string, skillId: string, language: string, budgetAmount: number) => {
     return request<{
@@ -182,15 +220,17 @@ export const api = {
 
   adopt: async (plan: Plan): Promise<Plan> => ({ ...plan, adopted: true }),
 
-  // P1 organization endpoints deliberately return 503 in API v1. Keep this clearly local until P1 ships.
-  organization: async (org: Organization, _actor: 'hr' | 'tvet'): Promise<Organization> =>
-    ({ ...structuredClone(org), analyzedRevision: org.revision }),
+  // No organization-analysis endpoint is available in the connected API yet.
+  organization: async (org: Organization, _actor: 'hr' | 'tvet'): Promise<Organization> => {
+    if (!isDemo) throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'Organization analysis is not connected yet. Your inputs remain saved locally; no AI analysis was generated.');
+    return { ...structuredClone(org), analyzedRevision: org.revision };
+  },
 
   task: async (profileId: string, plan: Plan, taskId: string, evidence: string): Promise<void> => {
     if (isDemo) return;
     const task = plan.tasks.find(item => item.id === taskId);
     if (!task) throw new ApiError(404, 'NOT_FOUND', 'The selected learning step was not found.');
-    // P1 progress is browser-local for now; the backend route intentionally returns 503.
+    if (!isDemo) throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'Learning-progress synchronization is not connected yet. No server-side progress was recorded.');
     void profileId; void evidence;
   },
 };

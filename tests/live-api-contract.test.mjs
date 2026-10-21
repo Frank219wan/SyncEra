@@ -41,8 +41,10 @@ test('live API completes the Individual contract from profile to roadmap', async
       study_constraints: constraints,
     }),
   });
-  assert.equal(normalized.meta.is_mock, false, 'CI must exercise futureproof_ai.create_adapter()');
+  assert.equal(normalized.meta.is_mock, true, 'Synthetic rule-based extraction stays labelled honestly');
   const profile = normalized.data.profile;
+  assert.equal(profile.current_occupation, 'Operations Assistant');
+  assert.deepEqual(profile.interests, ['analytics', 'data']);
 
   const confirmed = await request('/profiles/confirm', {
     method: 'POST',

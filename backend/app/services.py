@@ -2,7 +2,7 @@ from __future__ import annotations
 from uuid import uuid4
 from .models import Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
 from .catalogue import SKILLS, ROLES, FIELDS
-from .matching import calculate_breakdown, expected_reason, expected_scenario_explanation, expected_skill_gaps, expected_strengths, expected_uncertainty, recommendation_sort_key
+from .scoring_validation import validate_scored_recommendations
 
 class APIError(Exception):
     def __init__(self,status:int,code:str,message:str,details=None,retryable=False):
@@ -86,6 +86,9 @@ def normalize(adapter,req,store):
 
 def confirm(store,req):
     profile=require_profile(store,req.profile_id)
+    if profile.reviewed_by_user and req.profile_revision is None:
+        raise APIError(409,'PROFILE_REVISION_REQUIRED','profile_revision is required to update a confirmed profile',
+                       [{'field':'profile_revision','reason':'required_for_update'}])
     if req.profile_revision is not None and req.profile_revision!=profile.revision:
         raise APIError(409,'SNAPSHOT_CONFLICT','Profile revision changed',[{'field':'profile_revision','reason':'stale'}],True)
     ids=[x.skill_id for x in req.skills]
@@ -98,44 +101,30 @@ def confirm(store,req):
     return {'profile':updated.model_dump(),'profile_revision':updated.revision}
 
 def demo_recommendations(profile,snap,scenario,field_id,top_k):
+    owned={x.skill_id:x.level for x in profile.skills}
     results=[]
     for role in ROLES.values():
         if role.role_id not in snap.role_scores or (field_id and role.field_id!=field_id): continue
+        weighted=sum((max(0,min(1,(owned.get(s.skill_id) or 0)/s.target_level)) if owned.get(s.skill_id) is not None else 0)*({'high':3,'medium':2,'low':1}[s.importance]) for s in role.required_skills)
+        max_weight=sum({'high':3,'medium':2,'low':1}[s.importance] for s in role.required_skills)
+        skill_score=round(100*weighted/max_weight,2)
+        interest_score=round(100*len(set(profile.interests)&set(role.interests))/max(1,len(role.interests)),2)
         base=snap.role_scores[role.role_id]
         if base is None: continue
         multiplier=snap.scenario_assumptions[scenario][role.role_id]
-        breakdown=calculate_breakdown(profile,role,base,multiplier)
-        gaps=expected_skill_gaps(profile,role)
-        strengths=expected_strengths(profile,role)
-        results.append(Recommendation(rank=1,role_id=role.role_id,role_name=role.name,match_score=breakdown.total(),score_breakdown=breakdown,strengths=strengths,skill_gaps=gaps,reason=expected_reason(),evidence_ids=snap.role_evidence_ids[role.role_id],scenario_assumptions=expected_scenario_explanation(scenario,multiplier,base),uncertainty=expected_uncertainty(snap.uncertainty),sdg_links=role.sdg_links))
-    results.sort(key=recommendation_sort_key)
+        outlook=round(min(100,base*multiplier),2)
+        gap_count=sum(1 for s in role.required_skills if owned.get(s.skill_id) is None or owned[s.skill_id]<s.target_level)
+        transition=round(100*(1-gap_count/len(role.required_skills)),2)
+        breakdown=ScoreBreakdown(skill_compatibility=skill_score,interests_preferences=interest_score,scenario_outlook=outlook,transition_feasibility=transition)
+        gaps=[SkillGap(skill_id=s.skill_id,name=s.name,current_level=owned.get(s.skill_id),target_level=s.target_level,importance=s.importance) for s in role.required_skills if owned.get(s.skill_id) is None or owned[s.skill_id]<s.target_level]
+        strengths=[s.skill_id for s in role.required_skills if owned.get(s.skill_id) is not None and owned[s.skill_id]>=s.target_level]
+        results.append(Recommendation(rank=1,role_id=role.role_id,role_name=role.name,match_score=breakdown.total(),score_breakdown=breakdown,strengths=strengths,skill_gaps=gaps,reason='Rule-only demo match using confirmed skills, interests, and scenario-adjusted dated signals.',evidence_ids=snap.role_evidence_ids[role.role_id],scenario_assumptions=[f'{scenario} assumption multiplier {multiplier}; observed signal remains {base}'],uncertainty=snap.uncertainty+'; rule-only demo fit heuristic is not empirically calibrated',sdg_links=role.sdg_links))
+    results.sort(key=lambda r:(-r.match_score,r.role_id))
     return [r.model_copy(update={'rank':i}).model_dump() for i,r in enumerate(results[:top_k],1)]
 
-def validate_recommendations(raw,snap,scenario,profile):
+def validate_recommendations(raw,profile,snap,scenario,scoring_policy):
     try:
-        values=[Recommendation.model_validate(x) for x in raw]
-        if scenario not in snap.scenario_assumptions: raise ValueError('scenario missing from snapshot')
-        if len({r.role_id for r in values}) != len(values): raise ValueError('duplicate role recommendation')
-        for r in values:
-            role=require_role(r.role_id)
-            if r.role_id not in snap.role_scores or r.evidence_ids!=snap.role_evidence_ids[r.role_id]: raise ValueError('evidence provenance mismatch')
-            if r.role_name!=role.name: raise ValueError('role name mismatch')
-            if r.role_id not in snap.scenario_assumptions[scenario]: raise ValueError('role scenario assumption missing')
-            expected_breakdown=calculate_breakdown(profile,role,snap.role_scores[r.role_id],snap.scenario_assumptions[scenario][r.role_id])
-            for field in ('skill_compatibility','interests_preferences','scenario_outlook','transition_feasibility'):
-                if abs(getattr(r.score_breakdown,field)-getattr(expected_breakdown,field)) > .01: raise ValueError(f'{field} mismatch')
-            if r.strengths!=expected_strengths(profile,role): raise ValueError('strengths do not match confirmed profile')
-            if r.skill_gaps!=expected_skill_gaps(profile,role): raise ValueError('skill gaps do not match profile and role catalogue')
-            if r.sdg_links!=role.sdg_links: raise ValueError('sdg links do not match role catalogue')
-            multiplier=snap.scenario_assumptions[scenario][r.role_id]
-            base=snap.role_scores[r.role_id]
-            if r.reason!=expected_reason(): raise ValueError('reason does not match validated score basis')
-            if r.scenario_assumptions!=expected_scenario_explanation(scenario,multiplier,base): raise ValueError('scenario explanation mismatch')
-            if r.uncertainty!=expected_uncertainty(snap.uncertainty): raise ValueError('snapshot uncertainty mismatch')
-        ordered=sorted(values,key=recommendation_sort_key)
-        if [r.role_id for r in values]!=[r.role_id for r in ordered]: raise ValueError('recommendations are not sorted reproducibly')
-        if [r.rank for r in values]!=list(range(1,len(values)+1)): raise ValueError('recommendation ranks are not consecutive')
-        return [x.model_dump() for x in values]
+        return validate_scored_recommendations(raw,profile,snap,scenario,scoring_policy)
     except Exception:
         raise APIError(502,'MODEL_INVALID_OUTPUT','Matching output failed catalogue or score validation')
 

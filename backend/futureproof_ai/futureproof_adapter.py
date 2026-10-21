@@ -13,13 +13,13 @@ from .scoring import score_roles
 class FutureProofAdapter:
     """Deterministic and auditable Phase-1 AI implementation.
 
-    ``is_mock`` is false because outputs are computed from the supplied profile
-    and approved snapshot rather than returned from canned fixtures. The
-    current implementation is rules-based, not an LLM, and deliberately does
-    not infer proficiency levels that the user did not state.
+    Outputs are computed from supplied inputs. Synthetic data and rule-based
+    extraction remain explicitly labelled as mock; this is not LLM inference.
+    Proficiency levels are never inferred when the user did not state them.
     """
 
-    is_mock = False
+    is_mock = True
+    scoring_policy = 'tech-v1'
 
     def extract_profile(
         self,

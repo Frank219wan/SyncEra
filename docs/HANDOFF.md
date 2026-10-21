@@ -2,12 +2,6 @@
 
 更新时间：2026-10-21。用户最高需求依据：https://chatgpt.com/share/6ad79b9f-cc3c-83ec-8c8f-c23cfbff1670。
 
-## 2026-10-21 Tech 集成更新
-
-Individual 的 `real` 模式现已完成 A 主链契约映射：表单画像规范化 → 用户确认 → 趋势 Snapshot → Moderate/Fast 推荐 → Evidence 查询 → Skill Mind Map → Roadmap。UI 直接展示后端的分数拆解、匹配理由、优势与差距、Evidence ID／URL／日期／限制、情景假设与不确定性；路线图时长、容量、可行性、警告和进度分母均来自服务响应。后端拒绝与已确认画像、角色目录、Snapshot、情景公式或排序不一致的 Adapter 输出。
-
-`.github/workflows/backend-ci.yml` 现由 Backend、Frontend、Individual live contract 三个作业组成；根目录 `.replit` 通过 `scripts/run-replit.sh` 同时启动真实 Tech Adapter、FastAPI 和 Vite。候选 Snapshot／课程仍未取得 Team Lead reviewer-owned approval，不会自动激活；Organization 与进度写回仍属于 P1／演示范围。修复与外部评审项的对应关系见 `docs/REVIEW_RESOLUTION.md`。
-
 ## 已完成界面
 
 入口 /；个人 /individual、/radar、/intake、/intake/profile、/intake/review、/analyzing、/recommendations、/roles/:roleId、/skills/:skillId/mind-map、/roadmap/draft、/roadmap/:planId（后 10 个路径带 /individual 前缀）。
@@ -39,7 +33,7 @@ src/services/api.ts 已定义请求适配器；默认 demo 不产生网络分析
 |POST /organizations/hr/analyze|HR／L&D 合成群体分析|
 |POST /organizations/career_centre/analyze|院校合成群体分析|
 
-适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐、Roadmap、进度和机构路径实现。Individual real mode 的 Radar、Recommendation、Evidence、MindMap 和 Roadmap 已绑定服务数据并有跨栈联调测试。仍需认证、授权、生产持久化、错误本地化、幂等键、真实 Snapshot 历史、Team Lead 数据批准，以及 Organization／进度写回的 P1 服务。API 失败不得静默回退为演示数据。
+适配器现已按 `API.md` 的 `/api/v1` 成功／错误 envelope、稳定 ID、快照、画像确认、推荐和 Roadmap 路径实现。real 模式的 Radar、Recommendations、RoleDetail 从 API 读取信号、解释和 Evidence，并在 API 失败时显示错误；MindMap、组织分析和学习进度仍属于未完成的 P1 接入。还需后端认证、授权、持久化、完整 schema 验证、错误本地化、幂等键、真实趋势来源和 snapshot 历史、文件解析及版本并发控制。不得把 real 模式等同于生产模式。
 
 当前费用、工时和可行性均为标明的示例。学习时间、预算、语言、日期、已有基础可编辑并保存；真实课程价格和排期约束需要后端求解。用户任务确认是自我报告，不是认证或能力判定。
 
@@ -50,3 +44,13 @@ src/services/api.ts 已定义请求适配器；默认 demo 不产生网络分析
 ## 发布
 
 Sites project_id: appgprj_6ad79e021d708191ad91460917418cd5。保持所有者私有。发布状态与版本记录另见 DELIVERY.md。不要重复创建站点，不要记录凭证。完成后关闭 05-57-futureproof-ui 自动化。
+
+## Prompt_1.md 实施补充（2026-10-21）
+
+- 首页现有竹与常春藤植物加入约 4 秒、每个浏览器会话一次的展开动画；遵从 `prefers-reduced-motion`，保留原卡片位置和轻微背景呼吸效果。
+- 侧栏只保留品牌标志作为首页入口；“My Growth”和“Learning Journey”是固定独立导航。HR / TVET / 个人上下文从 URL 推导，并新增路由测试。
+- 今日计划改为个人首页内默认收起的展开区；任务各自展开、提供学习资源，完成必须人工确认并填写反思。学习旅程按技能分组展示当前和归档计划，重复技能不会合并掉计划来源。
+- HR 输入改成部门优先：职责、状态、挑战、目标、申报人数；员工资料可选。员工 CSV 支持列映射、预览、唯一编号/部门校验和显式确认。XLSX、PDF/DOCX 解析仍待解析库/服务。
+- HR 概览显示用户申报人数、部门、员工资料数和人工实施状态，并保留用户提交的本地规划快照版本。该预览不是 AI 分析。
+- localStorage 保存仍仅限此浏览器/设备；尚无机构账号隔离、服务端鉴权或同步。缺失后端时，机构 AI 分析与学习进度服务在 real mode 明确报不可用，不返回伪造成功。
+- 验证：TypeScript、Vite production build、17 个 Node 测试、44 个后端测试及 1 个本地 HTTP 跨栈测试通过。`pnpm install --frozen-lockfile` 已通过：将传递依赖固定到过等待期的 `electron-to-chromium@1.5.459`，并显式允许构建所需的 esbuild 安装脚本；未放宽最短发布年龄策略。
