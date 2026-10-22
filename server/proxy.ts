@@ -96,7 +96,10 @@ export async function handleProxy(
     if (key === 'proxy_path') continue;
     if (!allowedQuery.has(key) || value.length > 256 || incoming.searchParams.getAll(key).length !== 1) {
       // Temporary Preview diagnostic: names only, never values or request bodies.
-      const response = jsonError(400, 'BAD_QUERY', 'Unsupported API query.');
+      const response = Response.json({
+        error: { code: 'BAD_QUERY', message: 'Unsupported API query.', details: [{ field: key.slice(0, 80), reason: 'unsupported' }] },
+        meta: {},
+      }, { status: 400, headers: { 'Cache-Control': 'no-store' } });
       response.headers.set('X-Proxy-Rejected-Query-Key', key.slice(0, 80));
       return response;
     }
