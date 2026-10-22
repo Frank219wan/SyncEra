@@ -105,3 +105,50 @@
 | `POST /api/v1/profiles/confirm`（过期） | 409 | 409 | `2026-10-22T14:55:17Z`；Neon revision 保持 3 | NOT VERIFIED（响应错误码与 `meta`） |
 
 上表 Vercel Request ID 是边缘日志标识，**不是**响应中的 `meta.request_id`；两者不可混用。没有把请求正文、连接串或任何密钥写入报告。最终验收结论：**BLOCKED / READY TO MERGE: NO**。
+
+## Final Acceptance Refresh（2026-10-23 UTC+08）
+
+本节覆盖代码及此前报告提交 `cb48b33dc527acb39ed3bef64d2945861160152c`。两端 Vercel Preview 均在该 Source SHA 的 Ready 部署上验收：Frontend `8dPz7Hk687BUZJzUQ1AC6f6YbE8K`（唯一别名 `https://syncera-frontend-ax4px35mu-frank219wan.vercel.app`），Backend `32dMLGkuFLXUCXsJFLtduUQsTkaD`（唯一别名 `https://syncera-backend-9syem65xo-frank219wan.vercel.app`）。GitHub 对该 SHA 的两项 Vercel 状态均为 success。本节更新前文中旧 SHA 未验收的记录；最终报告提交会产生另一个仅文档 SHA，需对它做部署 Ready 与 Health 冒烟复核。
+
+| # | 验收项 | 状态 | 最新证据与边界 |
+| --- | --- | --- | --- |
+| 1 | Cloud 基线 PR #13 SHA | PASS | Cloud 全流程验收对应已推送的 `cb48b33dc527acb39ed3bef64d2945861160152c`；分支随后有并行提交，见下节。 |
+| 2 | Frontend Preview SHA | PASS | Preview 部署 `8dPz7Hk687BUZJzUQ1AC6f6YbE8K` Ready，Source `cb48b33`，唯一别名如上。 |
+| 3 | Backend Preview SHA | PASS | Preview 部署 `32dMLGkuFLXUCXsJFLtduUQsTkaD` Ready，Source `cb48b33`，唯一别名如上。 |
+| 4 | Actual Preview URLs | PASS | 两端唯一别名及既有分支别名均已核对；下述 Cloud E2E 使用 Frontend 唯一别名。 |
+| 5 | WAF Rule Coverage | BLOCKED | Frontend 规则 `preview-api-rate-limit` 已暂存 Environment=Preview、POST、`/api/v1/` 前缀、每 IP 60 秒 10 次、429；Dashboard 仍显示 `Review Changes 1`，尚未发布。当前生效规则的旧 Hostname 集合不覆盖新的唯一别名。 |
+| 6 | WAF 429 Event Evidence | NOT VERIFIED | 没有 Rule ID、Hostname、时间戳、Request ID 组成的真实 WAF 429 事件。代理实例内限流不能替代此证据；规则须由用户审阅发布后再受控验证。 |
+| 7 | Cloud Stale Revision 409 | PASS | 两个预先加载的确认页面使用同一虚构 Profile。第一个 Confirm 使 Revision 2→3；第二个旧页面显示 `Profile revision changed`。Frontend 部署日志 `2026-10-23 01:13:15.27 UTC+08` 记录 `POST /api/v1/profiles/confirm` HTTP 409；Neon 查询 Revision 仍为 3。响应 JSON 的 `error.code` 与 `meta.request_id` 未截取。 |
+| 8 | Cross-request Persistence | PASS | 独立的 Normalize、Confirm、Recommendation、Roadmap、Skill Map HTTP 请求均经 Frontend 同源代理成功；Neon 独立查询读到相同虚构 Profile、Revision 2 后又读到 3。未做跨 Vercel 实例冷启动读回。 |
+| 9 | Neon Revision Verification | PASS | Preview Project `aged-surf-56749653`、Branch `br-falling-glade-aox9nfes`、DB `syncera_preview` 中 `profile_0e6acee914f14506` 的虚构标记匹配且 `reviewed_by_user=true`。获用户单独确认后仅以 Profile ID、Revision 3、虚构标记三重条件精确删除；`RETURNING` 一行，复查 `count(*)=0`。 |
+| 10 | POST Response Metadata | NOT VERIFIED | Frontend Vercel Request Logs 给出各 POST 的 HTTP 状态；各响应 JSON 的 `meta.request_id`、`meta.model_version` 与适用的 `meta.snapshot_id` 未直接截取，不能声称逐项通过。 |
+| 11 | Backend Runtime Error Logs | NOT VERIFIED | 新 SHA 的 Frontend 代理日志显示 Normalize/Confirm 等 200、过期 Confirm 409；本轮没有完整复核 Backend 新部署的 Warning/Error/Fatal 窗口和 Python runtime。旧 503 的完整原始堆栈仍不可恢复。 |
+| 12 | Pool Recovery Regression Tests | PASS | 新 SHA 后端全集 `99 PASS, 1 SKIPPED`，保留失效连接恢复、单次有界重试和 CAS 回归测试；`TEST_DATABASE_URL` 未注入，因此本 SHA 实库集成测试未重跑。旧 SHA Neon 实库 10 PASS。 |
+| 13 | Frontend / Proxy Tests | PASS | 新 SHA `package.json` 对应 Node 测试直接运行 `49 PASS`；`tsc -b && vite build` PASS。`pnpm` 包装器因离线 registry/隔离检出软链保护未成功，但等价脚本执行通过。构建资产敏感变量名搜索无命中。 |
+| 14 | Backend Tests | PASS | 新 SHA `python -m pytest tests -q`：`99 PASS, 1 SKIPPED`（缺 `TEST_DATABASE_URL`）。不把跳过项称为实库通过。 |
+| 15 | Preview Environment Security | NOT VERIFIED | 两端匿名 Health 均返回 Vercel Authentication 302，已登录 Safari 经 Frontend/Backend Health 各得 200；Frontend 浏览器只走同源 `/api/v1`。Frontend server Function 使用 Secret 名 `BACKEND_PROTECTION_BYPASS_SECRET`，本地打包搜索无密钥变量名。Backend Preview 列出 `PROFILE_STORE`、Secret `DATABASE_URL`、`AI_ADAPTER_MODULE`、`FRONTEND_ORIGINS`；隐藏值与连接串 pooled/TLS、精确 Origin 仍未核验。 |
+| 16 | Production Unchanged | PASS | 只推送目标集成分支并写入/精确清理 Preview Neon 虚构记录；未修改 main、Production、公开 Backend 域名或任何密钥。 |
+| 17 | MiniMax Live | NOT VERIFIED | 结构化虚构资料的经验自由文本留空，未走付费抽取；Preview 未设置 `ENABLE_LIVE_CAREER_RECOMMENDATION`，页面 Moderate/Fast 显示规则推荐和 `disabled`。未调用真实 MiniMax。 |
+| 18 | Outstanding Release Risks | BLOCKED | WAF Preview 条件只暂存，未覆盖新唯一别名且无实际 429；POST 响应元数据、Backend 新部署日志、隐藏 Preview 变量值、跨实例读取及新 SHA 的 Neon 实库测试仍未验收。 |
+| 19 | Final Merge Recommendation | BLOCKED | **暂不合并 Draft PR #13。** 功能主链在 `cb48b33` 的受保护 Preview 成功，Cloud 409 与独立 Neon 持久化已证实；WAF 门槛仍未满足。 |
+
+### `cb48b33` Cloud 请求与清理证据
+
+| 同源 Endpoint | Frontend HTTP | 直接观察结果 |
+| --- | --- | --- |
+| `GET /api/v1/health` | 200 | Frontend `request_id=req_a143…`、Backend `request_id=req_ef0…`，两端 `status=ok`、`model_version=rules-v0.1`；完整 ID 未写入本节。 |
+| `POST /api/v1/profiles/normalize` | 200 | `2026-10-23 00:16:39.52 UTC+08`，Neon 产生上述虚构 Profile。 |
+| `POST /api/v1/profiles/confirm` | 200 | `00:16:57.71`；Neon Revision 2、`reviewed_by_user=true`。 |
+| `POST /api/v1/recommendations` Moderate / Fast | 200 | `00:17:00.31`、`00:17:05.80`、`00:17:12.25`；UI 展示 Data Analyst 35.62 / 36.87，规则路径 `disabled`。 |
+| `POST /api/v1/learning/roadmap` | 200 | `00:17:25.84`、`00:17:32.97`；UI 展示 3 技能检查点、预计 30 小时。 |
+| `POST /api/v1/learning/skill-map` | 200 | `00:17:38.58`；UI 展示 SQL 10 小时。 |
+| `POST /api/v1/profiles/confirm`（新 Revision） | 200 | `2026-10-23 01:12:35.13 UTC+08`；Neon Revision 3。 |
+| `POST /api/v1/profiles/confirm`（旧 Revision） | 409 | `2026-10-23 01:13:15.27 UTC+08`；UI 冲突提示、Neon Revision 保持 3。 |
+
+本轮唯一虚构 Profile 已在用户确认后精确清理，查询剩余 0 行。没有把请求正文、数据库连接串、Bypass Secret 或 TokenHub Key 写入本文档。**整体：PARTIALLY WORKING；READY TO MERGE: NO。**
+
+### 并行更新后的最新分支（2026-10-23 UTC+08）
+
+推送本节报告之前，`integration/postgres-preview-backend` 被并行工作推进到 `50a2dc940f0079c2b93391a97520917af51c3e91`，新增受控虚构 CV 上传路径并修改 `server/proxy.ts`、`vercel.json`、`src/` 与测试。`main` 也由其他工作推进至 `433bc2e5127145541061ed6bc4a33f13039cbde9`；本报告没有修改 main。报告已基于最新目标分支重放，无覆盖或强推。GitHub 对 `50a2dc9` 的两项 Vercel Preview 状态均为 success：Frontend 部署 `nkV8a3fusbgidBqSxCkmUNeVsU6y`，Backend 部署 `6bPMriQ34Kkm1u4sM2CkNHbjb1mm`。两端分支别名的匿名 Health 均仍返回 Vercel SSO 302。
+
+针对 `50a2dc9` 重新运行前端测试 **55 PASS**、后端 **101 PASS / 1 SKIPPED**（无 `TEST_DATABASE_URL`）、`tsc -b && vite build` **PASS**，浏览器构建资产中未找到 `BACKEND_PROTECTION_BYPASS_SECRET`、`TENCENT_TOKENHUB_API_KEY` 或 `DATABASE_URL` 字符串。因新提交改动了代理，`cb48b33` 的 Normalize→Confirm→Recommendation、CAS 409 等 Cloud 请求不能自动归到 `50a2dc9` 或随后的报告提交。**最新 SHA 的已登录 Cloud E2E 仍为 NOT VERIFIED**；也未触发新 CV 上传的可能付费提取路径。WAF 暂存规则仍待用户审阅发布并记录真实 429。**READY TO MERGE: NO。**
