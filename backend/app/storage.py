@@ -52,22 +52,25 @@ class PostgresProfileStore:
                 raise RuntimeError('Vercel PostgreSQL DATABASE_URL must require TLS (sslmode=require or stronger)')
         from psycopg_pool import ConnectionPool
         self.pool = ConnectionPool(conninfo=database_url, min_size=0, max_size=3,
-                                   timeout=5, max_idle=60, open=True)
+                                   timeout=5, max_idle=60, kwargs={'connect_timeout': 5}, open=True)
         try:
             with self.pool.connection() as db:
-                db.execute('SELECT profile_id FROM profiles LIMIT 0')
+                db.execute('SELECT profile_id FROM public.profiles LIMIT 0')
         except Exception:
             self.pool.close()
-            raise RuntimeError('PostgreSQL profiles schema is unavailable; run migrate_postgres.py') from None
+            raise RuntimeError('PostgreSQL connection or profiles schema is unavailable') from None
+
+    def close(self):
+        self.pool.close()
 
     def save_new(self, profile: Profile):
         with self.pool.connection() as db:
-            db.execute('INSERT INTO profiles (profile_id, revision, body) VALUES (%s,%s,%s::jsonb)',
+            db.execute('INSERT INTO public.profiles (profile_id, revision, body) VALUES (%s,%s,%s::jsonb)',
                        (profile.profile_id, profile.revision, profile.model_dump_json()))
 
     def get(self, profile_id: str) -> Profile | None:
         with self.pool.connection() as db:
-            row = db.execute('SELECT body FROM profiles WHERE profile_id=%s', (profile_id,)).fetchone()
+            row = db.execute('SELECT body FROM public.profiles WHERE profile_id=%s', (profile_id,)).fetchone()
         return Profile.model_validate(row[0]) if row else None
 
     def update(self, profile: Profile, expected_revision: int) -> bool:
@@ -75,7 +78,7 @@ class PostgresProfileStore:
             raise ValueError('Profile revision must increment by exactly one')
         with self.pool.connection() as db:
             cursor = db.execute(
-                'UPDATE profiles SET body=%s::jsonb, revision=%s, updated_at=now() '
+                'UPDATE public.profiles SET body=%s::jsonb, revision=%s, updated_at=now() '
                 'WHERE profile_id=%s AND revision=%s',
                 (profile.model_dump_json(), profile.revision, profile.profile_id, expected_revision))
             return cursor.rowcount == 1
@@ -83,6 +86,8 @@ class PostgresProfileStore:
 
 def create_profile_store():
     mode = os.getenv('PROFILE_STORE', 'sqlite')
+    if os.getenv('VERCEL_ENV') == 'preview' and mode != 'postgres':
+        raise RuntimeError('Vercel Preview requires PROFILE_STORE=postgres; SQLite fallback is disabled')
     if mode == 'postgres':
         database_url = os.getenv('DATABASE_URL')
         if not database_url:

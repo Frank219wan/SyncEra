@@ -57,9 +57,9 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
             assert result.json()['data']['recommendations']
     finally:
         with psycopg.connect(URL) as db:
-            db.execute('DELETE FROM profiles WHERE profile_id=%s', (profile_id,))
-        store_a.pool.close()
-        store_b.pool.close()
+            db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
+        store_a.close()
+        store_b.close()
 
 
 def test_vercel_cannot_fall_back_to_sqlite(monkeypatch, tmp_path):
@@ -68,6 +68,27 @@ def test_vercel_cannot_fall_back_to_sqlite(monkeypatch, tmp_path):
     monkeypatch.delenv('DATABASE_URL', raising=False)
     monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'should-not-exist.sqlite'))
     with pytest.raises(RuntimeError, match='DATABASE_URL'):
+        create_profile_store()
+    assert not (tmp_path / 'should-not-exist.sqlite').exists()
+
+
+def test_preview_requires_explicit_postgres_selection(monkeypatch, tmp_path):
+    monkeypatch.setenv('VERCEL_ENV', 'preview')
+    monkeypatch.delenv('PROFILE_STORE', raising=False)
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'should-not-exist.sqlite'))
+    with pytest.raises(RuntimeError, match='PROFILE_STORE=postgres'):
+        create_profile_store()
+    assert not (tmp_path / 'should-not-exist.sqlite').exists()
+
+
+def test_postgres_connection_failure_cannot_fall_back(monkeypatch, tmp_path):
+    monkeypatch.setenv('PROFILE_STORE', 'postgres')
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://invalid.invalid/test')
+    monkeypatch.setenv('DATABASE_PATH', str(tmp_path / 'should-not-exist.sqlite'))
+    def fail_connection(_url):
+        raise RuntimeError('PostgreSQL connection or profiles schema is unavailable')
+    monkeypatch.setattr('app.storage.PostgresProfileStore', fail_connection)
+    with pytest.raises(RuntimeError, match='PostgreSQL connection'):
         create_profile_store()
     assert not (tmp_path / 'should-not-exist.sqlite').exists()
 

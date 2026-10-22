@@ -46,6 +46,8 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         raise RuntimeError('TokenHub adapter is enabled only for Vercel Preview')
     app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
     app.state.store=store if store is not None else create_profile_store()
+    if callable(getattr(app.state.store, 'close', None)):
+        app.add_event_handler('shutdown', app.state.store.close)
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
     app.state.market=market if market is not None else MarketRepository()
     app.state.resources=resources if resources is not None else ResourceRepository()

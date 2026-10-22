@@ -10,7 +10,7 @@ def main():
     if not url.startswith(('postgresql://', 'postgres://')):
         raise SystemExit('DATABASE_URL must be a PostgreSQL connection URL')
     sql = (Path(__file__).resolve().parents[1] / 'migrations' / '001_profiles.sql').read_text()
-    with psycopg.connect(url) as db:
+    with psycopg.connect(url, connect_timeout=5) as db:
         db.execute(sql)
     print('PostgreSQL profiles schema ready')
 

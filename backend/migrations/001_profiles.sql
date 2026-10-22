@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
     profile_id TEXT PRIMARY KEY,
     revision INTEGER NOT NULL CHECK (revision >= 0),
     body JSONB NOT NULL,
