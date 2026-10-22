@@ -73,8 +73,18 @@ def validate_scored_recommendations(raw, profile: Profile, snap, scenario: str, 
     if not isinstance(raw, list):
         raise ValueError('recommendations must be a list')
     values = [Recommendation.model_validate(item) for item in raw]
-    if not values and any(score is not None for score in snap.role_scores.values()):
+    eligible = {
+        role_id for role_id, score in snap.role_scores.items()
+        if score is not None and role_id in ROLES
+        and (profile.preferred_field_id is None
+             or ROLES[role_id].field_id == profile.preferred_field_id)
+    }
+    if not values and eligible:
         raise ValueError('eligible roles must not produce an empty recommendation')
+    if policy == 'tech-v1' and (
+        {item.role_id for item in values} != eligible or len(values) != len(eligible)
+    ):
+        raise ValueError('technical adapter omitted or duplicated an eligible role')
     seen = set()
     previous_score = float('inf')
     for rank, item in enumerate(values, 1):

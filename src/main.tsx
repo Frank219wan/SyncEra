@@ -5,6 +5,8 @@ import '@fontsource/noto-sans/400.css';
 import '@fontsource/noto-sans/500.css';
 import '@fontsource/noto-sans/600.css';
 import '@fontsource/noto-serif/500.css';
+import '@fontsource/bodoni-moda/500.css';
+import '@fontsource/bodoni-moda/500-italic.css';
 import '@fontsource/noto-sans-sc/400.css';
 import '@fontsource/noto-sans-sc/500.css';
 import '@fontsource/noto-serif-sc/500.css';

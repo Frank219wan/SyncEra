@@ -52,6 +52,15 @@ export interface ApiRoleData {
   sdg_links: Array<{ sdg: number; rationale: string }>;
 }
 
+export interface ApiTaskImpact {
+  task_id: string;
+  title: string;
+  impact_type: 'automation_candidate' | 'ai_augmented' | 'human_led_oversight';
+  reason: string;
+  evidence_ids: string[];
+  uncertainty: string;
+}
+
 export interface ApiRecommendation {
   rank: number;
   role_id: string;

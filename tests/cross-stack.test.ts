@@ -7,6 +7,7 @@ import {
 } from '../src/services/api-contract.ts';
 
 const base=(process.env.CROSS_STACK_API_URL??'http://127.0.0.1:8000').replace(/\/$/,'');
+type TaskImpact = { task_id:string; title:string; impact_type:string; reason:string; evidence_ids:string[]; uncertainty:string };
 
 async function envelope<T>(path:string,body?:unknown):Promise<{data:T;meta:{snapshot_id:string|null;is_mock:boolean}}>{
   const response=await fetch(`${base}/api/v1${path}`,body===undefined?undefined:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -49,9 +50,18 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   assert.ok(cards.every(card=>card.origin==='computed'&&card.matchScore!==null&&card.reason&&card.evidenceIds));
 
   const first=cards[0];
-  const detail=await envelope<{role_id:string;required_skills:unknown[];evidence_ids:string[]}>(`/roles/role_${first.roleId.replace(/-/g,'_')}`);
-  assert.equal(detail.data.role_id,`role_${first.roleId.replace(/-/g,'_')}`);
+  const contractRoleId=`role_${first.roleId.replace(/-/g,'_')}`;
+  const detail=await envelope<{role_id:string;required_skills:unknown[];evidence_ids:string[]}>(`/roles/${contractRoleId}`);
+  assert.equal(detail.data.role_id,contractRoleId);
   assert.ok(detail.data.required_skills.length>0);
+  const taskData=await envelope<{role_id:string;tasks:TaskImpact[]}>(`/roles/${contractRoleId}/tasks${trends.meta.snapshot_id?`?snapshot_id=${encodeURIComponent(trends.meta.snapshot_id)}`:''}`);
+  assert.equal(taskData.data.role_id,contractRoleId);
+  assert.ok(taskData.data.tasks.length>0);
+  assert.ok(taskData.data.tasks.every(task=>task.title&&task.reason&&task.uncertainty&&['automation_candidate','ai_augmented','human_led_oversight'].includes(task.impact_type)));
+  for(const id of taskData.data.tasks.flatMap(task=>task.evidence_ids)){
+    const source=await envelope<{evidence:{evidence_id:string;title:string}}>(`/evidence/${id}`);
+    assert.equal(source.data.evidence.evidence_id,id);
+  }
   for(const id of first.evidenceIds??[]){
     const source=await envelope<{evidence:{evidence_id:string;title:string}}>(`/evidence/${id}`);
     assert.equal(source.data.evidence.evidence_id,id);
