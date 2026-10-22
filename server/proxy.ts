@@ -95,7 +95,10 @@ export async function handleProxy(
   for (const [key, value] of incoming.searchParams) {
     if (key === 'proxy_path') continue;
     if (!allowedQuery.has(key) || value.length > 256 || incoming.searchParams.getAll(key).length !== 1) {
-      return jsonError(400, 'BAD_QUERY', 'Unsupported API query.');
+      // Temporary Preview diagnostic: names only, never values or request bodies.
+      const response = jsonError(400, 'BAD_QUERY', 'Unsupported API query.');
+      response.headers.set('X-Proxy-Rejected-Query-Key', key.slice(0, 80));
+      return response;
     }
   }
   if (incoming.search.length > 2048) return jsonError(414, 'QUERY_TOO_LARGE', 'API query is too large.');
