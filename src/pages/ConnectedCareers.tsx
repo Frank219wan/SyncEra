@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {Link,useParams} from 'react-router-dom';
 import {api} from '../services/api';
-import {fromContractSkillId,type ApiRoleData} from '../services/api-contract';
+import {fromContractSkillId,type ApiRoleData,type ApiTaskImpact} from '../services/api-contract';
 import {useApp} from '../store';
 import type {Evidence,Recommendation,TrendPackage} from '../types';
 import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
@@ -93,20 +93,38 @@ export function ConnectedRoleDetail(){
   const {state,setState,t}=useApp();
   const [role,setRole]=useState<ApiRoleData|null>(null);
   const [error,setError]=useState('');
+  const [tasks,setTasks]=useState<ApiTaskImpact[]|null>(null);
+  const [tasksError,setTasksError]=useState('');
+  const [attempt,setAttempt]=useState(0);
   useEffect(()=>{
     if(!roleId)return;
     let active=true;
-    setRole(null);setError('');
+    setRole(null);setError('');setTasks(null);setTasksError('');
     api.role(roleId).then(row=>{if(active)setRole(row.role);}).catch(e=>{if(active)setError((e as Error).message);});
+    api.roleTasks(roleId,state.snapshotId||undefined).then(row=>{if(active)setTasks(row.tasks);}).catch(e=>{if(active)setTasksError((e as Error).message);});
     return()=>{active=false;};
-  },[roleId]);
+  },[roleId,state.snapshotId,attempt]);
   const result=state.results?.find(item=>item.roleId===roleId&&item.origin==='computed');
+  const impactLabel=(impact:ApiTaskImpact['impact_type'])=>impact==='automation_candidate'
+    ?t('Automation candidate','自动化候选任务','Tugas berpotensi diautomasi')
+    :impact==='ai_augmented'?t('AI augmented','AI 辅助','Dibantu AI'):t('Human-led oversight','人工主导与监督','Pengawasan diterajui manusia');
   return <>
     <PageHeader title={role?.name??t('Career detail','职业详情','Butiran kerjaya')} description={role?.summary} back="/individual/recommendations" action={<DemoNotice/>}/>
     {error&&<ErrorState message={error}/>}
+    {tasksError&&<ErrorState message={tasksError} retry={()=>setAttempt(value=>value+1)}/>}
     {role&&<><section className="surface"><h2>{t('Required skills','所需技能','Kemahiran diperlukan')}</h2>
       {role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {skill.importance}</span></div>)}
       {result&&<p>{t('Your relative fit','你的相对匹配','Padanan relatif anda')}: {result.matchScore??'—'} / 100 · {result.reason}</p>}
+    </section>
+    <section className="surface"><h2>{t('Task impacts','任务影响','Impak tugas')}</h2>
+      <p className="muted">{t('Illustrative task scenarios from synthetic data. They do not predict job loss or replace human review.','来自合成数据的任务示例，不代表岗位流失预测，也不能替代人工审查。','Senario tugas ilustrasi daripada data sintetik. Ia bukan ramalan kehilangan kerja atau pengganti semakan manusia.')}</p>
+      {tasks===null&&!tasksError&&<p className="muted">{t('Loading task impacts…','正在加载任务影响…','Memuatkan impak tugas…')}</p>}
+      {tasks?.length===0&&<p className="muted">{t('No task impact examples are available for this role.','此职业暂无任务影响示例。','Tiada contoh impak tugas untuk kerjaya ini.')}</p>}
+      {tasks?.map(task=><article className="task-impact-card" key={task.task_id}>
+        <div className="section-heading"><h3>{task.title}</h3><span className="subtle-tag">{impactLabel(task.impact_type)}</span></div>
+        <p>{task.reason}</p><p className="muted">{t('Uncertainty','不确定性','Ketidakpastian')}: {task.uncertainty}</p>
+        <h4>{t('Evidence','依据','Bukti')}</h4><EvidenceSources ids={task.evidence_ids}/>
+      </article>)}
     </section>
     <section className="surface"><h2>{t('Source evidence','来源依据','Bukti sumber')}</h2><EvidenceSources ids={role.evidence_ids}/></section>
     <div className="form-actions"><ButtonLink to="/individual/roadmap/draft" onClick={()=>setState(previous=>({...previous,selectedRole:roleId??''}))}>{t('Build my learning plan','制定学习计划','Bina pelan belajar')}</ButtonLink></div></>}

@@ -24,8 +24,8 @@ Run these checks in order. Use fictional data only. The normal local launch uses
 1. Open the Career Radar / trends view for Malaysia (`MY`).
 2. Confirm the role and skill signals render and the bubbles use equal area when verified posting volumes are unavailable.
 3. Change the selected field and region. The supported field changes should filter the role list; an unsupported region should show a clear error instead of fabricated data.
-4. Select a role and open its details and task list.
-5. Open each evidence link from the role or trend view. Synthetic evidence should be visibly described as illustrative and should not show a real source URL.
+4. Select a role and open its details. Check required skills, task impacts, impact category, reason, uncertainty, and per-task evidence. The task impacts are synthetic examples, not forecasts of job loss.
+5. Open each evidence link from the role, task, or trend view. Synthetic evidence should be visibly described as illustrative and should not show a real source URL.
 
 ## 3. Recommendations and scenarios
 
@@ -42,7 +42,7 @@ Run these checks in order. Use fictional data only. The normal local launch uses
 3. Build a roadmap from selected required skills and the profile's study constraints.
 4. Confirm estimated hours, capacity, feasibility, and warnings agree with the chosen hours, pace, and budget. Try a one-hour-per-week constraint and expect a stretch/insufficient-time result with a warning.
 5. Try a skill that is not required by the chosen role. Expect a validation error.
-6. Inspect plan adoption, task completion, rescheduling, and history in the UI. These are browser-local features; backend progress synchronization is still disabled and must not be reported as server-saved.
+6. Adopt the plan and check that it appears in learning history. In real API mode, try task completion and confirm the UI reports that progress sync is unavailable and leaves the task incomplete. Local completion/rescheduling is available only in demo mode; neither path is server-saved today.
 
 ## 5. Individual error and boundary checks
 
@@ -72,10 +72,10 @@ pnpm test
 pnpm build
 ```
 
-Then run the live cross-stack test against the running local API:
+Then run the live cross-stack test through the Vite proxy at `5174` to FastAPI at `8001`:
 
 ```sh
-VITE_API_MODE=real node --experimental-strip-types --test tests/cross-stack.test.ts
+CROSS_STACK_API_URL=http://127.0.0.1:5174 VITE_API_MODE=real node --experimental-strip-types --test tests/cross-stack.test.ts
 ```
 
 ## 8. After the Individual flow

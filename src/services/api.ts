@@ -5,7 +5,7 @@ import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -160,6 +160,12 @@ export const api = {
   role: async (roleId: string): Promise<{ role: ApiRoleData; meta: ReturnType<typeof toServiceMeta> }> => {
     const response = await request<ApiRoleData>(`/roles/${toContractRoleId(roleId)}`);
     return { role: response.data, meta: toServiceMeta(response.meta) };
+  },
+
+  roleTasks: async (roleId: string, snapshotId?: string): Promise<{ tasks: ApiTaskImpact[]; meta: ReturnType<typeof toServiceMeta> }> => {
+    const query = snapshotId ? `?snapshot_id=${encodeURIComponent(snapshotId)}` : '';
+    const response = await request<{ role_id: string; tasks: ApiTaskImpact[] }>(`/roles/${toContractRoleId(roleId)}/tasks${query}`);
+    return { tasks: response.data.tasks, meta: toServiceMeta(response.meta) };
   },
 
   recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>}> => {

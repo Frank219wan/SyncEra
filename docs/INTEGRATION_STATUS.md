@@ -14,6 +14,7 @@ Integration branch: `codex/latest-team-integration`
 ## Current connected product behavior
 
 - Individual real-mode flow uses the shared FastAPI `/api/v1` contract for profile normalization/confirmation, trends/radar, recommendations, role/task detail, evidence, skill maps, and roadmaps.
+- Connected role detail now fetches and renders backend task-impact records, including impact type, reason, uncertainty, and evidence. The page labels these catalogue records as synthetic illustrations.
 - Local VS Code tasks run `futureproof_ai.futureproof_adapter`: deterministic profile extraction and `tech-v1` role scoring. No paid provider call is made by the default run configuration.
 - Current main also contains an **optional Tencent TokenHub MiniMax-M3 profile extraction adapter**. It is activated only when the backend is configured with `AI_ADAPTER_MODULE=futureproof_ai.tencent_tokenhub_adapter` and a server-side `TENCENT_TOKENHUB_API_KEY`. It calls the LLM for non-empty text declared synthetic. Form-only profile normalization stays local. Role scoring, score arithmetic, explanations, evidence checks, skill maps, and roadmaps remain deterministic. Metadata remains `synthetic_demo` / `is_mock=true`; this is not authorization for real CV or personal data.
 - The frontend is not wired to the backend file upload endpoint. PDF/DOCX upload remains a backend-only synthetic-input path.
@@ -32,7 +33,8 @@ Latest local verification on `codex/latest-team-integration`:
 - Live API vertical slice through profile normalization, confirmation, trends, recommendations, evidence, skill map, and roadmap: passed against FastAPI.
 - Frontend contract flow through Vite proxy `5174 → 8001`: passed.
 - Built single-process app on `8765`: landing page, Individual deep route, silhouette asset, and health endpoint returned 200; unknown API route returned the expected structured 404; live Individual API slice passed.
-- Browser route review: landing, onboarding, radar (synthetic role/skill data), and unconfirmed-profile recommendation gate rendered. The onboarding form itself was not submitted interactively; use the ordered manual steps in the test plan for profile entry and confirmation.
+- Interactive browser walkthrough: created and confirmed a fictional profile; generated recommendations and switched scenarios; opened a recommended role and verified task impacts/evidence; generated a skill map and roadmap; adopted the plan. Attempting task completion in real mode correctly showed that progress sync is unavailable and left progress unchanged.
+- Remaining browser checks: keyboard-only navigation, narrow viewport layout, error recovery for each route, and direct refresh/re-entry after profile adoption.
 
 The TokenHub adapter tests use an offline mock transport. No provider key was configured and no paid LLM call was made. This run does not verify public deployment, approved market data, HR/TVET server functions, or server-side learning progress.
 
