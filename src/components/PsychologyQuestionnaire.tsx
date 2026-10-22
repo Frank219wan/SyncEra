@@ -36,7 +36,7 @@ export function PsychologyQuestionnaire({ value, onChange }: { value?: Psycholog
     <div className="form-actions">
       <button type="button" className="button secondary" disabled={step===0} onClick={()=>setStep(x=>Math.max(0,x-1))}>Back</button>
       <button type="button" className="button secondary" onClick={()=>{onChange(null);setStep(0);}}>Clear assessment</button>
-      <button type="button" className="button secondary" onClick={()=>{onChange({...data,scenario_answers:{...data.scenario_answers,[id]:null}});next();}}>Skip</button>
+      <button type="button" className="button secondary" onClick={()=>{const other=Object.fromEntries(Object.entries(data.other_responses).filter(([key])=>key!==id));onChange({...data,scenario_answers:{...data.scenario_answers,[id]:null},other_responses:other});next();}}>Skip</button>
       {step<4 && <button type="button" className="button" disabled={choice==='E'&&!data.other_responses[id]?.trim()} onClick={next}>Next</button>}
       {step===4 && <span role="status" className="subtle-tag">You can continue to profile review below.</span>}
     </div>
