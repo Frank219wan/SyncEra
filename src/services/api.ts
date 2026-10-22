@@ -9,8 +9,7 @@ import {
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
-const configuredBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const apiRoot = configuredBase.endsWith('/api/v1') ? configuredBase : `${configuredBase}/api/v1`;
+const apiRoot = '/api/v1';
 
 interface SuccessEnvelope<T> { data: T; meta: ApiMeta }
 interface ErrorEnvelope {
