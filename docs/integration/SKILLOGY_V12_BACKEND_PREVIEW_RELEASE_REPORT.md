@@ -67,15 +67,15 @@
 
 ## Final Acceptance（2026-10-22 23:02 UTC+08）
 
-本节复验的是代码提交 `276f95fa33808adedc939f0f426d21a6c57adfe7` 的受保护 Preview。后续只更新本报告的提交会改变 PR HEAD；该文档提交对应的新部署仍需单独核对，不能把下列 Cloud 结果自动归给新 SHA。所有线上写入均为虚构结构化资料，未发送真实 CV，也未发起收费 MiniMax 请求。
+本节 Cloud 流程复验的是代码提交 `276f95fa33808adedc939f0f426d21a6c57adfe7` 的受保护 Preview。报告提交 `41725c26401998cb21c5bb10e8721178132d6171` 后，目标分支由并行工作推进到 `f06d0b70ed3ae1af84d1a2acb9195ae2cea236f4`，增加可选 Career Analysis；不能把旧 Cloud 结果自动归给新 SHA。2026-10-23 只读 Git 远端核对确认该分支仍指向 `f06d0b7`；Vercel 部署列表未加载完成，最终部署状态没有完成复验。所有已执行的线上写入均为虚构结构化资料，未发送真实 CV，也未发起收费 MiniMax 请求。
 
 | # | 验收项 | 状态 | 本轮证据与边界 |
 | --- | --- | --- | --- |
-| 1 | Latest PR #13 SHA | PASS | `git fetch origin --prune` 后，本地 HEAD 与 `origin/integration/postgres-preview-backend` 均为 `276f95fa33808adedc939f0f426d21a6c57adfe7`；`origin/main` 为 `0e8bffdb549a146f37d57a7946cef702eb1b891d`。此为报告提交前的业务代码 SHA。 |
-| 2 | Frontend Preview SHA | PASS | Vercel Preview、分支 `integration/postgres-preview-backend`、Ready；部署 `akvPeqfCTwBR1bVnCfSTHxBncFTr`，Source SHA `276f95f`。 |
-| 3 | Backend Preview SHA | PASS | Vercel Preview、同一分支、Ready；部署 `EhRmcmYFh5ZqmUyQK9o7axFeuHCa`，Source SHA `276f95f`。 |
-| 4 | Actual Preview URLs | PASS | Frontend 分支别名 `https://syncera-frontend-git-integration-postgres-pr-e72229-frank219wan.vercel.app`、唯一别名 `https://syncera-frontend-jllrtc28c-frank219wan.vercel.app`；Backend 分支别名 `https://syncera-backend-git-integration-postgres-pre-a79754-frank219wan.vercel.app`、唯一别名 `https://syncera-backend-ahqbpj1lk-frank219wan.vercel.app`。 |
-| 5 | WAF Rule Coverage | PASS | Frontend 规则 `preview-api-rate-limit`（ID `rule_preview_api_rate_limit_c6P0Pw`）启用，POST、Request Path starts with `/api/v1/`、每 IP 固定 60 秒 10 次、动作 429；Hostname 清单包含当前分支别名与当前唯一别名。规则仍显式列举唯一别名，下一次部署的唯一别名需要重新核对。 |
+| 1 | Latest PR #13 SHA | PASS | 本地目标分支和 `origin/integration/postgres-preview-backend` 跟踪引用均指向 `f06d0b70ed3ae1af84d1a2acb9195ae2cea236f4`，独立 `git ls-remote` 亦确认该远端 SHA；`origin/main` 为 `0e8bffdb549a146f37d57a7946cef702eb1b891d`。此为本报告修订提交前的分支 HEAD。 |
+| 2 | Frontend Preview SHA | NOT VERIFIED | 已验收的 Ready 部署 `akvPeqfCTwBR1bVnCfSTHxBncFTr` 运行旧代码 `276f95f`；`41725c2` 的新部署曾进入 Building，`f06d0b7` 对应部署未核验。 |
+| 3 | Backend Preview SHA | NOT VERIFIED | 已验收的 Ready 部署 `EhRmcmYFh5ZqmUyQK9o7axFeuHCa` 运行旧代码 `276f95f`；`f06d0b7` 对应部署未核验。 |
+| 4 | Actual Preview URLs | NOT VERIFIED | Frontend 分支别名 `https://syncera-frontend-git-integration-postgres-pr-e72229-frank219wan.vercel.app`、旧唯一别名 `https://syncera-frontend-jllrtc28c-frank219wan.vercel.app`；Backend 分支别名 `https://syncera-backend-git-integration-postgres-pre-a79754-frank219wan.vercel.app`、旧唯一别名 `https://syncera-backend-ahqbpj1lk-frank219wan.vercel.app`。新 SHA 的唯一别名和归属仍需核验。 |
+| 5 | WAF Rule Coverage | BLOCKED | Frontend 规则 `preview-api-rate-limit`（ID `rule_preview_api_rate_limit_c6P0Pw`）现有生效版仅列三个旧 Hostname，不含后续唯一部署别名。已将条件暂存为 Environment=Preview、POST、Request Path starts with `/api/v1/`、每 IP 固定 60 秒 10 次、动作 429；Dashboard 显示 `Review Changes 1`，**尚未发布或验证生效**。按 Vercel Firewall 技能的发布门槛，需用户审阅并亲自 Publish。 |
 | 6 | WAF 429 Event Evidence | NOT VERIFIED | 在受保护分支别名上小规模重试过期 Confirm（无有价值写入、无付费模型调用），仅确认多个 HTTP 409；Firewall Traffic 最近一天显示 `Rate Limited -` 和 `There are no enforced rules`，规则详情的 `View Traffic` 返回 404。没有可核验的 WAF 429、Rule ID + Hostname + 时间戳 + Request ID 事件；不能把代理内存限流视作 WAF 命中。 |
 | 7 | Cloud Stale Revision 409 | PASS | 同一虚构 Profile 确认后 revision 2；两个独立已加载的确认页以相同旧状态操作，第一个提交使 revision 到 3，第二个页面显示 `Profile revision changed`。Frontend Request Logs 于 `2026-10-22T14:55:17.624Z` 显示 POST `/api/v1/profiles/confirm` 409，Backend Request Logs 同路径 409；Frontend Vercel Request ID `dwt8m-1792680917624-24181cd62ce6`。响应 JSON 的实际 `error.code` 和 `meta.request_id` 未截取，**这两项仍为 NOT VERIFIED**；代码契约预期 `SNAPSHOT_CONFLICT`，不能冒充线上读取值。 |
 | 8 | Cross-request Persistence | PASS | 独立 HTTP Normalize、Confirm、Fast/Moderate Recommendation、Skill Map 与 Roadmap 均通过 Frontend 同源代理到受保护 Backend。后续请求使用已确认 Profile 得到不同情境的推荐；Neon 独立查询同一 Profile。未安排跨 Vercel 实例的冷启动读取，故跨实例一项 NOT VERIFIED。 |
@@ -83,13 +83,13 @@
 | 10 | POST Response Metadata | NOT VERIFIED | Frontend/Backend Request Logs 证实各实际 POST 状态，但浏览器诊断没有截取各响应 JSON；`meta.request_id`、`meta.model_version`、适用的 `meta.snapshot_id` 和代理保真性不能逐条验收。UI 显示 snapshot `snap_my_20261021_01`；代码中的推荐评分版本为 `tech-v1`，不能称为已读取 Cloud 响应。 |
 | 11 | Backend Runtime Error Logs | PASS | 最终 Backend 部署 Request Logs 中本轮 Normalize、Confirm、Recommendation、Skill Map 均为 200，过期 Confirm 为 409；最近 30 分钟控制台 Warning/Error/Fatal 计数均为 0。该窗口未出现 503 或异常堆栈；旧 503 的原始完整异常仍不可恢复，连接失效仍是有依据的推断而非已完全证明的根因。Vercel Python runtime 版本未从部署设置单独确认。 |
 | 12 | Pool Recovery Regression Tests | PASS | `ConnectionPool.check_connection`、仅连接级异常一次重试、同一 Profile ID、已提交响应丢失时核对行内容均保留。恢复与 PostgreSQL 测试合跑：13 PASS、1 SKIPPED（未注入实库 URL）；单独向 Neon Preview 临时无回显注入连接运行 `test_postgres_integration.py`：10 PASS，包含实库连接恢复与 CAS。 |
-| 13 | Frontend / Proxy Tests | PASS | `pnpm test` 48 PASS；`pnpm build` PASS；本地跨栈 `tests/cross-stack.test.ts` 1 PASS；`git diff --check` PASS；构建资产搜索未见 Backend Bypass、数据库或 TokenHub 变量名。本轮隔离检出不含并行工作区的未提交代码。 |
-| 14 | Backend Tests | PASS | `python -m pytest tests -q`：88 PASS、1 SKIPPED（无 `TEST_DATABASE_URL`）；实库测试另跑 10 PASS；`uv pip check`：33 个已安装包兼容。 |
+| 13 | Frontend / Proxy Tests | PASS | 旧 SHA：48 PASS、build PASS、跨栈 1 PASS。新 `f06d0b7` 隔离检出：直接执行 `package.json` 的 Node test 命令 49 PASS；`tsc -b && vite build` PASS；`git diff --check` PASS。`pnpm` 包装器因离线安装检查与隔离检出的依赖软链保护而未能运行，但等价脚本已直接通过。 |
+| 14 | Backend Tests | PASS | 旧 SHA：88 PASS、1 SKIPPED，Neon 实库另跑 10 PASS，`uv pip check` 兼容。新 `f06d0b7` 隔离检出：`python -m pytest tests -q` 99 PASS、1 SKIPPED（未注入 `TEST_DATABASE_URL`）；新 SHA 的 Neon 实库集成尚未重跑。 |
 | 15 | Preview Environment Security | NOT VERIFIED | Frontend 与 Backend Dashboard 的 Vercel Authentication 均为 Enabled / Standard Protection；匿名无凭据访问两端 Health 均为 302。Frontend 分支 Preview 存在服务器端 Secret 名 `BACKEND_PROTECTION_BYPASS_SECRET`，浏览器代码仅用同源 `/api/v1`；代理固定 Backend HTTPS 域、路径/方法/查询白名单、64 KiB 请求体、限流。Backend Preview 列出 `PROFILE_STORE`、`DATABASE_URL`、`AI_ADAPTER_MODULE`、`FRONTEND_ORIGINS`，但隐藏值需邮件验证码，未揭示或核对 pooled/TLS 实际 URI、Adapter 实际值及精确 Origin；`MAX_CV_UPLOAD_BYTES`、`ENABLE_SYNTHETIC_UPLOAD` 未见分支变量。Frontend 仍有无用 `VITE_API_BASE_URL` Preview 配置，建议受控移除后复验。 |
 | 16 | Production Unchanged | PASS | 本轮未修改 main、Production Vercel、公开 Backend 域名、Neon Production 或任何密钥；只写入并精确清理 Neon Preview 的本轮虚构 Profile。 |
 | 17 | MiniMax Live | NOT VERIFIED | 本轮没有真实 TokenHub / MiniMax 请求。Normalize 使用无 CV/经验全文的虚构表单；推荐版本 `tech-v1` 是确定性评分，不代表 MiniMax。数据库内部重试不重复抽取；用户重新发起整个 Normalize HTTP 请求仍可能重复付费，后续需请求级幂等。 |
-| 18 | Outstanding Release Risks | BLOCKED | 缺少 WAF 429 事件；未来唯一部署别名不自动进入当前 Hostname 清单；各 POST 的 Cloud 响应元数据与 CAS 实际错误码未截取；隐藏 Preview 变量值及 Vercel Python runtime 未核对；跨实例读取未执行；Frontend 仍有旧 `VITE_API_BASE_URL`。 |
-| 19 | Final Merge Recommendation | BLOCKED | **暂不合并 Draft PR #13。** 功能流程与 Cloud 409 已有证据，但 WAF 执行和逐条响应元数据等安全门槛未通过最终验收。 |
+| 18 | Outstanding Release Risks | BLOCKED | WAF 稳定 Preview 条件仅暂存、无 WAF 429 事件；新 `f06d0b7` 部署及 Cloud 全流程未复验，Career Analysis 的 Preview 开关实际值未核对，不能触发可能付费的路径；各 POST 的 Cloud 响应元数据与 CAS 实际错误码未截取；隐藏 Preview 变量值及 Vercel Python runtime 未核对；跨实例读取未执行；Frontend 仍有旧 `VITE_API_BASE_URL`。 |
+| 19 | Final Merge Recommendation | BLOCKED | **暂不合并 Draft PR #13。** 旧 SHA 的功能流程与 Cloud 409 有证据；新 SHA 部署、WAF 发布及真实 429、逐条响应元数据等最终安全门槛尚未通过。 |
 
 ### 最终 Preview HTTP 记录
 
