@@ -2,6 +2,7 @@ from __future__ import annotations
 from uuid import uuid4
 from .models import Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
 from .catalogue import SKILLS, ROLES, FIELDS
+from .ai_adapter import AIAdapterRequestError
 from .scoring_validation import validate_scored_recommendations
 
 class APIError(Exception):
@@ -64,6 +65,7 @@ def normalize(adapter,req,store):
     require_field(req.preferred_field_id)
     try: output=adapter.extract_profile(req.text,req.form)
     except TimeoutError: raise APIError(504,'MODEL_TIMEOUT','Profile extraction timed out',retryable=True)
+    except AIAdapterRequestError as exc: raise APIError(exc.status,exc.code,exc.message,retryable=exc.retryable)
     except Exception: raise APIError(502,'MODEL_INVALID_OUTPUT','Profile extraction failed')
     if not isinstance(output,dict): raise APIError(502,'MODEL_INVALID_OUTPUT','Extraction output is malformed')
     recognized=[]; unknown=list(output.get('unrecognized_skill_terms',[]))

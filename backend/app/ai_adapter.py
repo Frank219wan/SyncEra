@@ -13,11 +13,23 @@ from .models import Profile, TrendPackage
 
 class AIAdapter(Protocol):
     is_mock: bool
+    extraction_model_version: str
+    scoring_model_version: str
     def extract_profile(self, text: str | None, questionnaire: dict | None) -> dict[str,Any]: ...
     def score_roles(self, profile: Profile, trend_package: TrendPackage, scenario: str) -> list[dict[str,Any]]: ...
 
 class AIAdapterConfigurationError(RuntimeError):
     pass
+
+class AIAdapterRequestError(RuntimeError):
+    """Sanitized provider error that can safely cross the adapter boundary."""
+
+    def __init__(self,status:int,code:str,message:str,retryable:bool=False):
+        super().__init__(message)
+        self.status=status
+        self.code=code
+        self.message=message
+        self.retryable=retryable
 
 def load_ai_adapter(module_path: str | None = None) -> AIAdapter:
     module_path = module_path or os.getenv('AI_ADAPTER_MODULE')
@@ -38,6 +50,8 @@ def load_ai_adapter(module_path: str | None = None) -> AIAdapter:
 class DemoAdapter:
     """Transparent rule-only demo fallback; no LLM or live retrieval."""
     is_mock=True
+    extraction_model_version='rules-v0.1'
+    scoring_model_version='rules-v0.1'
     def extract_profile(self, text, questionnaire):
         from .catalogue import SKILLS
         raw = (text or '') + ' ' + str(questionnaire or '')

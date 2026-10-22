@@ -14,7 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
 from .storage import ProfileStore
-from .ai_adapter import load_ai_adapter
+from .ai_adapter import AIAdapterRequestError, load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
@@ -60,13 +60,13 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         response.headers['X-Request-ID']=request.state.request_id
         return response
 
-    def success(request,data,snapshot=None,data_model=None,data_label=None,is_mock=None):
+    def success(request,data,snapshot=None,data_model=None,data_label=None,is_mock=None,model_version=None):
         if data_model is not None:
             data=data_model.model_validate(data).model_dump(exclude_unset=True)
         snapshot_id=getattr(snapshot,'snapshot_id',snapshot)
         label=data_label or getattr(snapshot,'data_label','synthetic_demo')
         mock=getattr(snapshot,'is_mock',True) if is_mock is None else is_mock
-        version=getattr(snapshot,'method_version','rules-v0.1') if label=='public_open' else 'rules-v0.1'
+        version=model_version or (getattr(snapshot,'method_version','rules-v0.1') if label=='public_open' else 'rules-v0.1')
         meta=Meta(request_id=request.state.request_id,snapshot_id=snapshot_id,generated_at=datetime.now(timezone.utc),data_label=label,is_mock=mock,model_version=version)
         return Envelope(data=data,meta=meta)
 
@@ -131,17 +131,20 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         real=evidence_id not in EVIDENCE
         return success(request,{'evidence':item.model_dump()},data_model=EvidenceData,data_label='public_open' if real else 'synthetic_demo',is_mock=not real)
 
-    @app.post('/api/v1/profiles/normalize',response_model=Envelope[NormalizeData],responses=documented_errors(400,422,502,504))
+    @app.post('/api/v1/profiles/normalize',response_model=Envelope[NormalizeData],responses=documented_errors(400,422,429,502,503,504))
     def normalize(payload:NormalizeRequest,request:Request):
         data=svc.normalize(app.state.adapter,payload,app.state.store)
-        return success(request,data,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
+        version=getattr(app.state.adapter,'extraction_model_version','rules-v0.1') if payload.text else 'rules-v0.1'
+        return success(request,data,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True,model_version=version)
 
     @app.post('/api/v1/profiles/upload',response_model=Envelope[NormalizeData],responses={
         400:{'model':APIErrorEnvelope,'description':'Invalid request length'},
         413:{'model':APIErrorEnvelope,'description':'CV exceeds upload limit'},
         415:{'model':APIErrorEnvelope,'description':'Unsupported file type'},
         422:{'model':APIErrorEnvelope,'description':'Invalid, unreadable, or non-synthetic input'},
+        429:{'model':APIErrorEnvelope,'description':'AI provider rate limited'},
         502:{'model':APIErrorEnvelope,'description':'Extraction adapter invalid output'},
+        503:{'model':APIErrorEnvelope,'description':'AI provider unavailable'},
         504:{'model':APIErrorEnvelope,'description':'Extraction adapter timeout'},
     })
     async def upload_profile(request:Request,file:UploadFile=File(...),synthetic_input:bool=Form(...),study_constraints:str=Form(...),preferred_field_id:str|None=Form(None)):
@@ -165,13 +168,14 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         text=extract_cv_text(file.filename,data)
         payload=NormalizeRequest(pipeline='A',input_type='synthetic_cv_text',synthetic_input=True,text=text,preferred_field_id=preferred_field_id,study_constraints=payload_constraints)
         result=svc.normalize(app.state.adapter,payload,app.state.store)
-        return success(request,result,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True)
+        version=getattr(app.state.adapter,'extraction_model_version','rules-v0.1')
+        return success(request,result,data_model=NormalizeData,data_label='synthetic_demo',is_mock=True,model_version=version)
 
     @app.post('/api/v1/profiles/confirm',response_model=Envelope[ConfirmData],responses=documented_errors(404,409,422))
     def confirm(payload:ConfirmRequest,request:Request):
         return success(request,svc.confirm(app.state.store,payload),data_model=ConfirmData)
 
-    @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],responses=documented_errors(400,404,409,422,502,504))
+    @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],responses=documented_errors(400,404,409,422,429,502,503,504))
     def recommend(payload:RecommendRequest,request:Request):
         profile=svc.require_profile(app.state.store,payload.profile_id,confirmed=True)
         svc.require_field(payload.preferred_field_id)
@@ -182,6 +186,7 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         if hasattr(app.state.adapter,'score_roles'):
             try: raw=app.state.adapter.score_roles(scoring_profile,package,payload.ai_scenario)
             except TimeoutError: raise svc.APIError(504,'MODEL_TIMEOUT','Matching model timed out',retryable=True)
+            except AIAdapterRequestError as exc: raise svc.APIError(exc.status,exc.code,exc.message,retryable=exc.retryable)
             except Exception: raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching model failed')
             scoring_policy=getattr(app.state.adapter,'scoring_policy',None)
         else:
@@ -191,7 +196,8 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
-        return success(request,{'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations},snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True)
+        version=getattr(app.state.adapter,'scoring_model_version','rules-v0.1')
+        return success(request,{'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations},snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True,model_version=version)
 
     @app.post('/api/v1/learning/skill-map',response_model_exclude_none=True,response_model=Envelope[SkillMapData],responses=documented_errors(404,422))
     def skill_map(payload:SkillMapRequest,request:Request):

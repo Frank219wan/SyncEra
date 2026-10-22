@@ -149,6 +149,35 @@ def test_concurrent_confirms_only_one_wins(tmp_path):
     assert sorted(outcomes) == [3, 409]
 
 
+def test_profile_store_closes_sqlite_connections(tmp_path, monkeypatch):
+    import app.storage as storage_module
+
+    real_connect = storage_module.sqlite3.connect
+    opened = []
+
+    class TrackingConnection:
+        def __init__(self, connection):
+            self.connection = connection
+            self.closed = False
+
+        def __getattr__(self, name):
+            return getattr(self.connection, name)
+
+        def close(self):
+            self.closed = True
+            self.connection.close()
+
+    def tracked_connect(*args, **kwargs):
+        connection = TrackingConnection(real_connect(*args, **kwargs))
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(storage_module.sqlite3, 'connect', tracked_connect)
+    ProfileStore(str(tmp_path / 'closed.sqlite'))
+    assert opened
+    assert all(connection.closed for connection in opened)
+
+
 async def run_guard(headers, chunks, path='/api/v1/profiles/upload'):
     reads = 0
     sent = []
