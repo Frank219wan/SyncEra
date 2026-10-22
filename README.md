@@ -31,13 +31,19 @@ node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node
 
 默认启动的是前端演示模式，只使用虚构测试资料。演示资料与计划历史存于此浏览器的 localStorage（futureproof-v1），不会跨设备同步。清除站点数据会清除本地进度。CSV 员工导入在本机预览并经用户确认后保存；当前未接入 XLSX/PDF/DOCX 解析。
 
-固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。PDF/DOCX 提取、真实评分、课程推荐和认证评估均尚待服务接入。TXT 可本地读取。
+固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。前端尚未连接 CV 上传、实时市场预测、机构分析后端或课程认证评估。TXT 可本地读取。
 
-VITE_API_MODE 默认 demo。设置 `VITE_API_MODE=real` 后，个人职业雷达、推荐、职业详情和 Evidence 会请求同源 `/api/v1`，跨栈请求测试见 `tests/cross-stack.test.ts`。机构分析、学习进度等 P1 能力尚未接入；real 不等于生产模式。详见 docs/HANDOFF.md。
+VITE_API_MODE 默认 demo。设置 `VITE_API_MODE=real` 后，个人职业雷达、推荐、职业详情和 Evidence 会请求同源 `/api/v1`，跨栈请求测试见 `tests/cross-stack.test.ts`。默认后端 AI 适配器是确定性实现；可选 Tencent TokenHub MiniMax-M3 只负责合成文本画像提取，职业评分仍使用确定性规则。机构分析、学习进度等 P1 能力尚未接入；real 不等于生产模式。详见 [完整栈集成状态](docs/INTEGRATION_STATUS.md)。
+
+按个人流程逐项测试，请从 [Individual-first 测试计划](docs/TEST_PLAN_INDIVIDUAL_FIRST.md) 开始。
+
+### VS Code 本地全栈运行
+
+首次运行先执行 `pnpm install --frozen-lockfile`；在 `backend/` 创建 `.venv` 并运行 `.venv/bin/python -m pip install -r requirements.txt`。然后在 VS Code 运行 **Terminal → Run Task → Start FutureProof full stack (dev)**。前端地址为 `http://127.0.0.1:5174`，后端地址为 `http://127.0.0.1:8001`。单进程预览任务的地址为 `http://127.0.0.1:8765`。
 
 ## Backend 与 Tech 集成
 
-本分支基于 `feature/tech-integration`，包含 `backend/` FastAPI 服务、Tech v0.1.0 确定性 Adapter、DOSM／TalentCorp 候选 Snapshot 和 Microsoft Learn 候选课程。进入 `backend/` 后按 [Backend README](backend/README.md) 和 [Tech Integration](backend/tech_delivery/INTEGRATION.md) 操作。
+仓库包含 `backend/` FastAPI 服务、Tech v0.1.0 确定性 Adapter、DOSM／TalentCorp 候选 Snapshot 和 Microsoft Learn 候选课程。进入 `backend/` 后按 [Backend README](backend/README.md) 和 [Tech Integration](backend/tech_delivery/INTEGRATION.md) 操作。
 
 候选来源与课程已经完成技术预检，但 `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` 不是 Team Lead 治理批准。替换为真实 reviewer-owned approval manifest 前，不得把候选数据声明为已批准生产数据。
 

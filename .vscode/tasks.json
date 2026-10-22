@@ -1,0 +1,72 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FutureProof API (8001)",
+      "type": "process",
+      "command": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"],
+      "options": {
+        "cwd": "${workspaceFolder}/backend",
+        "env": {"AI_ADAPTER_MODULE": "futureproof_ai.futureproof_adapter"}
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [{"regexp": "^$"}],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Started server process",
+          "endsPattern": "Uvicorn running on http://127\\.0\\.0\\.1:8001"
+        }
+      }
+    },
+    {
+      "label": "FutureProof frontend (5174)",
+      "type": "process",
+      "command": "${workspaceFolder}/node_modules/.bin/vite",
+      "args": ["--host", "127.0.0.1", "--port", "5174", "--strictPort"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "VITE_API_MODE": "real",
+          "VITE_API_BASE_URL": "",
+          "FUTUREPROOF_API_TARGET": "http://127.0.0.1:8001"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [{"regexp": "^$"}],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "[Vv][Ii][Tt][Ee]",
+          "endsPattern": "Local:.*http://127\\.0\\.0\\.1:5174"
+        }
+      }
+    },
+    {
+      "label": "Start FutureProof full stack (dev)",
+      "dependsOn": ["FutureProof API (8001)", "FutureProof frontend (5174)"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and serve full stack (one process)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "VITE_API_MODE=real VITE_API_BASE_URL= ./node_modules/.bin/tsc -b && VITE_API_MODE=real VITE_API_BASE_URL= ./node_modules/.bin/vite build && cd backend && AI_ADAPTER_MODULE=futureproof_ai.futureproof_adapter STATIC_DIR=../dist .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8765"
+      ],
+      "options": {"cwd": "${workspaceFolder}"},
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": [{"regexp": "^$"}],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "vite v|Started server process",
+          "endsPattern": "Uvicorn running on http://127\\.0\\.0\\.1:8765"
+        }
+      }
+    }
+  ]
+}

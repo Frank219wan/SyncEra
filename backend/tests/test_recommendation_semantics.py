@@ -1,12 +1,14 @@
 """Model output must agree with the confirmed profile and dated snapshot."""
 
 from copy import deepcopy
+from dataclasses import replace
 
 import pytest
 
 from app.approved_data import MarketRepository
 from app.models import Profile
-from app.services import APIError, demo_recommendations, validate_recommendations
+from app.services import APIError, demo_recommendations, trend_package, validate_recommendations
+from futureproof_ai.scoring import score_roles
 
 
 @pytest.fixture
@@ -49,3 +51,24 @@ def test_semantically_false_model_output_is_rejected(recommendation_inputs, chan
         validate_recommendations(malformed, profile, snapshot, "moderate", "demo-v1")
     assert raised.value.status == 502
     assert raised.value.code == "MODEL_INVALID_OUTPUT"
+
+
+def test_tech_adapter_cannot_omit_eligible_roles(recommendation_inputs):
+    profile, snapshot, _ = recommendation_inputs
+    complete = score_roles(profile, trend_package(snapshot), "moderate")
+    assert len(complete) > 1
+    with pytest.raises(APIError) as raised:
+        validate_recommendations(complete[1:], profile, snapshot, "moderate", "tech-v1")
+    assert raised.value.status == 502
+    assert raised.value.code == "MODEL_INVALID_OUTPUT"
+
+
+def test_field_with_no_observed_roles_is_valid_empty(recommendation_inputs):
+    profile, snapshot, _ = recommendation_inputs
+    only_data_role = replace(
+        snapshot,
+        role_scores={"role_data_analyst": snapshot.role_scores["role_data_analyst"]},
+    )
+    business_profile = profile.model_copy(update={"preferred_field_id": "field_business"})
+    assert score_roles(business_profile, trend_package(only_data_role), "moderate") == []
+    assert validate_recommendations([], business_profile, only_data_role, "moderate", "tech-v1") == []
