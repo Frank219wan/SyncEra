@@ -92,5 +92,5 @@ export interface MarketRadarPackage {
 }
 export interface AppState {
   locale: Locale; profile: Profile; scenario: Scenario; selectedRole: string; results: Recommendation[] | null;
-  snapshotId: string; serviceMeta?: ServiceMeta | null; trendPackage?: TrendPackage | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; hrProfileSaved: boolean; tvet: Organization;
+  matchingSnapshotId: string; marketSnapshotId: string; serviceMeta?: ServiceMeta | null; marketMeta?: ServiceMeta | null; trendPackage?: TrendPackage | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; hrProfileSaved: boolean; tvet: Organization;
 }

@@ -15,7 +15,6 @@ from app.matching import (
     recommendation_sort_key,
 )
 from app.models import Profile, Recommendation, TrendPackage
-
 from .retrieval import retrieve_career_candidates
 
 

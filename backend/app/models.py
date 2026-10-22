@@ -197,6 +197,16 @@ class Recommendation(Strict):
             raise ValueError('match_score does not match score_breakdown')
         return self
 
+class CareerAnalysis(Strict):
+    source: Literal['minimax','rules_fallback']
+    status: Literal['success','disabled','unavailable','invalid_output','in_progress','rate_limited','input_limit']
+    role_id: str | None
+    reason: str
+    strength_skill_ids: list[str]
+    gap_skill_ids: list[str]
+    risk_and_uncertainty: str
+    evidence_ids: list[str]
+    model_version: str | None = None
 class CareerRadarNarrativeItem(Strict):
     role_id: str
     fit_summary: str = Field(min_length=1,max_length=600)
@@ -395,6 +405,9 @@ class RecommendData(Strict):
     profile_id: str
     ai_scenario: Literal['moderate','fast']
     recommendations: list[Recommendation]
+    ai_analysis: CareerAnalysis | None = None
+    # Legacy optional field retained for response compatibility. The API no
+    # longer generates a second AI narrative; ai_analysis is canonical.
     career_radar: CareerRadarNarrative | None = None
 
 class SkillMapData(Strict):

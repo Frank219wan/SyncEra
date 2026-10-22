@@ -1,5 +1,15 @@
 # Career Radar hybrid RAG
 
+> Integration status: PR #17's structured candidate retrieval is retained, but
+> its separate Career Radar Narrative model path is not active. The only live
+> recommendation analysis contract is PR #13's `CareerAnalyzer`: send
+> `X-Recommendation-Analysis: v1` (or the compatibility request alias
+> `include_narrative=true`) and read the optional `data.ai_analysis` object.
+> `data.career_radar` is a deprecated optional schema field and is not emitted.
+> Keep `ENABLE_LIVE_CAREER_RECOMMENDATION=0` unless paid calls are separately
+> authorized. Neither `CAREER_RADAR_LLM_ENABLED` nor the older adapter method
+> activates recommendation analysis.
+
 ## Decision
 
 Career ranking and Skill Gap stay deterministic. MiniMax-M3 may generate only
@@ -25,16 +35,16 @@ repository root for the two-step call contract.
 4. `retrieve_career_candidates()` performs recall-first structured retrieval.
 5. `tech-v1` calculates rank, Matching Score, Skill Gap and scenarios.
 6. Backend independently validates every deterministic result.
-7. When `include_narrative=true`, MiniMax receives only the normalized profile,
-   validated recommendation facts, and reviewed evidence metadata.
-8. Backend attaches trusted Evidence IDs and mechanically rejects changed role
-   order, unknown fields, URLs, numbers, guarantees, and malformed output.
+7. When explicitly requested, the single `CareerAnalyzer` receives only bounded,
+   confirmed synthetic profile fields, validated recommendation facts, and
+   reviewed evidence metadata. It returns `ai_analysis` or a labelled rule fallback.
+8. Backend validates the analysis against the selected role and known skill and
+   evidence IDs. It cannot change ranking, scores, gaps, or source records.
 
-The LLM never receives original CV bytes or the original CV text during Career
-Radar generation. Its output cannot add or change role IDs, skill IDs, scores,
-gaps, scenario inputs, Evidence IDs, URLs, or ranking. Backend cannot prove the
-semantic truth of every generated sentence, so each item remains explicitly
-model-generated and must include an uncertainty statement.
+The analyzer never receives original CV bytes or the original CV text. Its output
+cannot add or change role IDs, skill IDs, scores, gaps, scenario inputs, Evidence
+IDs, URLs, or ranking. Backend cannot prove the semantic truth of generated prose,
+so the explanation retains an uncertainty statement and explicit source status.
 
 ## Optional request
 
@@ -49,7 +59,9 @@ model-generated and must include an uncertainty statement.
 }
 ```
 
-`include_narrative` defaults to `false`, preserving API Contract v1.0 clients.
+`include_narrative` defaults to `false`. It is a compatibility request alias for
+`X-Recommendation-Analysis: v1`; both use one analyzer and return `ai_analysis`.
+Requests without either flag keep the original recommendation response shape.
 
 ## Backend Preview configuration
 
@@ -57,13 +69,12 @@ model-generated and must include an uncertainty statement.
 AI_ADAPTER_MODULE=futureproof_ai.tencent_tokenhub_adapter
 TENCENT_TOKENHUB_API_KEY=
 TENCENT_TOKENHUB_MODEL=minimax-m3
-CAREER_RADAR_LLM_ENABLED=true
-CAREER_RADAR_MAX_TOKENS=1600
+ENABLE_LIVE_CAREER_RECOMMENDATION=0
 ```
 
-The same server-side TokenHub key may be reused. No browser-visible key and no
-second chat-model key are required. Keep `CAREER_RADAR_LLM_ENABLED=false` until
-the protected Preview is ready for a synthetic test.
+No browser-visible key or second chat-model key is needed. The live switch remains
+off until a separately authorized paid Preview test, and requires the PR #13
+PostgreSQL ledger migration and protected Preview environment.
 
 ## PostgreSQL
 

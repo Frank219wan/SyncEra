@@ -2,12 +2,24 @@ import {createContext,useContext,useEffect,useState,type ReactNode} from 'react'
 import type {AppState,Copy,Locale} from './types';
 import {emptyProfile,emptyHr,tvetSample} from './data';
 import {restoreHr} from './hrState';
-const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,snapshotId:'',serviceMeta:null,plan:null,hr:emptyHr,hrProfileSaved:false,tvet:tvetSample};
+const initial:AppState={locale:'en',profile:emptyProfile,scenario:'moderate',selectedRole:'',results:null,matchingSnapshotId:'',marketSnapshotId:'',serviceMeta:null,marketMeta:null,plan:null,hr:emptyHr,hrProfileSaved:false,tvet:tvetSample};
 function read():AppState {
   try {
     const saved=JSON.parse(localStorage.getItem('futureproof-v1')||'null');
     if(saved?.schema!==1)return structuredClone(initial);
     const state={...initial,...saved.state};
+    // The former shared snapshotId could hold a DOSM ID after visiting Radar.
+    // Migrate only an ID already tied to the saved tech-v1 trend package.
+    if(typeof saved.state?.snapshotId==='string'){
+      if(saved.state.snapshotId.startsWith('dosm-')){
+        state.marketSnapshotId=saved.state.snapshotId;
+        state.matchingSnapshotId=state.trendPackage?.snapshotId??'';
+        state.serviceMeta=state.trendPackage?.meta??null;
+      }else if(state.trendPackage?.snapshotId===saved.state.snapshotId){
+        state.matchingSnapshotId=saved.state.snapshotId;
+      }
+    }
+    delete (state as AppState & {snapshotId?:string}).snapshotId;
     return {...state,...restoreHr(saved.state?.hr,saved.state?.hrProfileSaved)};
   }
   catch {return structuredClone(initial);}

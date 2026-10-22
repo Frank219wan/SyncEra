@@ -1404,6 +1404,23 @@
         ],
         "title": "BubblesData"
       },
+      "CareerAnalysis": {
+        "properties": {
+          "source": {"type": "string", "enum": ["minimax", "rules_fallback"]},
+          "status": {"type": "string", "enum": ["success", "disabled", "unavailable", "invalid_output", "in_progress", "rate_limited", "input_limit"]},
+          "role_id": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+          "reason": {"type": "string"},
+          "strength_skill_ids": {"type": "array", "items": {"type": "string"}},
+          "gap_skill_ids": {"type": "array", "items": {"type": "string"}},
+          "risk_and_uncertainty": {"type": "string"},
+          "evidence_ids": {"type": "array", "items": {"type": "string"}},
+          "model_version": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null}
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["source", "status", "role_id", "reason", "strength_skill_ids", "gap_skill_ids", "risk_and_uncertainty", "evidence_ids"],
+        "title": "CareerAnalysis"
+      },
       "CareerRadarNarrative": {
         "properties": {
           "status": {
@@ -2794,6 +2811,13 @@
             },
             "type": "array",
             "title": "Recommendations"
+          },
+          "ai_analysis": {
+            "anyOf": [
+              {"$ref": "#/components/schemas/CareerAnalysis"},
+              {"type": "null"}
+            ],
+            "default": null
           },
           "career_radar": {
             "anyOf": [

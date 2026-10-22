@@ -125,10 +125,7 @@ class NarrativeAdapter:
         return score_roles(profile, package, scenario)
 
     def generate_career_radar(self, profile, recommendations, package, scenario, language):
-        assert profile.reviewed_by_user is True
-        assert scenario in {'moderate', 'fast'}
-        assert language == 'en'
-        return narrative_rows(recommendations)
+        raise AssertionError('The separate Career Radar model path must not run')
 
 
 def _api_profile(client: TestClient):
@@ -155,7 +152,7 @@ def _api_profile(client: TestClient):
     return response.json()['data']['profile']
 
 
-def test_recommendation_api_adds_narrative_without_changing_scores(tmp_path):
+def test_narrative_alias_uses_single_analysis_without_changing_scores(tmp_path):
     client = TestClient(create_app(
         store=ProfileStore(str(tmp_path / 'career-radar.sqlite')),
         adapter=NarrativeAdapter(),
@@ -175,14 +172,17 @@ def test_recommendation_api_adds_narrative_without_changing_scores(tmp_path):
     assert without.status_code == with_narrative.status_code == 200
     assert 'career_radar' not in without.json()['data']
     assert without.json()['data']['recommendations'] == with_narrative.json()['data']['recommendations']
-    radar = with_narrative.json()['data']['career_radar']
-    assert radar['model_version'] == 'fixture-narrative'
-    assert [item['role_id'] for item in radar['items']] == [
-        item['role_id'] for item in with_narrative.json()['data']['recommendations']
-    ]
+    assert 'career_radar' not in with_narrative.json()['data']
+    assert with_narrative.json()['data']['ai_analysis']['source'] == 'rules_fallback'
+    with_header = client.post(
+        '/api/v1/recommendations', json={**base, 'include_narrative': True},
+        headers={'X-Recommendation-Analysis': 'v1'},
+    )
+    assert with_header.status_code == 200
+    assert with_header.json()['data']['ai_analysis'] == with_narrative.json()['data']['ai_analysis']
 
 
-def test_narrative_request_fails_explicitly_when_generator_is_unavailable(tmp_path):
+def test_narrative_alias_falls_back_when_live_analysis_is_disabled(tmp_path):
     client = TestClient(create_app(store=ProfileStore(str(tmp_path / 'disabled.sqlite'))))
     profile = _api_profile(client)
     response = client.post('/api/v1/recommendations', json={
@@ -191,8 +191,9 @@ def test_narrative_request_fails_explicitly_when_generator_is_unavailable(tmp_pa
         'ai_scenario': 'moderate',
         'include_narrative': True,
     })
-    assert response.status_code == 503
-    assert response.json()['error']['code'] == 'SOURCE_UNAVAILABLE'
+    assert response.status_code == 200
+    assert response.json()['data']['ai_analysis']['status'] == 'disabled'
+    assert response.json()['data']['ai_analysis']['source'] == 'rules_fallback'
 
 
 def test_synthetic_cv_skills_retrieve_roles_gaps_and_learning_map(tmp_path):
