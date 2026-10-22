@@ -4,13 +4,22 @@ The local individual radar uses a prepared snapshot built from the two DOSM Q2 2
 
 ## Local view and API
 
-Open `http://127.0.0.1:5174/individual/radar` while the **Start FutureProof full stack (dev)** VS Code task is running. That task enables the local-only endpoint `GET /api/v1/market/radar`; the data file is `backend/data/dosm_market_q2_2026.json`.
+The prepared snapshot is available behind the explicitly configured endpoint
+`GET /api/v1/market/radar`; the data file is
+`backend/data/dosm_market_q2_2026.json`. The checked-in local tasks and
+deployment defaults leave it disabled pending source review. For a local
+review session, set `DOSM_MARKET_RADAR_ENABLED=1` on the backend and
+`VITE_DOSM_MARKET_RADAR_ENABLED=true` on the frontend, then open
+`http://127.0.0.1:5174/individual/radar`. The frontend flag selects the DOSM
+view; it never changes the recommendation Snapshot ID.
 
 The current snapshot defaults to Q2 2026 and supports the JMI quarterly series from Q3 2019 through Q2 2026. The quarter selector shows occupation groups, industries, or employment context for the selected quarter. Comparisons are calculated by SyncEra against the preceding quarter and the same quarter one year earlier. A missing source value remains unavailable; it is not changed to zero.
 
 The occupation view highlights the largest groups by ad volume and the fastest-growing group among the five largest. Share-of-ads values use JMI's published total. Industry highlights exclude `Unclassified` from the named-sector ranking and show its share separately. Each JMI signal carries the source workbook ID and row number so a future position-matching adapter can preserve evidence lineage.
 
-The API is disabled unless `DOSM_MARKET_RADAR_ENABLED=1` is set. The VS Code tasks set it for local preview; the default protects the endpoint from being exposed by other deployments before the team reviews the data flow.
+The API is disabled unless `DOSM_MARKET_RADAR_ENABLED=1` is set. The DOSM
+major-group snapshot is kept separate from the role-level matching snapshot;
+it must not be sent as `snapshot_id` to `/api/v1/recommendations`.
 
 ## Refreshing the prepared snapshot
 
