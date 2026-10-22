@@ -1,6 +1,7 @@
 from __future__ import annotations
+import re
 from uuid import uuid4
-from .models import Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
+from .models import CareerRadarNarrative, Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
 from .catalogue import SKILLS, ROLES, FIELDS
 from .ai_adapter import AIAdapterRequestError
 from .scoring_validation import validate_scored_recommendations
@@ -129,6 +130,54 @@ def validate_recommendations(raw,profile,snap,scenario,scoring_policy):
         return validate_scored_recommendations(raw,profile,snap,scenario,scoring_policy)
     except Exception:
         raise APIError(502,'MODEL_INVALID_OUTPUT','Matching output failed catalogue or score validation')
+
+def career_radar_language(profile: Profile) -> str:
+    value=profile.study_constraints.language.strip().casefold()
+    if value.startswith('zh') or 'chinese' in value or '中文' in value or '汉语' in value:
+        return 'zh-CN'
+    return 'en'
+
+def validate_career_radar_narrative(raw,recommendations,model_version,language):
+    """Attach trusted IDs to LLM prose and reject unsupported generated claims."""
+    fields={'role_id','fit_summary','trend_summary','gap_summary','next_step','uncertainty'}
+    text_fields=fields-{'role_id'}
+    forbidden=(
+        'guarantee','guaranteed','guarantees','certain to be hired','will be hired',
+        'promise employment','guaranteed employment','保证','一定会','必然录用','包就业','稳进',
+    )
+    try:
+        if not isinstance(raw,dict) or set(raw)!={'items'} or not isinstance(raw['items'],list):
+            raise ValueError('narrative must contain only items')
+        expected_ids=[item['role_id'] for item in recommendations]
+        if len(raw['items'])!=len(expected_ids):
+            raise ValueError('narrative count does not match recommendations')
+        validated=[]
+        for index,(item,recommendation) in enumerate(zip(raw['items'],recommendations)):
+            if not isinstance(item,dict) or set(item)!=fields:
+                raise ValueError('narrative item shape is invalid')
+            if item['role_id']!=expected_ids[index]:
+                raise ValueError('narrative role order is invalid')
+            clean={'role_id':item['role_id']}
+            for field in text_fields:
+                value=item[field]
+                if not isinstance(value,str):
+                    raise ValueError('narrative text is invalid')
+                value=value.strip()
+                folded=value.casefold()
+                if (not value or any(ord(ch)<32 for ch in value)
+                    or re.search(r'https?://|www\.',folded)
+                    or any(ch.isdigit() for ch in value)
+                    or any(term in folded for term in forbidden)):
+                    raise ValueError('narrative contains unsupported claims or citations')
+                clean[field]=value
+            clean['evidence_ids']=list(recommendation['evidence_ids'])
+            validated.append(clean)
+        return CareerRadarNarrative.model_validate({
+            'status':'generated','model_version':model_version,
+            'language':language,'items':validated,
+        }).model_dump()
+    except Exception as exc:
+        raise APIError(502,'MODEL_INVALID_OUTPUT','Career Radar narrative failed grounding validation') from exc
 
 def make_skill_map(profile,role,skill,language,budget,currency,resources):
     # The repository returns only links matched to a reviewer-owned approval manifest.

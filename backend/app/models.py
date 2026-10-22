@@ -161,6 +161,7 @@ class RecommendRequest(Strict):
     preferred_field_id: str | None = None
     top_k: int = Field(default=5,ge=1,le=20)
     snapshot_id: str | None = None
+    include_narrative: bool = False
 
 class ScoreBreakdown(Strict):
     skill_compatibility: float = Field(ge=0,le=100)
@@ -195,6 +196,21 @@ class Recommendation(Strict):
         if abs(self.match_score-self.score_breakdown.total()) > .01:
             raise ValueError('match_score does not match score_breakdown')
         return self
+
+class CareerRadarNarrativeItem(Strict):
+    role_id: str
+    fit_summary: str = Field(min_length=1,max_length=600)
+    trend_summary: str = Field(min_length=1,max_length=600)
+    gap_summary: str = Field(min_length=1,max_length=600)
+    next_step: str = Field(min_length=1,max_length=400)
+    uncertainty: str = Field(min_length=1,max_length=500)
+    evidence_ids: list[str] = Field(min_length=1)
+
+class CareerRadarNarrative(Strict):
+    status: Literal['generated']
+    model_version: str = Field(min_length=1,max_length=128)
+    language: Literal['en','zh-CN']
+    items: list[CareerRadarNarrativeItem]
 
 class Resource(Strict):
     resource_id: str
@@ -312,6 +328,7 @@ class RecommendData(Strict):
     profile_id: str
     ai_scenario: Literal['moderate','fast']
     recommendations: list[Recommendation]
+    career_radar: CareerRadarNarrative | None = None
 
 class SkillMapData(Strict):
     skill_map_id: str
