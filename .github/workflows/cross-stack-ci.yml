@@ -37,6 +37,8 @@ jobs:
         env:
           AI_ADAPTER_MODULE: futureproof_ai.futureproof_adapter
           DOSM_MARKET_RADAR_ENABLED: '1'
+          ENABLE_SYNTHETIC_UPLOAD: '1'
+          ENABLE_LIVE_CAREER_RECOMMENDATION: '0'
         run: |
           uvicorn app.main:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/syncera-api.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/syncera-api.pid"
