@@ -15,6 +15,7 @@ from app.matching import (
     recommendation_sort_key,
 )
 from app.models import Profile, Recommendation, TrendPackage
+from .retrieval import eligible_role_ids
 
 
 def _role_signal(package: TrendPackage, role_id: str) -> dict[str, Any] | None:
@@ -43,9 +44,8 @@ def score_roles(
         raise ValueError(f"snapshot has no {scenario!r} scenario assumptions")
 
     results: list[Recommendation] = []
-    for role in ROLES.values():
-        if profile.preferred_field_id and role.field_id != profile.preferred_field_id:
-            continue
+    for role_id in eligible_role_ids(profile, trend_package):
+        role = ROLES[role_id]
         signal = _role_signal(trend_package, role.role_id)
         if signal is None or signal.get("trend_score") is None:
             continue

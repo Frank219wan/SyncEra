@@ -1,9 +1,12 @@
 from __future__ import annotations
 import os
 import json
+import logging
+import traceback
 from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
+from urllib.parse import urlsplit
 from fastapi import FastAPI, Request, Query, UploadFile, File, Form
 from pydantic import ValidationError
 from fastapi.exceptions import RequestValidationError
@@ -11,15 +14,19 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, MarketRadarData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
-from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
-from .storage import ProfileStore
+from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, Recommendation, SkillMapRequest, RoadmapRequest, HealthData, MarketRadarData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
+from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS, SNAPSHOTS
+from .storage import create_profile_store
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
 from .market_radar import MarketRadarError, build_market_radar_data, is_market_radar_enabled
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
+from .career_analysis import CareerAnalyzer, rule_fallback
+from .career_analysis_ledger import PostgresCareerAnalysisLedger
+
+logger = logging.getLogger(__name__)
 
 ERROR_CODES={400:'BAD_REQUEST',404:'NOT_FOUND',409:'SNAPSHOT_CONFLICT',422:'VALIDATION_ERROR',429:'RATE_LIMITED',502:'MODEL_INVALID_OUTPUT',503:'SOURCE_UNAVAILABLE',504:'MODEL_TIMEOUT'}
 
@@ -38,10 +45,30 @@ class SPAStaticFiles(StaticFiles):
 def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
-def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
-    app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic recommendation demo. The DOSM market radar is an explicitly enabled local data snapshot.')
-    app.state.store=store or ProfileStore()
+def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,career_analyzer=None):
+    if os.getenv('VERCEL') and os.getenv('ACTIVE_SNAPSHOT_ID') and os.getenv('ACTIVE_SNAPSHOT_ID') not in SNAPSHOTS:
+        raise RuntimeError('Hosted Preview permits only bundled synthetic snapshots')
+    if (os.getenv('VERCEL') and os.getenv('AI_ADAPTER_MODULE') == 'futureproof_ai.tencent_tokenhub_adapter'
+            and os.getenv('VERCEL_ENV') != 'preview'):
+        raise RuntimeError('TokenHub adapter is enabled only for Vercel Preview')
+    app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. The DOSM market radar uses a separately gated public data snapshot.')
+    app.state.store=store if store is not None else create_profile_store()
+    if callable(getattr(app.state.store, 'close', None)):
+        app.add_event_handler('shutdown', app.state.store.close)
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
+    if career_analyzer is not None:
+        app.state.career_analyzer=career_analyzer
+    else:
+        live_career=os.getenv('ENABLE_LIVE_CAREER_RECOMMENDATION')=='1'
+        ledger=None
+        if live_career and os.getenv('VERCEL_ENV')=='preview':
+            if not hasattr(app.state.store,'pool'):
+                raise RuntimeError('Live career analysis requires the shared PostgreSQL ledger')
+            ledger=PostgresCareerAnalysisLedger(app.state.store.pool)
+        app.state.career_analyzer=CareerAnalyzer(
+            ledger=ledger,live_enabled=live_career,
+            api_key=os.getenv('TENCENT_TOKENHUB_API_KEY','') if live_career else '',
+        )
     app.state.market=market if market is not None else MarketRepository()
     app.state.resources=resources if resources is not None else ResourceRepository()
     if market is None or resources is None:
@@ -49,9 +76,17 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         if market is None: app.state.market.load_dir(approved_dir)
         if resources is None: app.state.resources.load_dir(approved_dir)
     app.state.market.validate_active()
+    if os.getenv('VERCEL') and not os.getenv('FRONTEND_ORIGINS'):
+        raise RuntimeError('FRONTEND_ORIGINS is required for Vercel Preview')
     origins=[x.strip() for x in os.getenv('FRONTEND_ORIGINS','http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173').split(',') if x.strip()]
+    if os.getenv('VERCEL'):
+        for origin in origins:
+            parsed=urlsplit(origin)
+            if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password
+                    or parsed.path or parsed.query or parsed.fragment or origin != f'https://{parsed.netloc}'):
+                raise RuntimeError('FRONTEND_ORIGINS must contain only exact HTTPS origins for Vercel Preview')
     app.add_middleware(UploadBodyLimitMiddleware)
-    app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST'],allow_headers=['Content-Type','X-Request-ID'],expose_headers=['X-Request-ID'])
+    app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST'],allow_headers=['Content-Type','X-Request-ID','X-Recommendation-Analysis'],expose_headers=['X-Request-ID'])
 
     @app.middleware('http')
     async def request_id(request:Request,call_next):
@@ -83,7 +118,14 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request,exc): return error(request,exc.status_code,ERROR_CODES.get(exc.status_code,'BAD_REQUEST'),str(exc.detail))
     @app.exception_handler(Exception)
-    async def unexpected_error(request,exc): return error(request,503,'SOURCE_UNAVAILABLE','Service unavailable')
+    async def unexpected_error(request,exc):
+        # Log code locations, never exception text or traceback source lines: driver
+        # errors can embed a DSN and validation errors can embed submitted profile data.
+        frames = traceback.extract_tb(exc.__traceback__)[-8:]
+        stack = ' > '.join(f'{Path(frame.filename).name}:{frame.lineno}:{frame.name}' for frame in frames)
+        logger.error('Unexpected backend failure request_id=%s exception_type=%s stack=%s',
+                     getattr(request.state, 'request_id', 'unavailable'), type(exc).__name__, stack)
+        return error(request,503,'SOURCE_UNAVAILABLE','Service unavailable')
 
     @app.get('/api/v1/health',response_model=Envelope[HealthData])
     def health(request:Request): return success(request,{'status':'ok','api_version':'1.0.0'},data_model=HealthData)
@@ -161,6 +203,8 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         504:{'model':APIErrorEnvelope,'description':'Extraction adapter timeout'},
     })
     async def upload_profile(request:Request,file:UploadFile=File(...),synthetic_input:bool=Form(...),study_constraints:str=Form(...),preferred_field_id:str|None=Form(None)):
+        if os.getenv('VERCEL') and os.getenv('ENABLE_SYNTHETIC_UPLOAD') != '1':
+            raise svc.APIError(503,'UPLOAD_DISABLED','Synthetic CV upload is disabled for this Preview')
         if not synthetic_input:
             raise svc.APIError(422,'SYNTHETIC_ONLY','Only declared synthetic CVs are accepted in this demo')
         try:
@@ -188,7 +232,16 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
     def confirm(payload:ConfirmRequest,request:Request):
         return success(request,svc.confirm(app.state.store,payload),data_model=ConfirmData)
 
-    @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],responses=documented_errors(400,404,409,422,429,502,503,504))
+    # This readback route has no ownership checks. Hosted Preview must opt in
+    # only after deployment protection has been verified.
+    if not os.getenv('VERCEL') or (os.getenv('VERCEL_ENV') == 'preview'
+                                 and os.getenv('ENABLE_PROFILE_READBACK') == '1'):
+        @app.get('/api/v1/profiles/{profile_id}',response_model=Envelope[ConfirmData],responses=documented_errors(404))
+        def get_profile(profile_id:str,request:Request):
+            profile=svc.require_profile(app.state.store,profile_id)
+            return success(request,{'profile':profile.model_dump(),'profile_revision':profile.revision},data_model=ConfirmData)
+
+    @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],response_model_exclude_none=True,responses=documented_errors(400,404,409,422,429,502,503,504))
     def recommend(payload:RecommendRequest,request:Request):
         profile=svc.require_profile(app.state.store,payload.profile_id,confirmed=True)
         svc.require_field(payload.preferred_field_id)
@@ -209,8 +262,17 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
+        analysis=None
+        if request.headers.get('X-Recommendation-Analysis')=='v1':
+            try:
+                analysis=app.state.career_analyzer.analyze(scoring_profile,package,payload.ai_scenario,recommendations,scoring_policy)
+            except Exception as exc:
+                logger.warning('Career analysis degraded request_id=%s exception_type=%s',request.state.request_id,type(exc).__name__)
+                analysis=rule_fallback([Recommendation.model_validate(row) for row in recommendations[:5]],'unavailable')
         version=getattr(app.state.adapter,'scoring_model_version','rules-v0.1')
-        return success(request,{'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations},snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True,model_version=version)
+        data={'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations}
+        if analysis is not None: data['ai_analysis']=analysis.model_dump()
+        return success(request,data,snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True,model_version=version)
 
     @app.post('/api/v1/learning/skill-map',response_model_exclude_none=True,response_model=Envelope[SkillMapData],responses=documented_errors(404,422))
     def skill_map(payload:SkillMapRequest,request:Request):

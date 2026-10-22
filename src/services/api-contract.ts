@@ -102,6 +102,18 @@ export interface ApiRecommendation {
   sdg_links?: Array<{ sdg: number; rationale: string }>;
 }
 
+export interface ApiCareerAnalysis {
+  source: 'minimax' | 'rules_fallback';
+  status: 'success' | 'disabled' | 'unavailable' | 'invalid_output' | 'in_progress' | 'rate_limited' | 'input_limit';
+  role_id: string | null;
+  reason: string;
+  strength_skill_ids: string[];
+  gap_skill_ids: string[];
+  risk_and_uncertainty: string;
+  evidence_ids: string[];
+  model_version: string | null;
+}
+
 export interface ApiRoadmapStep {
   step_id: string;
   skill_id: string;

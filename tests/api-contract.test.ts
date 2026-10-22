@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyProfile } from '../src/data.ts';
+import { resolveApiRoot } from '../src/services/api-base.ts';
+import { withMarketSnapshot } from '../src/marketSnapshot.ts';
+import type { AppState, MarketRadarPackage } from '../src/types.ts';
 import {
   applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
   mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
@@ -12,6 +15,28 @@ test('contract IDs round-trip without leaking display names into keys', () => {
   assert.equal(fromContractRoleId('role_data_analyst'), 'data-analyst');
   assert.equal(toContractSkillId('python'), 'skill_python');
   assert.equal(fromContractSkillId('skill_python'), 'python');
+});
+
+test('Production API origin and Preview same-origin proxy resolve independently', () => {
+  assert.equal(resolveApiRoot(''), '/api/v1');
+  assert.equal(resolveApiRoot('https://backend.example.test'), 'https://backend.example.test/api/v1');
+  assert.equal(resolveApiRoot('https://backend.example.test/api/v1/'), 'https://backend.example.test/api/v1');
+});
+
+test('DOSM market snapshot cannot replace the tech-v1 matching snapshot', () => {
+  const previous = {
+    matchingSnapshotId: 'snap_my_20261021_02', marketSnapshotId: '',
+    serviceMeta: { requestId: 'match', snapshotId: 'snap_my_20261021_02', generatedAt: null, dataLabel: 'synthetic_demo', isMock: true, modelVersion: 'tech-v1' },
+  } as AppState;
+  const market = {
+    snapshotId: 'dosm-market-q2-2026',
+    meta: { requestId: 'market', snapshotId: 'dosm-market-q2-2026', generatedAt: null, dataLabel: 'public_open', isMock: false, modelVersion: 'dosm-jmi-qes-v1' },
+  } as MarketRadarPackage;
+  const next = withMarketSnapshot(previous, market);
+  assert.equal(next.marketSnapshotId, market.snapshotId);
+  assert.equal(next.matchingSnapshotId, previous.matchingSnapshotId);
+  assert.equal(next.serviceMeta?.dataLabel, 'synthetic_demo');
+  assert.equal(next.marketMeta?.dataLabel, 'public_open');
 });
 
 test('skill levels preserve unknown as null', () => {

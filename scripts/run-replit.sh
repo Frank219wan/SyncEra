@@ -16,5 +16,5 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-VITE_API_MODE=real VITE_API_BASE_URL= \
+VITE_API_MODE=real \
   pnpm dev --host 0.0.0.0 --port "${PORT:-3000}"
