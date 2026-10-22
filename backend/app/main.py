@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
-from .storage import ProfileStore
+from .storage import create_profile_store
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
 from . import services as svc
@@ -39,7 +39,7 @@ def documented_errors(*codes):
 
 def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
     app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
-    app.state.store=store or ProfileStore()
+    app.state.store=store if store is not None else create_profile_store()
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
     app.state.market=market if market is not None else MarketRepository()
     app.state.resources=resources if resources is not None else ResourceRepository()

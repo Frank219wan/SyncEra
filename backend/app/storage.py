@@ -37,3 +37,18 @@ class ProfileStore:
         with self.connect() as db:
             cur=db.execute('UPDATE profiles SET body=?,revision=? WHERE profile_id=? AND revision=?',(profile.model_dump_json(),profile.revision,profile.profile_id,expected_revision))
             return cur.rowcount == 1
+
+
+def create_profile_store():
+    """Select durable storage explicitly; Preview can never use local SQLite."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    vercel_env = os.getenv("VERCEL_ENV", "").lower()
+    require_postgres = vercel_env == "preview" or os.getenv("REQUIRE_POSTGRES") == "1"
+    if url:
+        if not url.startswith(("postgresql://", "postgres://")):
+            raise RuntimeError("DATABASE_URL must be a PostgreSQL URL")
+        from .postgres_storage import PostgresProfileStore
+        return PostgresProfileStore(url)
+    if require_postgres:
+        raise RuntimeError("PostgreSQL DATABASE_URL is required for Preview; SQLite fallback is disabled")
+    return ProfileStore()
