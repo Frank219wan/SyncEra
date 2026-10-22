@@ -1,6 +1,7 @@
 import json
 import os
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from .models import Profile
 
@@ -11,8 +12,17 @@ class ProfileStore:
         with self.connect() as db:
             db.execute('CREATE TABLE IF NOT EXISTS profiles (profile_id TEXT PRIMARY KEY, revision INTEGER NOT NULL, body TEXT NOT NULL)')
 
+    @contextmanager
     def connect(self):
-        return sqlite3.connect(self.path,timeout=5)
+        db=sqlite3.connect(self.path,timeout=5)
+        try:
+            yield db
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
+        finally:
+            db.close()
 
     def save_new(self, profile: Profile):
         with self.connect() as db:
