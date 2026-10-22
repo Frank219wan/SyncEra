@@ -30,6 +30,11 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
     first = TestClient(create_app(store=store_a, adapter=create_adapter()))
     second = TestClient(create_app(store=store_b, adapter=create_adapter()))
     marker = 'Synthetic ' + uuid4().hex
+    # Mimic an idle pooled connection being closed by a network/proxy hop.
+    # The next checkout must discard it before Normalize writes a profile.
+    stale = store_a.pool.getconn()
+    store_a.pool.putconn(stale)
+    stale.close()
     response = first.post('/api/v1/profiles/normalize', json={
         'pipeline': 'A', 'input_type': 'form', 'synthetic_input': True,
         'form': {'current_occupation': marker, 'skills': [{'skill_id': 'skill_sql', 'level': 3}]},

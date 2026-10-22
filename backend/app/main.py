@@ -1,6 +1,8 @@
 from __future__ import annotations
 import os
 import json
+import logging
+import traceback
 from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -20,6 +22,8 @@ from .approved_data import MarketRepository, ResourceRepository
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
+
+logger = logging.getLogger(__name__)
 
 ERROR_CODES={400:'BAD_REQUEST',404:'NOT_FOUND',409:'SNAPSHOT_CONFLICT',422:'VALIDATION_ERROR',429:'RATE_LIMITED',502:'MODEL_INVALID_OUTPUT',503:'SOURCE_UNAVAILABLE',504:'MODEL_TIMEOUT'}
 
@@ -98,7 +102,14 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
     @app.exception_handler(StarletteHTTPException)
     async def http_error(request,exc): return error(request,exc.status_code,ERROR_CODES.get(exc.status_code,'BAD_REQUEST'),str(exc.detail))
     @app.exception_handler(Exception)
-    async def unexpected_error(request,exc): return error(request,503,'SOURCE_UNAVAILABLE','Service unavailable')
+    async def unexpected_error(request,exc):
+        # Log code locations, never exception text or traceback source lines: driver
+        # errors can embed a DSN and validation errors can embed submitted profile data.
+        frames = traceback.extract_tb(exc.__traceback__)[-8:]
+        stack = ' > '.join(f'{Path(frame.filename).name}:{frame.lineno}:{frame.name}' for frame in frames)
+        logger.error('Unexpected backend failure request_id=%s exception_type=%s stack=%s',
+                     getattr(request.state, 'request_id', 'unavailable'), type(exc).__name__, stack)
+        return error(request,503,'SOURCE_UNAVAILABLE','Service unavailable')
 
     @app.get('/api/v1/health',response_model=Envelope[HealthData])
     def health(request:Request): return success(request,{'status':'ok','api_version':'1.0.0'},data_model=HealthData)

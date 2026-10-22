@@ -1,10 +1,13 @@
 import json
+import logging
 import os
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 from .models import Profile
+
+logger = logging.getLogger(__name__)
 
 class ProfileStore:
     def __init__(self, path: str | None = None):
@@ -52,7 +55,8 @@ class PostgresProfileStore:
                 raise RuntimeError('Vercel PostgreSQL DATABASE_URL must require TLS (sslmode=require or stronger)')
         from psycopg_pool import ConnectionPool
         self.pool = ConnectionPool(conninfo=database_url, min_size=0, max_size=3,
-                                   timeout=5, max_idle=60, kwargs={'connect_timeout': 5}, open=True)
+                                   timeout=5, max_idle=60, kwargs={'connect_timeout': 5},
+                                   check=ConnectionPool.check_connection, open=True)
         try:
             with self.pool.connection() as db:
                 db.execute('SELECT profile_id FROM public.profiles LIMIT 0')
@@ -64,9 +68,31 @@ class PostgresProfileStore:
         self.pool.close()
 
     def save_new(self, profile: Profile):
-        with self.pool.connection() as db:
-            db.execute('INSERT INTO public.profiles (profile_id, revision, body) VALUES (%s,%s,%s::jsonb)',
-                       (profile.profile_id, profile.revision, profile.model_dump_json()))
+        import psycopg
+
+        body = profile.model_dump_json()
+        for attempt in range(2):
+            try:
+                with self.pool.connection() as db:
+                    # A lost acknowledgement after COMMIT must not create a second row.
+                    inserted = db.execute(
+                        'INSERT INTO public.profiles (profile_id, revision, body) VALUES (%s,%s,%s::jsonb) '
+                        'ON CONFLICT (profile_id) DO NOTHING',
+                        (profile.profile_id, profile.revision, body))
+                    if inserted.rowcount == 0:
+                        existing = db.execute(
+                            'SELECT revision, body FROM public.profiles WHERE profile_id=%s',
+                            (profile.profile_id,)).fetchone()
+                        if not existing or existing[0] != profile.revision or existing[1] != json.loads(body):
+                            raise RuntimeError('Profile ID conflict')
+                return
+            except (psycopg.OperationalError, psycopg.InterfaceError) as exc:
+                # Retry only a transport failure, once, with the same Profile ID and
+                # serialized body. Never repeat profile extraction or other SQL errors.
+                if attempt or exc.sqlstate is not None:
+                    raise
+                logger.warning('PostgreSQL profile insert connection retry; exception_type=%s',
+                               type(exc).__name__)
 
     def get(self, profile_id: str) -> Profile | None:
         with self.pool.connection() as db:
