@@ -8,9 +8,9 @@ Date: 2026-10-22 (Asia/Kuala_Lumpur)
 
 | Required verdict | Result | Basis |
 | --- | --- | --- |
-| FRONTEND REAL API | **PASS** for the previously audited Production deployment; **NOT VERIFIED** for this branch's Preview | Earlier browser Network and Vercel runtime evidence showed Production Radar read-only calls to the real FastAPI origin. Current Preview configuration and fresh Network capture were unavailable. |
+| FRONTEND REAL API | **NOT VERIFIED** for the latest Preview deployment | Earlier browser Network and Vercel runtime evidence showed a prior Production Radar deployment making real FastAPI read-only calls. Current Preview configuration and a fresh Network capture were unavailable. |
 | MINIMAX LIVE API | **NOT VERIFIED** | No approved billable call was made. No redacted TokenHub success log exists for this branch. |
-| POSTGRESQL PERSISTENCE | **PASS** in isolated Neon application integration; **NOT VERIFIED** in Vercel Preview | Two FastAPI clients using separate PostgreSQL pools read the same synthetic profile, confirmed it with CAS, and recommended against it. No deployed Preview request was observed. |
+| POSTGRESQL PERSISTENCE | **NOT VERIFIED** in Vercel Preview | The isolated Neon application integration passed: two FastAPI clients using separate PostgreSQL pools read the same synthetic profile, confirmed it with CAS, and recommended against it. No deployed Preview request was observed. |
 
 ## Source and deployment identity
 
