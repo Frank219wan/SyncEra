@@ -3,10 +3,13 @@ import {Link,useParams} from 'react-router-dom';
 import {api} from '../services/api';
 import {fromContractSkillId,type ApiCareerAnalysis,type ApiRoleData,type ApiTaskImpact} from '../services/api-contract';
 import {useApp} from '../store';
-import type {Evidence,MarketRadarPackage,Recommendation} from '../types';
+import type {Evidence,MarketRadarPackage,Recommendation,TrendPackage} from '../types';
 import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
 import {LiveCareerRadar} from './LiveCareerRadar';
 import {withMarketSnapshot} from '../marketSnapshot';
+import {Radar} from './RadarExperience';
+
+const dosmRadarEnabled=import.meta.env.VITE_DOSM_MARKET_RADAR_ENABLED==='true';
 
 function EvidenceSources({ids}:{ids:string[]}) {
   const {t}=useApp();
@@ -35,6 +38,30 @@ function EvidenceSources({ids}:{ids:string[]}) {
 }
 
 export function ConnectedRadar(){
+  return dosmRadarEnabled?<ConnectedDosmRadar/>:<ConnectedMatchingRadar/>;
+}
+
+function ConnectedMatchingRadar(){
+  const {setState,t}=useApp();
+  const [data,setData]=useState<TrendPackage|null>(null);
+  const [error,setError]=useState('');
+  const [attempt,setAttempt]=useState(0);
+  useEffect(()=>{
+    let active=true;
+    setData(null);setError('');
+    api.discovery().then(packageData=>{
+      if(!active)return;
+      setData(packageData);
+      setState(previous=>({...previous,matchingSnapshotId:packageData.snapshotId,serviceMeta:packageData.meta,trendPackage:packageData}));
+    }).catch(e=>{if(active)setError((e as Error).message);});
+    return()=>{active=false;};
+  },[attempt,setState]);
+  if(error)return <ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>;
+  if(!data)return <p className="muted">{t('Loading the current snapshot…','正在加载当前快照…','Memuatkan gambaran semasa…')}</p>;
+  return <Radar data={data}/>;
+}
+
+function ConnectedDosmRadar(){
   const {setState,t}=useApp();
   const [data,setData]=useState<MarketRadarPackage|null>(null);
   const [error,setError]=useState('');

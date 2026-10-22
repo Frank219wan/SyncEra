@@ -18,7 +18,10 @@ from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendR
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS, SNAPSHOTS
 from .storage import create_profile_store
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
-from .approved_data import MarketRepository, ResourceRepository
+from .repository_ports import (
+    load_market_repository,
+    load_resource_repository,
+)
 from .market_radar import MarketRadarError, build_market_radar_data, is_market_radar_enabled
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
@@ -69,12 +72,14 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
             ledger=ledger,live_enabled=live_career,
             api_key=os.getenv('TENCENT_TOKENHUB_API_KEY','') if live_career else '',
         )
-    app.state.market=market if market is not None else MarketRepository()
-    app.state.resources=resources if resources is not None else ResourceRepository()
+    configured_market=bool(os.getenv('MARKET_REPOSITORY_MODULE','').strip())
+    configured_resources=bool(os.getenv('RESOURCE_REPOSITORY_MODULE','').strip())
+    app.state.market=market if market is not None else load_market_repository()
+    app.state.resources=resources if resources is not None else load_resource_repository()
     if market is None or resources is None:
         approved_dir=os.getenv('APPROVED_DATA_DIR',os.path.join(os.path.dirname(__file__),'..','data','approved'))
-        if market is None: app.state.market.load_dir(approved_dir)
-        if resources is None: app.state.resources.load_dir(approved_dir)
+        if market is None and not configured_market: app.state.market.load_dir(approved_dir)
+        if resources is None and not configured_resources: app.state.resources.load_dir(approved_dir)
     app.state.market.validate_active()
     if os.getenv('VERCEL') and not os.getenv('FRONTEND_ORIGINS'):
         raise RuntimeError('FRONTEND_ORIGINS is required for Vercel Preview')
@@ -263,7 +268,10 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
         analysis=None
-        if request.headers.get('X-Recommendation-Analysis')=='v1':
+        # PR #17's include_narrative input is a compatibility alias. Both
+        # requests share this one bounded analyzer and never call the adapter's
+        # separate generate_career_radar model path.
+        if request.headers.get('X-Recommendation-Analysis')=='v1' or payload.include_narrative:
             try:
                 analysis=app.state.career_analyzer.analyze(scoring_profile,package,payload.ai_scenario,recommendations,scoring_policy)
             except Exception as exc:
@@ -284,12 +292,12 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
         levels={s.skill_id:s.level for s in profile.skills}
         if levels.get(skill.skill_id) is not None and levels[skill.skill_id]>=requirements[skill.skill_id].target_level:
             raise svc.APIError(422,'VALIDATION_ERROR','Selected skill is not a current gap',[{'field':'skill_id','reason':'already_at_target'}])
-        return success(request,svc.make_skill_map(profile,role,skill,payload.language,payload.budget_amount,payload.currency,app.state.resources),app.state.market.get_snapshot(),SkillMapData,data_label='mixed_demo' if app.state.resources.entries else 'synthetic_demo',is_mock=True)
+        return success(request,svc.make_skill_map(profile,role,skill,payload.language,payload.budget_amount,payload.currency,app.state.resources),app.state.market.get_snapshot(),SkillMapData,data_label='mixed_demo' if app.state.resources.has_approved_data() else 'synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/learning/roadmap',response_model_exclude_none=True,response_model=Envelope[RoadmapData],responses=documented_errors(404,422))
     def roadmap(payload:RoadmapRequest,request:Request):
         profile=svc.require_profile(app.state.store,payload.profile_id,confirmed=True); role=svc.require_role(payload.role_id)
-        return success(request,svc.make_roadmap(profile,role,payload.selected_skill_ids,payload.study_constraints,app.state.resources),app.state.market.get_snapshot(),RoadmapData,data_label='mixed_demo' if app.state.resources.entries else 'synthetic_demo',is_mock=True)
+        return success(request,svc.make_roadmap(profile,role,payload.selected_skill_ids,payload.study_constraints,app.state.resources),app.state.market.get_snapshot(),RoadmapData,data_label='mixed_demo' if app.state.resources.has_approved_data() else 'synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/progress/skills',status_code=503,response_model=APIErrorEnvelope)
     def progress(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 progress is not implemented')

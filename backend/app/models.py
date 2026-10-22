@@ -161,6 +161,7 @@ class RecommendRequest(Strict):
     preferred_field_id: str | None = None
     top_k: int = Field(default=5,ge=1,le=20)
     snapshot_id: str | None = None
+    include_narrative: bool = False
 
 class ScoreBreakdown(Strict):
     skill_compatibility: float = Field(ge=0,le=100)
@@ -206,6 +207,20 @@ class CareerAnalysis(Strict):
     risk_and_uncertainty: str
     evidence_ids: list[str]
     model_version: str | None = None
+class CareerRadarNarrativeItem(Strict):
+    role_id: str
+    fit_summary: str = Field(min_length=1,max_length=600)
+    trend_summary: str = Field(min_length=1,max_length=600)
+    gap_summary: str = Field(min_length=1,max_length=600)
+    next_step: str = Field(min_length=1,max_length=400)
+    uncertainty: str = Field(min_length=1,max_length=500)
+    evidence_ids: list[str] = Field(min_length=1)
+
+class CareerRadarNarrative(Strict):
+    status: Literal['generated']
+    model_version: str = Field(min_length=1,max_length=128)
+    language: Literal['en','zh-CN']
+    items: list[CareerRadarNarrativeItem]
 
 class Resource(Strict):
     resource_id: str
@@ -391,6 +406,9 @@ class RecommendData(Strict):
     ai_scenario: Literal['moderate','fast']
     recommendations: list[Recommendation]
     ai_analysis: CareerAnalysis | None = None
+    # Legacy optional field retained for response compatibility. The API no
+    # longer generates a second AI narrative; ai_analysis is canonical.
+    career_radar: CareerRadarNarrative | None = None
 
 class SkillMapData(Strict):
     skill_map_id: str
