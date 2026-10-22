@@ -101,7 +101,7 @@ function useHomepageMotion() {
       document.removeEventListener('visibilitychange', sync);
       element?.removeEventListener('animationend', finishIntro);
       media.removeEventListener('change', reduceMotion);
-      element?.querySelectorAll('.wind-leaf, .headline-glyph').forEach(node => node.getAnimations().forEach(animation => animation.cancel()));
+      element?.querySelectorAll('.wind-leaf, .headline-glyph, .copy-letter').forEach(node => node.getAnimations().forEach(animation => animation.cancel()));
     };
   }, []);
   useEffect(() => {
@@ -254,13 +254,23 @@ function BotanicalBackground({paused}: {paused: boolean}) {
 }
 
 type EmblemProps = {keywords?: string[]; radius?: number; duration?: number; inclination?: number; perspective?: number};
+function setOrbitPlaybackRate(emblem: Element | null, rate: number) {
+  emblem?.querySelectorAll<HTMLElement>('.word-orbit, .orbit-word').forEach(element => {
+    element.getAnimations().forEach(animation => animation.updatePlaybackRate(rate));
+  });
+}
+function BouncyText({text}: {text: string}) {
+  const cjk = /[\u3400-\u9fff]/.test(text);
+  const parts = cjk ? [...text] : text.split(/(\s+)/);
+  return <span className="bouncy-copy"><span className="sr-only">{text}</span><span aria-hidden="true">{parts.map((part, wordIndex) => /\s+/.test(part) ? part : <span className={cjk ? undefined : 'copy-word'} key={wordIndex}>{[...part].map((letter, letterIndex) => <span className="copy-letter" key={letterIndex} onPointerEnter={event => hopLetter(event.currentTarget)}>{letter}</span>)}</span>)}</span></span>;
+}
 /** Real CSS 3D orbit: counter-rotation keeps each moving word upright. */
 export function FloatingBrandEmblem({keywords=['Skills','Career','Growth','AI'], radius=118, duration=28, inclination=18, perspective=650}: EmblemProps) {
   const style = {'--orbit-radius':`${radius}px`, '--orbit-duration':`${duration}s`, '--orbit-inclination':`${inclination}deg`, '--orbit-perspective':`${perspective}px`} as CSSProperties;
   return <div className="emblem-entrance" aria-hidden="true"><div className="brand-emblem" style={style}>
     <div className="emblem-shadow"/>
     <div className="emblem-space">
-      <div className="sculpture"><div className="sprout-stem"/><div className="sculpted-leaf leaf-left"/><div className="sculpted-leaf leaf-right"/><div className="sculpted-leaf leaf-crown"/><div className="growth-joint"/></div>
+      <div className="sculpture" onPointerEnter={event => setOrbitPlaybackRate(event.currentTarget.closest('.brand-emblem'), 5)} onPointerLeave={event => setOrbitPlaybackRate(event.currentTarget.closest('.brand-emblem'), 1)}><img className="emblem-relief" src="/images/skillogy-botanical-s-relief.png" alt="" width="164" height="164" draggable="false"/></div>
       <div className="orbital-plane"><div className="orbital-guide"/>{keywords.map((word,i)=><div className="word-orbit" key={word} style={{'--phase':`${-duration*i/keywords.length}s`} as CSSProperties}><span className="word-position"><span className="orbit-word">{word}</span></span></div>)}</div>
     </div>
   </div></div>;
@@ -276,8 +286,8 @@ export function Home() {
       <div className="landing-copy">
         <FloatingBrandEmblem/>
         <h1 aria-label="Skillogy"><span className="type-mask" aria-hidden="true"><span className="headline-line">{[...'Skillogy'].map((letter,i)=><span className="headline-letter" style={{'--letter-delay':`${i*0.13}s`} as CSSProperties} key={`${letter}-${i}`} onPointerEnter={event => hopLetter(event.currentTarget.firstElementChild as HTMLElement)}><span className="headline-glyph">{letter}</span></span>)}</span></span></h1>
-        <p className="hero-tagline type-mask"><span>{t('Grow your career with AI','与 AI 一起，生长职业未来','Kembangkan kerjaya anda dengan AI')}</span></p>
-        <p className="hero-description"><span className="type-mask"><span>{t('Understand your strengths. Find your direction.','读懂自身优势，找到前行方向。','Kenali kekuatan anda. Temui arah anda.')}</span></span><span className="type-mask"><span>{t('Build the skills for what comes next.','培养技能，迎接未来的可能。','Bina kemahiran untuk masa depan.')}</span></span></p>
+        <p className="hero-tagline type-mask"><BouncyText text={t('Grow your career with AI','与 AI 一起，生长职业未来','Kembangkan kerjaya anda dengan AI')}/></p>
+        <p className="hero-description"><span className="type-mask"><BouncyText text={t('Understand your strengths. Find your direction.','读懂自身优势，找到前行方向。','Kenali kekuatan anda. Temui arah anda.')}/></span><span className="type-mask"><BouncyText text={t('Build the skills for what comes next.','培养技能，迎接未来的可能。','Bina kemahiran untuk masa depan.')}/></span></p>
       </div>
       <div className="entry-pair">
         <div className="entry-reveal"><Link to="/individual" className="entry-card individual-entry"><span className="card-art card-bamboo" aria-hidden="true"><i/><i/><i/></span><div><h2>{t('Individual','个人','Individu')}</h2><p className="entry-tagline">{t('rooted to rise','扎根，向上生长','berakar untuk berkembang')}</p></div><p className="entry-description" lang="en">Discover your career direction, build essential skills, and grow toward your future.</p><ArrowUpRight className="entry-arrow" size={22} aria-hidden="true"/></Link></div>
