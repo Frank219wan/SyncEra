@@ -24,7 +24,7 @@ export interface ApiNormalizedProfile {
   interests: string[];
   preferred_field_id?: string | null;
   study_constraints?: Record<string, unknown>;
-  psychology?: { mbti?: string | null };
+  psychology?: { mbti?: string | null; assessment_version?: string; assessment_type?: string; scenario_answers?: Record<string,'A'|'B'|'C'|'D'|'E'|null>; other_responses?: Record<string,string>; consent_to_personalization?: boolean };
   reviewed_by_user: boolean;
   revision: number;
 }
