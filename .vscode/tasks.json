@@ -8,7 +8,10 @@
       "args": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"],
       "options": {
         "cwd": "${workspaceFolder}/backend",
-        "env": {"AI_ADAPTER_MODULE": "futureproof_ai.futureproof_adapter"}
+        "env": {
+          "AI_ADAPTER_MODULE": "futureproof_ai.futureproof_adapter",
+          "DOSM_MARKET_RADAR_ENABLED": "1"
+        }
       },
       "isBackground": true,
       "problemMatcher": {
@@ -55,7 +58,7 @@
       "command": "bash",
       "args": [
         "-lc",
-        "VITE_API_MODE=real VITE_API_BASE_URL= ./node_modules/.bin/tsc -b && VITE_API_MODE=real VITE_API_BASE_URL= ./node_modules/.bin/vite build && cd backend && AI_ADAPTER_MODULE=futureproof_ai.futureproof_adapter STATIC_DIR=../dist .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8765"
+        "VITE_API_MODE=real VITE_API_BASE_URL= ./node_modules/.bin/tsc -b && VITE_API_MODE=real VITE_API_BASE_URL= ./node_modules/.bin/vite build && cd backend && AI_ADAPTER_MODULE=futureproof_ai.futureproof_adapter DOSM_MARKET_RADAR_ENABLED=1 STATIC_DIR=../dist .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8765"
       ],
       "options": {"cwd": "${workspaceFolder}"},
       "isBackground": true,

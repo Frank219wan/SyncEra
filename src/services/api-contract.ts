@@ -1,4 +1,4 @@
-import type { Constraints, Plan, Profile, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
+import type { Constraints, MarketRadarPackage, Plan, Profile, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
 
 export interface ApiMeta {
   request_id?: string;
@@ -41,6 +41,32 @@ export interface ApiRoleSignal {
 }
 export interface ApiSkillSignal { skill_id:string; name:string; trend_score:number|null; signal_label:string; observed_metrics?:{change_pp?:number|null}; evidence_ids:string[]; source_window?:{from:string;to:string} }
 export interface ApiBubblesData { categories:Array<{field_id:string;name:string;display_size:number}>; roles:Array<{role_id:string;field_id:string;display_size:number;evidence_ids:string[]}>; size_basis:string; region:string }
+
+export interface ApiMarketRadarSignal {
+  id:string; name:string; source_id:string; source_row:number; postings:number|null; previous_postings:number|null; year_ago_postings:number|null;
+  market_share_percent:number|null; qoq_change_percent:number|null; yoy_change_percent:number|null;
+}
+export interface ApiMarketMatchReadiness {
+  candidate_skills_source:string; position_granularity:string;
+  named_positions_available:boolean; named_skill_requirements_available:boolean; evidence_based_matching_ready:boolean; reason:string;
+}
+export interface ApiMarketEmploymentMetric {
+  jobs:number; filled_jobs:number; vacancies:number; jobs_created:number;
+  qoq_change_percent:number|null; yoy_change_percent:number|null;
+}
+export interface ApiMarketRadarData {
+  snapshot_id:string; region:string; data_as_of:string; period:string; periods:string[];
+  total_job_offerings:number; total_qoq_change_percent:number|null; total_yoy_change_percent:number|null;
+  occupation_groups:ApiMarketRadarSignal[]; industries:ApiMarketRadarSignal[];
+  matching_readiness:ApiMarketMatchReadiness;
+  employment_totals:ApiMarketEmploymentMetric;
+  employment_sectors:Array<ApiMarketEmploymentMetric & {
+    id:string; name:string;
+    skill_levels:Array<{name:'Skilled'|'Semi-skilled'|'Low-skilled';jobs:number;filled_jobs:number;vacancies:number;jobs_created:number}>;
+  }>;
+  sources:Array<{id:string;title:string;file:string;published_on:string;url:string;measure:string}>;
+  terms_url:string; attribution:string; notes:string[];
+}
 
 export interface ApiRoleData {
   role_id: string;
@@ -119,6 +145,77 @@ export function toServiceMeta(meta: ApiMeta | undefined): ServiceMeta {
     dataLabel: meta?.data_label ?? 'synthetic_demo',
     isMock: meta?.is_mock ?? false,
     modelVersion: meta?.model_version ?? null,
+  };
+}
+
+function mapMarketEmploymentMetric(value: ApiMarketEmploymentMetric) {
+  return {
+    jobs: value.jobs,
+    filledJobs: value.filled_jobs,
+    vacancies: value.vacancies,
+    jobsCreated: value.jobs_created,
+    qoqChangePercent: value.qoq_change_percent,
+    yoyChangePercent: value.yoy_change_percent,
+  };
+}
+
+export function mapMarketRadar(data: ApiMarketRadarData, meta: ServiceMeta): MarketRadarPackage {
+  const mapSignal = (signal: ApiMarketRadarSignal) => ({
+    id: signal.id,
+    name: signal.name,
+    sourceId: signal.source_id,
+    sourceRow: signal.source_row,
+    postings: signal.postings,
+    marketSharePercent: signal.market_share_percent,
+    previousPostings: signal.previous_postings,
+    yearAgoPostings: signal.year_ago_postings,
+    qoqChangePercent: signal.qoq_change_percent,
+    yoyChangePercent: signal.yoy_change_percent,
+  });
+  return {
+    snapshotId: data.snapshot_id,
+    region: data.region,
+    dataAsOf: data.data_as_of,
+    period: data.period,
+    periods: data.periods,
+    totalJobOfferings: data.total_job_offerings,
+    totalQoqChangePercent: data.total_qoq_change_percent,
+    totalYoyChangePercent: data.total_yoy_change_percent,
+    occupationGroups: data.occupation_groups.map(mapSignal),
+    industries: data.industries.map(mapSignal),
+    matchingReadiness: {
+      candidateSkillsSource: data.matching_readiness.candidate_skills_source,
+      positionGranularity: data.matching_readiness.position_granularity,
+      namedPositionsAvailable: data.matching_readiness.named_positions_available,
+      namedSkillRequirementsAvailable: data.matching_readiness.named_skill_requirements_available,
+      evidenceBasedMatchingReady: data.matching_readiness.evidence_based_matching_ready,
+      reason: data.matching_readiness.reason,
+    },
+    employmentTotals: mapMarketEmploymentMetric(data.employment_totals),
+    employmentSectors: data.employment_sectors.map(sector => ({
+      ...mapMarketEmploymentMetric(sector),
+      id: sector.id,
+      name: sector.name,
+      skillLevels: sector.skill_levels.map(level => ({
+        name: level.name,
+        jobs: level.jobs,
+        filledJobs: level.filled_jobs,
+        vacancies: level.vacancies,
+        jobsCreated: level.jobs_created,
+      })),
+    })),
+    sources: data.sources.map(source => ({
+      id: source.id,
+      title: source.title,
+      file: source.file,
+      publishedOn: source.published_on,
+      url: source.url,
+      measure: source.measure,
+    })),
+    termsUrl: data.terms_url,
+    attribution: data.attribution,
+    notes: data.notes,
+    meta,
   };
 }
 
