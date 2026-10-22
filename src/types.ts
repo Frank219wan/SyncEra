@@ -1,12 +1,28 @@
 export type Locale = 'en' | 'zh' | 'ms';
 export type Copy = readonly [string, string, string];
 export type Scenario = 'moderate' | 'fast';
+export type PsychologyScenarioId = 'S1' | 'S2' | 'S3' | 'S4' | 'S5';
+export type PsychologyAnswer = 'A' | 'B' | 'C' | 'D' | 'E';
+export interface PsychologyAssessment {
+  assessment_version: '1.0';
+  assessment_type: 'self_report_reflection';
+  scenario_answers: Record<PsychologyScenarioId, PsychologyAnswer | null>;
+  other_responses: Partial<Record<PsychologyScenarioId, string>>;
+  consent_to_personalization: boolean;
+}
+export interface Psychology {
+  mbti?: string | null;
+  character_notes?: string | null;
+  adaptability_self_report?: string | null;
+  intrinsic_motivators?: string[];
+  assessment?: PsychologyAssessment | null;
+}
 export type Origin = 'synthetic_fixture' | 'public_observed' | 'computed' | 'scenario_model' | 'llm_generated';
 export interface Skill { id: string; level: string; source: 'manual' | 'cv_extracted' | 'inferred'; confirmed: boolean; confidence?: number; backendSupported?: boolean }
 export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
-  region: string; synthetic: boolean; sample: boolean; revision?: number;
+  region: string; synthetic: boolean; sample: boolean; revision?: number; psychology?: Psychology;
 }
 export interface Constraints { hours: number; budget: number; language: Locale; start: string; deadline: string; baseline: string }
 export interface Task { id: string; skill: string; title: Copy; hours: number; done: boolean; completedAt?: string; completedOffset?: number; evidence?: string; week: number }

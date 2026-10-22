@@ -16,6 +16,7 @@ import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
 import {About} from './pages/About';
 import {Intake,IntakeStart,ProfileInput,ProfileReview,Analyzing} from './pages/Intake';
+import {PsychologyAssessmentPage} from './pages/PsychologyAssessment';
 import {ProfileEdit} from './pages/ProfileEdit';
 import {Recommendations,RoleDetail} from './pages/Careers';
 import {Radar} from './pages/RadarExperience';
@@ -47,6 +48,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><
   <Route path="/individual/intake" element={<Intake/>}/>
   <Route path="/individual/intake/start" element={<IntakeStart/>}/>
   <Route path="/individual/intake/profile" element={<ProfileRoute/>}/>
+  <Route path="/individual/intake/assessment" element={<PsychologyAssessmentPage/>}/>
   <Route path="/individual/intake/review" element={<ProfileReview/>}/>
   <Route path="/individual/analyzing" element={<Analyzing/>}/>
   <Route path="/individual/recommendations" element={<RecommendationsRoute/>}/>

@@ -5,7 +5,7 @@
       "label": "FutureProof API (8001)",
       "type": "process",
       "command": "${workspaceFolder}/backend/.venv/bin/python",
-      "args": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001"],
+      "args": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "8001", "--reload"],
       "options": {
         "cwd": "${workspaceFolder}/backend",
         "env": {

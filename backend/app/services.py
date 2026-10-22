@@ -98,7 +98,12 @@ def confirm(store,req):
         raise APIError(422,'VALIDATION_ERROR','Duplicate skill IDs',[{'field':'skills','reason':'duplicate'}])
     for sid in ids: require_skill(sid)
     old=profile.revision
-    updated=profile.model_copy(update={'skills':req.skills,'reviewed_by_user':True,'revision':old+1})
+    updated=profile.model_copy(update={
+        'skills':req.skills,
+        'psychology':req.psychology if req.psychology is not None else profile.psychology,
+        'reviewed_by_user':True,
+        'revision':old+1,
+    })
     if not store.update(updated,old): raise APIError(409,'SNAPSHOT_CONFLICT','Profile revision changed',[{'field':'profile_revision','reason':'stale'}],True)
     return {'profile':updated.model_dump(),'profile_revision':updated.revision}
 

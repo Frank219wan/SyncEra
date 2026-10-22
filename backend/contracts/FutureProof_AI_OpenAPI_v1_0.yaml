@@ -1655,8 +1655,71 @@ components:
           type: array
           items:
             type: string
+        assessment:
+          $ref: '#/components/schemas/PsychologyAssessment'
+          nullable: true
       additionalProperties: false
       description: Optional reflective context; never hard-filter career access.
+    PsychologyAssessment:
+      type: object
+      properties:
+        assessment_version:
+          type: string
+          enum:
+          - '1.0'
+        assessment_type:
+          type: string
+          enum:
+          - self_report_reflection
+        scenario_answers:
+          type: object
+          properties:
+            S1:
+              type: string
+              nullable: true
+              enum: [A, B, C, D, E, null]
+            S2:
+              type: string
+              nullable: true
+              enum: [A, B, C, D, E, null]
+            S3:
+              type: string
+              nullable: true
+              enum: [A, B, C, D, E, null]
+            S4:
+              type: string
+              nullable: true
+              enum: [A, B, C, D, E, null]
+            S5:
+              type: string
+              nullable: true
+              enum: [A, B, C, D, E, null]
+          required: [S1, S2, S3, S4, S5]
+          additionalProperties: false
+        other_responses:
+          type: object
+          properties:
+            S1:
+              type: string
+              maxLength: 1200
+            S2:
+              type: string
+              maxLength: 1200
+            S3:
+              type: string
+              maxLength: 1200
+            S4:
+              type: string
+              maxLength: 1200
+            S5:
+              type: string
+              maxLength: 1200
+          additionalProperties: false
+        consent_to_personalization:
+          type: boolean
+      required: [assessment_version, assessment_type, scenario_answers, consent_to_personalization]
+      additionalProperties: false
+      description: Optional versioned self-report reflection. A nonempty other_responses value is required for each E answer; skipped answers are null and are not interpreted.
     ProfileSkill:
       type: object
       properties:
@@ -1791,6 +1854,8 @@ components:
           type: boolean
           enum:
           - true
+        psychology:
+          $ref: '#/components/schemas/Psychology'
       additionalProperties: false
       required:
       - profile_id

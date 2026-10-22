@@ -1,4 +1,4 @@
-import type { Constraints, MarketRadarPackage, Plan, Profile, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
+import type { Constraints, MarketRadarPackage, Plan, Profile, Psychology, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
 
 export interface ApiMeta {
   request_id?: string;
@@ -24,7 +24,7 @@ export interface ApiNormalizedProfile {
   interests: string[];
   preferred_field_id?: string | null;
   study_constraints?: Record<string, unknown>;
-  psychology?: { mbti?: string | null };
+  psychology?: Psychology;
   reviewed_by_user: boolean;
   revision: number;
 }
@@ -240,6 +240,12 @@ function splitInterests(value: string) {
 }
 
 export function profileToNormalizeRequest(profile: Profile) {
+  const psychology: Psychology = {
+    ...(profile.psychology ?? {}),
+    mbti: profile.mbti || null,
+    intrinsic_motivators: profile.psychology?.intrinsic_motivators ?? [],
+    assessment: profile.psychology?.assessment ?? null,
+  };
   return {
     pipeline: 'A' as const,
     input_type: 'form' as const,
@@ -251,7 +257,7 @@ export function profileToNormalizeRequest(profile: Profile) {
       interests: splitInterests(profile.interests),
       skills: contractSkills(profile.skills),
     },
-    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[] },
+    psychology,
     study_constraints: {
       weekly_hours: 5, budget_amount: 0, currency: 'MYR', language: 'en',
       target_weeks: 12, learning_pace: 'focused',
@@ -260,10 +266,17 @@ export function profileToNormalizeRequest(profile: Profile) {
 }
 
 export function profileToConfirmRequest(profile: Profile) {
+  const psychology: Psychology = {
+    ...(profile.psychology ?? {}),
+    mbti: profile.mbti || null,
+    intrinsic_motivators: profile.psychology?.intrinsic_motivators ?? [],
+    assessment: profile.psychology?.assessment ?? null,
+  };
   return {
     profile_id: profile.id,
     skills: contractSkills(profile.skills, true),
     reviewed_by_user: true,
+    psychology,
     profile_revision: profile.revision,
   };
 }
@@ -276,6 +289,7 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     occupation: profile.current_occupation ?? fallback.occupation,
     interests: profile.interests?.join(', ') || fallback.interests,
     mbti: profile.psychology?.mbti ?? fallback.mbti,
+    psychology: profile.psychology ? {...fallback.psychology,...profile.psychology} : fallback.psychology,
     revision: profile.revision,
     skills: [...profile.skills.map(skill => ({
       id: fromContractSkillId(skill.skill_id),

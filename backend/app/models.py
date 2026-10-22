@@ -106,11 +106,36 @@ class StudyConstraints(Strict):
     target_weeks: int = Field(gt=0)
     learning_pace: Literal['focused','deep']
 
+PsychologyScenarioId = Literal['S1','S2','S3','S4','S5']
+PsychologyAnswer = Literal['A','B','C','D','E']
+
+class PsychologyAssessment(Strict):
+    assessment_version: Literal['1.0']
+    assessment_type: Literal['self_report_reflection']
+    scenario_answers: dict[PsychologyScenarioId, PsychologyAnswer | None]
+    other_responses: dict[PsychologyScenarioId,str] = Field(default_factory=dict)
+    consent_to_personalization: bool
+    @model_validator(mode='after')
+    def validate_responses(self):
+        scenario_ids={'S1','S2','S3','S4','S5'}
+        if set(self.scenario_answers)!=scenario_ids:
+            raise ValueError('scenario_answers must include S1 through S5')
+        for scenario_id,answer in self.scenario_answers.items():
+            response=self.other_responses.get(scenario_id)
+            if answer=='E' and (response is None or not response.strip()):
+                raise ValueError(f'{scenario_id} requires nonempty other_responses when answer is E')
+            if response is not None and len(response)>1200:
+                raise ValueError(f'{scenario_id} other_responses exceeds 1200 characters')
+            if answer!='E' and response is not None:
+                raise ValueError(f'{scenario_id} other_responses is only allowed when answer is E')
+        return self
+
 class Psychology(Strict):
     mbti: str | None = None
     character_notes: str | None = None
     adaptability_self_report: str | None = None
     intrinsic_motivators: list[str] = []
+    assessment: PsychologyAssessment | None = None
 
 class ProfileSkill(Strict):
     skill_id: str
@@ -151,6 +176,7 @@ class ConfirmRequest(Strict):
     profile_id: str
     skills: list[ProfileSkill]
     reviewed_by_user: Literal[True]
+    psychology: Psychology | None = None
     # Additive optional version token prevents stale updates when supplied.
     profile_revision: int | None = None
 

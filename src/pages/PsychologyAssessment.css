@@ -1,0 +1,48 @@
+.psychology-assessment{max-width:960px;margin:0 auto;padding:clamp(22px,4vw,42px)}
+.assessment-topline,.assessment-progress-row,.assessment-actions,.assessment-intro-actions,.assessment-next-actions{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.assessment-topline{padding-bottom:18px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
+.assessment-intro{max-width:720px;margin:0 auto;padding:clamp(20px,5vw,52px) 0 18px}
+.assessment-intro h2{font-size:30px;margin-bottom:16px}
+.assessment-intro>p{margin:0 0 15px;color:var(--body)}
+.assessment-disclaimer{color:var(--muted);font-size:12px;margin-top:20px}
+.assessment-consent{display:flex;align-items:flex-start;gap:12px;margin:24px 0;padding:16px;background:#edf2e8;border:1px solid var(--line);border-radius:10px;cursor:pointer}
+.assessment-consent input{margin-top:4px}
+.assessment-intro-actions{justify-content:flex-start;flex-wrap:wrap;margin-top:26px}
+.assessment-progress-row{margin-top:24px;font-size:13px;color:var(--muted)}
+.assessment-progress{height:7px;background:#dce6d7;border-radius:999px;overflow:hidden;margin:12px 0 30px}
+.assessment-progress span{display:block;height:100%;background:#668654;border-radius:inherit;transition:width .2s ease}
+.assessment-situation{padding:16px 18px;margin-bottom:22px;background:#edf2e8;border-left:3px solid #78975d;border-radius:4px 10px 10px 4px;color:#354e3d}
+.assessment-question{margin:0 0 20px}
+.assessment-question legend{max-width:75ch;font-size:21px;margin-bottom:15px}
+.assessment-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.assessment-option{min-height:78px;display:flex;align-items:flex-start;gap:12px;padding:15px;border:1px solid var(--line);border-radius:10px;background:#fcfcf7;cursor:pointer;transition:border-color .16s,background .16s,box-shadow .16s}
+.assessment-option:hover,.assessment-option.selected{border-color:#668654;background:#f0f5ec;box-shadow:0 3px 12px rgba(36,61,48,.06)}
+.assessment-option input{margin-top:4px}
+.assessment-option-letter{display:inline-flex;align-items:center;justify-content:center;flex:0 0 25px;height:25px;border-radius:50%;background:#e5ecdf;color:var(--ink);font-weight:600;font-size:12px}
+.assessment-option.selected .assessment-option-letter{background:#365b43;color:#fff}
+.assessment-option>span:last-child{line-height:1.55}
+.assessment-actions{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.assessment-next-actions{justify-content:flex-end;flex-wrap:wrap}
+.psychology-review{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:22px 26px;margin-bottom:24px}
+.psychology-review h2{font-size:19px;margin-bottom:5px}
+.psychology-review p{max-width:680px;color:var(--muted);font-size:13px}
+.learning-support{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.65fr);gap:22px;padding:22px 24px;margin:22px 0;border-color:#c7d7bd;background:linear-gradient(120deg,#f5f8f1,#eef4e9)}
+.learning-support h2{font-size:20px;margin-bottom:7px}
+.learning-support p{color:var(--body);font-size:13px}
+.learning-support ul{margin:12px 0 0;padding-left:20px;color:var(--body);font-size:13px}
+.learning-support li+li{margin-top:6px}
+.learning-support-first{align-self:stretch;padding:16px;border-radius:10px;background:#e5edde;border:1px solid #c7d7bd}
+.learning-support-first span{display:block;color:#50684a;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+.learning-support-first strong{display:block;color:var(--ink);font-size:14px}
+.learning-support-first .skill-chip{margin-top:8px}
+.support-more-milestones{margin-top:14px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:#fafbf7}
+.support-more-milestones summary{color:var(--action);font-size:13px;font-weight:500;cursor:pointer}
+.support-more-milestones[open] summary{margin-bottom:8px}
+@media(max-width:760px){
+  .assessment-options{grid-template-columns:1fr}
+  .assessment-option{min-height:64px}
+  .assessment-actions,.psychology-review{align-items:stretch;flex-direction:column}
+  .assessment-next-actions{width:100%;justify-content:space-between}
+  .assessment-next-actions .button{flex:1}
+  .learning-support{grid-template-columns:1fr}
+}

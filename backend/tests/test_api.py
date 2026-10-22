@@ -37,6 +37,29 @@ def test_routes_and_openapi(client):
         assert {p for p,ops in paths.items() if method.lower() in ops}==expected
     assert client.get('/docs').status_code==200
 
+def test_optional_psychology_assessment_round_trips_through_existing_profile_endpoints(client):
+    assessment={
+        'assessment_version':'1.0',
+        'assessment_type':'self_report_reflection',
+        'scenario_answers':{'S1':'D','S2':'C','S3':'C','S4':'E','S5':None},
+        'other_responses':{'S4':'A synthetic example response.'},
+        'consent_to_personalization':True,
+    }
+    psychology={'mbti':'INTJ','character_notes':'synthetic demo context','adaptability_self_report':'steady','intrinsic_motivators':['purpose'],'assessment':assessment}
+    normalized=good(client.post('/api/v1/profiles/normalize',json={
+        'pipeline':'A','input_type':'guided_text','synthetic_input':True,
+        'text':'Synthetic analyst who knows SQL and Excel and enjoys analytics.',
+        'preferred_field_id':'field_data','psychology':psychology,'study_constraints':CONSTRAINTS,
+    }))['profile']
+    assert normalized['psychology']==psychology
+    changed={**assessment,'scenario_answers':{**assessment['scenario_answers'],'S4':'C'},'other_responses':{}}
+    confirmed=good(client.post('/api/v1/profiles/confirm',json={
+        'profile_id':normalized['profile_id'],'skills':normalized['skills'],'reviewed_by_user':True,
+        'psychology':{**psychology,'assessment':changed},'profile_revision':normalized['revision'],
+    }))['profile']
+    assert confirmed['psychology']['assessment']['scenario_answers']['S4']=='C'
+    assert confirmed['psychology']['intrinsic_motivators']==['purpose']
+
 def test_public_catalogue_and_envelopes(client):
     health=good(client.get('/api/v1/health',headers={'X-Request-ID':'req_test'}))
     assert health=={'status':'ok','api_version':'1.0.0'}
