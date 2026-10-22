@@ -1,11 +1,12 @@
-import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence } from '../types';
+import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence, MarketRadarPackage } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
+  mapMarketRadar,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -88,6 +89,12 @@ function regionCode(region: string) {
 
 export const api = {
   health: async () => request<{ status: 'ok'; api_version: string }>('/health'),
+
+  marketRadar: async (period?: string): Promise<MarketRadarPackage> => {
+    const query = period ? `?period=${encodeURIComponent(period)}` : '';
+    const response = await request<ApiMarketRadarData>(`/market/radar${query}`);
+    return mapMarketRadar(response.data, toServiceMeta(response.meta));
+  },
 
   normalize: async (profile: Profile): Promise<Profile> => {
     if (isDemo) return structuredClone(profile);

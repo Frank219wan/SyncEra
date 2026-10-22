@@ -6,6 +6,17 @@ Career ranking and Skill Gap stay deterministic. MiniMax-M3 may generate only
 the optional, grounded explanation attached to already validated recommendations.
 The first version does not use embeddings or a vector database.
 
+The DOSM market radar added in PR #15 provides occupation-group and industry
+context only. It has no named position-to-skill requirements, so it remains a
+separate display dataset. The current matching catalogue is labelled synthetic
+until reviewed position-level skill data is supplied.
+
+The optional MiniMax research helper can draft a named position from a DOSM
+group and then draft catalogue skill requirements for that position. Both
+methods are disabled by default and return `pending_review`; they do not write
+to PostgreSQL or enter matching. See `docs/RADAR_LLM_MATCHING.md` at the
+repository root for the two-step call contract.
+
 ## Data flow
 
 1. `/api/v1/profiles/normalize` creates a synthetic-only profile.
@@ -60,6 +71,46 @@ the protected Preview is ready for a synthetic test.
 role-skill, immutable snapshot, signal, scenario and evidence relationships.
 It contains no profile/CV table and no vector column. The deployment branch must
 apply it to a Preview database before switching the trend repository to SQL.
+
+For a future real position import, assign a reviewed `role_id` (the `draft_`
+candidate ID is never promoted directly), map it to a DOSM occupation group,
+provide a named title and description, and submit each required canonical
+`skill_id` with target level, importance, and independent position-level
+`evidence_id`. Evidence must retain source URL, publication/collection date,
+region, extraction method, and reviewer approval. The existing `career_roles`,
+`role_skills`, and `evidence` tables are the storage target. The current runtime
+still uses a static role catalogue; a future approved import also needs a
+catalogue projection and matching-validation update before activation. Merely
+writing database rows will not make new positions recommendable.
+
+The reserved reviewer handoff shape is:
+
+```json
+{
+  "role_id": "role_example_verified",
+  "parent_occupation_group_id": "occupation-professionals",
+  "title": "Verified named position",
+  "description": "Source-backed position description",
+  "region": "MY",
+  "source_url": "https://source.example.org/position",
+  "published_or_collected_at": "2026-10-01",
+  "collected_at": "2026-10-22T00:00:00Z",
+  "method_version": "position-skill-review-v1",
+  "review_status": "pending_review",
+  "required_skills": [
+    {
+      "skill_id": "skill_sql",
+      "target_level": 3,
+      "importance": "high",
+      "evidence_id": "ev_example_verified"
+    }
+  ]
+}
+```
+
+This is a **reserved data contract**, not an active HTTP importer; the example
+URL and IDs are placeholders, not verified sources. The `review_status` must
+remain `pending_review` until the real source and every requirement are checked.
 
 Real data remains inactive until its source URL, date, region, method and reviewer
 approval pass the existing `MarketRepository.import_public()` boundary.

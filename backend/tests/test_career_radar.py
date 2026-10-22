@@ -195,6 +195,81 @@ def test_narrative_request_fails_explicitly_when_generator_is_unavailable(tmp_pa
     assert response.json()['error']['code'] == 'SOURCE_UNAVAILABLE'
 
 
+def test_synthetic_cv_skills_retrieve_roles_gaps_and_learning_map(tmp_path):
+    """MiniMax extraction reaches the confirmed synthetic catalogue end to end."""
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        return httpx.Response(200, json={
+            'choices': [{
+                'finish_reason': 'stop',
+                'message': {'content': json.dumps({
+                    'skills': [
+                        {'skill_id': 'skill_sql', 'confidence': 0.9},
+                        {'skill_id': 'skill_python', 'confidence': 0.9},
+                    ],
+                    'interests': ['analytics'],
+                    'current_occupation': 'Synthetic data intern',
+                    'unrecognized_skill_terms': [],
+                })},
+            }],
+        })
+
+    adapter = TencentTokenHubAdapter(
+        'test-secret',
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    client = TestClient(create_app(
+        store=ProfileStore(str(tmp_path / 'cv-flow.sqlite')),
+        adapter=adapter,
+    ))
+    normalized = client.post('/api/v1/profiles/normalize', json={
+        'pipeline': 'A',
+        'input_type': 'synthetic_cv_text',
+        'synthetic_input': True,
+        'text': 'Synthetic CV: wrote SQL reports and Python scripts.',
+        'study_constraints': CONSTRAINTS,
+    })
+    assert normalized.status_code == 200, normalized.text
+    profile = normalized.json()['data']['profile']
+    assert {item['skill_id'] for item in profile['skills']} == {'skill_sql', 'skill_python'}
+    assert all(item['level'] is None for item in profile['skills'])
+
+    confirmed = client.post('/api/v1/profiles/confirm', json={
+        'profile_id': profile['profile_id'],
+        'profile_revision': profile['revision'],
+        'skills': [
+            {'skill_id': 'skill_sql', 'level': 3, 'source': 'confirmed', 'confidence': 1},
+            {'skill_id': 'skill_python', 'level': 3, 'source': 'confirmed', 'confidence': 1},
+        ],
+        'reviewed_by_user': True,
+    })
+    assert confirmed.status_code == 200, confirmed.text
+    result = client.post('/api/v1/recommendations', json={
+        'profile_id': profile['profile_id'],
+        'ai_scenario': 'moderate',
+    })
+    assert result.status_code == 200, result.text
+    assert result.json()['meta']['data_label'] == 'synthetic_demo'
+    best = result.json()['data']['recommendations'][0]
+    assert best['role_id'] == 'role_data_analyst'
+    assert [gap['skill_id'] for gap in best['skill_gaps']] == ['skill_validation']
+    assert best['evidence_ids'] == ['ev_demo_001']
+    assert len(calls) == 1  # Ranking and Gap computation made no second LLM call.
+
+    learning = client.post('/api/v1/learning/skill-map', json={
+        'profile_id': profile['profile_id'],
+        'role_id': best['role_id'],
+        'skill_id': best['skill_gaps'][0]['skill_id'],
+        'language': 'en',
+        'budget_amount': 0,
+        'currency': 'MYR',
+    })
+    assert learning.status_code == 200, learning.text
+    assert learning.json()['data']['nodes']
+
+
 def test_minimax_narrative_uses_structured_profile_and_validated_recommendations():
     profile = confirmed_profile()
     package = trend_package(MarketRepository().get_snapshot())
@@ -237,6 +312,113 @@ def test_minimax_narrative_is_opt_in():
             'moderate', 'en',
         )
     assert raised.value.code == 'SOURCE_UNAVAILABLE'
+
+
+def test_position_skill_draft_is_review_only_and_rejects_dosm_groups():
+    observed = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        observed.append(json.loads(request.content))
+        return httpx.Response(200, json={
+            'choices': [{
+                'finish_reason': 'stop',
+                'message': {'content': json.dumps({
+                    'skills': [{
+                        'skill_id': 'skill_sql',
+                        'suggested_target_level': 3,
+                        'importance': 'high',
+                        'rationale': 'Suggested from the named data analyst title.',
+                    }],
+                })},
+            }],
+        })
+
+    adapter = TencentTokenHubAdapter(
+        'test-secret',
+        position_skill_drafts_enabled=True,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(ValueError, match='named position'):
+        adapter.propose_position_skills({
+            'position_id': 'occupation-professionals',
+            'title': 'Professionals',
+            'taxonomy_level': 'major_occupation_group',
+        })
+    assert not observed
+
+    result = adapter.propose_position_skills({
+        'position_id': 'role_data_analyst',
+        'title': 'Data Analyst',
+        'taxonomy_level': 'named_position',
+    })
+    assert result['status'] == 'pending_review'
+    assert result['skills'][0]['skill_id'] == 'skill_sql'
+    assert len(observed) == 1
+
+
+def test_dosm_group_can_draft_named_positions_then_skills_without_activation():
+    responses = iter([
+        {"positions": [{"title": "Data Analyst", "rationale": "A plausible example only."}]},
+        {"skills": [{
+            "skill_id": "skill_sql",
+            "suggested_target_level": 3,
+            "importance": "high",
+            "rationale": "A candidate requirement to review.",
+        }]},
+    ])
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={
+            "choices": [{
+                "finish_reason": "stop",
+                "message": {"content": json.dumps(next(responses))},
+            }],
+        })
+
+    adapter = TencentTokenHubAdapter(
+        "test-secret",
+        position_skill_drafts_enabled=True,
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    with pytest.raises(ValueError, match="unknown DOSM occupation group"):
+        adapter.propose_named_positions("occupation-nonexistent")
+
+    draft = adapter.propose_named_positions("occupation-professionals")
+    assert draft["status"] == "pending_review"
+    assert "no position-level market evidence" in draft["limitations"]
+    position = draft["positions"][0]
+    assert position["origin"] == "llm_draft"
+    assert position["parent_occupation_group_id"] == "occupation-professionals"
+    skills = adapter.propose_position_skills(position)
+    assert skills["status"] == "pending_review"
+    assert skills["skills"][0]["skill_id"] == "skill_sql"
+
+
+def test_position_skill_draft_rejects_unknown_skill_ids():
+    response = httpx.Response(200, json={
+        'choices': [{
+            'finish_reason': 'stop',
+            'message': {'content': json.dumps({
+                'skills': [{
+                    'skill_id': 'skill_invented',
+                    'suggested_target_level': 4,
+                    'importance': 'high',
+                    'rationale': 'Unsupported guess',
+                }],
+            })},
+        }],
+    })
+    adapter = TencentTokenHubAdapter(
+        'test-secret',
+        position_skill_drafts_enabled=True,
+        client=httpx.Client(transport=httpx.MockTransport(lambda _: response)),
+    )
+    with pytest.raises(ValueError, match='invalid position skill draft'):
+        adapter.propose_position_skills({
+            'position_id': 'role_data_analyst',
+            'title': 'Data Analyst',
+            'taxonomy_level': 'named_position',
+        })
 
 
 def test_postgres_migration_has_structured_rag_tables_without_vectors_or_profiles():
