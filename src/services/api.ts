@@ -1,4 +1,4 @@
-import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence } from '../types';
+import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence, MarketRadarPackage } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import { validateSyntheticCvFile } from './cv-upload';
@@ -6,7 +6,8 @@ import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
+  mapMarketRadar,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -90,10 +91,16 @@ function regionCode(region: string) {
 export const api = {
   health: async () => request<{ status: 'ok'; api_version: string }>('/health'),
 
+  marketRadar: async (period?: string): Promise<MarketRadarPackage> => {
+    const query = period ? `?period=${encodeURIComponent(period)}` : '';
+    const response = await request<ApiMarketRadarData>(`/market/radar${query}`);
+    return mapMarketRadar(response.data, toServiceMeta(response.meta));
+  },
+
   normalize: async (profile: Profile): Promise<Profile> => {
     if (isDemo) return structuredClone(profile);
     const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: profileToNormalizeRequest(profile) });
-    return mergeNormalizedProfile(response.data.profile, profile);
+    return {...mergeNormalizedProfile(response.data.profile, profile), uploadedFromCv: false};
   },
 
   uploadSyntheticCv: async (file: File, profile: Profile): Promise<Profile> => {
@@ -107,7 +114,7 @@ export const api = {
     form.append('synthetic_input', 'true');
     form.append('study_constraints', JSON.stringify(profileToNormalizeRequest(profile).study_constraints));
     const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/upload', { form, timeoutMs: 58_000 });
-    return mergeNormalizedProfile(response.data.profile, profile);
+    return {...mergeNormalizedProfile(response.data.profile, profile), uploadedFromCv: true};
   },
 
   confirm: async (profile: Profile): Promise<Profile> => {

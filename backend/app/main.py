@@ -14,11 +14,15 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, Recommendation, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
+from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, Recommendation, SkillMapRequest, RoadmapRequest, HealthData, MarketRadarData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS, SNAPSHOTS
-from .storage import create_profile_store
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
-from .approved_data import MarketRepository, ResourceRepository
+from .repository_ports import (
+    load_market_repository,
+    load_profile_repository,
+    load_resource_repository,
+)
+from .market_radar import MarketRadarError, build_market_radar_data, is_market_radar_enabled
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
@@ -50,8 +54,10 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
     if (os.getenv('VERCEL') and os.getenv('AI_ADAPTER_MODULE') == 'futureproof_ai.tencent_tokenhub_adapter'
             and os.getenv('VERCEL_ENV') != 'preview'):
         raise RuntimeError('TokenHub adapter is enabled only for Vercel Preview')
-    app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
-    app.state.store=store if store is not None else create_profile_store()
+    app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic recommendations with an explicitly enabled DOSM market radar.')
+    configured_market=bool(os.getenv('MARKET_REPOSITORY_MODULE','').strip())
+    configured_resources=bool(os.getenv('RESOURCE_REPOSITORY_MODULE','').strip())
+    app.state.store=store if store is not None else load_profile_repository()
     if callable(getattr(app.state.store, 'close', None)):
         app.add_event_handler('shutdown', app.state.store.close)
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
@@ -68,12 +74,12 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
             ledger=ledger,live_enabled=live_career,
             api_key=os.getenv('TENCENT_TOKENHUB_API_KEY','') if live_career else '',
         )
-    app.state.market=market if market is not None else MarketRepository()
-    app.state.resources=resources if resources is not None else ResourceRepository()
+    app.state.market=market if market is not None else load_market_repository()
+    app.state.resources=resources if resources is not None else load_resource_repository()
     if market is None or resources is None:
         approved_dir=os.getenv('APPROVED_DATA_DIR',os.path.join(os.path.dirname(__file__),'..','data','approved'))
-        if market is None: app.state.market.load_dir(approved_dir)
-        if resources is None: app.state.resources.load_dir(approved_dir)
+        if market is None and not configured_market: app.state.market.load_dir(approved_dir)
+        if resources is None and not configured_resources: app.state.resources.load_dir(approved_dir)
     app.state.market.validate_active()
     if os.getenv('VERCEL') and not os.getenv('FRONTEND_ORIGINS'):
         raise RuntimeError('FRONTEND_ORIGINS is required for Vercel Preview')
@@ -128,6 +134,18 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
 
     @app.get('/api/v1/health',response_model=Envelope[HealthData])
     def health(request:Request): return success(request,{'status':'ok','api_version':'1.0.0'},data_model=HealthData)
+
+    @app.get('/api/v1/market/radar',response_model=Envelope[MarketRadarData],responses=documented_errors(400,503))
+    def dosm_market_radar(request:Request,period:str|None=None):
+        if not is_market_radar_enabled():
+            raise svc.APIError(503,'FEATURE_DISABLED','The DOSM market radar is enabled for the local VS Code task only.')
+        try:
+            data=build_market_radar_data(period)
+        except MarketRadarError as exc:
+            raise svc.APIError(400,'BAD_REQUEST',str(exc),[{'field':'period','reason':'unknown_or_invalid'}]) from exc
+        except RuntimeError as exc:
+            raise svc.APIError(503,'SOURCE_UNAVAILABLE',str(exc),retryable=False) from exc
+        return success(request,data.model_dump(),data.snapshot_id,MarketRadarData,data_label='public_open',is_mock=False,model_version='dosm-jmi-qes-v1')
 
     @app.get('/api/v1/explore/bubbles',response_model=Envelope[BubblesData],responses=documented_errors(400,409,422))
     def bubbles(request:Request,region:str='MY',field_id:str|None=None,snapshot_id:str|None=None):
@@ -256,9 +274,27 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
             except Exception as exc:
                 logger.warning('Career analysis degraded request_id=%s exception_type=%s',request.state.request_id,type(exc).__name__)
                 analysis=rule_fallback([Recommendation.model_validate(row) for row in recommendations[:5]],'unavailable')
+        career_radar=None
+        if payload.include_narrative and recommendations:
+            generate=getattr(app.state.adapter,'generate_career_radar',None)
+            if not callable(generate):
+                raise svc.APIError(503,'SOURCE_UNAVAILABLE','Career Radar narrative generator is not configured')
+            language=svc.career_radar_language(scoring_profile)
+            try:
+                raw_narrative=generate(scoring_profile,recommendations,package,payload.ai_scenario,language)
+            except TimeoutError:
+                raise svc.APIError(504,'MODEL_TIMEOUT','Career Radar generation timed out',retryable=True)
+            except AIAdapterRequestError as exc:
+                raise svc.APIError(exc.status,exc.code,exc.message,retryable=exc.retryable)
+            except Exception:
+                raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Career Radar generation failed')
+            career_radar=svc.validate_career_radar_narrative(
+                raw_narrative,recommendations,
+                getattr(app.state.adapter,'career_radar_model_version','unknown'),language)
         version=getattr(app.state.adapter,'scoring_model_version','rules-v0.1')
         data={'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations}
         if analysis is not None: data['ai_analysis']=analysis.model_dump()
+        if career_radar is not None: data['career_radar']=career_radar
         return success(request,data,snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True,model_version=version)
 
     @app.post('/api/v1/learning/skill-map',response_model_exclude_none=True,response_model=Envelope[SkillMapData],responses=documented_errors(404,422))
@@ -271,12 +307,12 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
         levels={s.skill_id:s.level for s in profile.skills}
         if levels.get(skill.skill_id) is not None and levels[skill.skill_id]>=requirements[skill.skill_id].target_level:
             raise svc.APIError(422,'VALIDATION_ERROR','Selected skill is not a current gap',[{'field':'skill_id','reason':'already_at_target'}])
-        return success(request,svc.make_skill_map(profile,role,skill,payload.language,payload.budget_amount,payload.currency,app.state.resources),app.state.market.get_snapshot(),SkillMapData,data_label='mixed_demo' if app.state.resources.entries else 'synthetic_demo',is_mock=True)
+        return success(request,svc.make_skill_map(profile,role,skill,payload.language,payload.budget_amount,payload.currency,app.state.resources),app.state.market.get_snapshot(),SkillMapData,data_label='mixed_demo' if app.state.resources.has_approved_data() else 'synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/learning/roadmap',response_model_exclude_none=True,response_model=Envelope[RoadmapData],responses=documented_errors(404,422))
     def roadmap(payload:RoadmapRequest,request:Request):
         profile=svc.require_profile(app.state.store,payload.profile_id,confirmed=True); role=svc.require_role(payload.role_id)
-        return success(request,svc.make_roadmap(profile,role,payload.selected_skill_ids,payload.study_constraints,app.state.resources),app.state.market.get_snapshot(),RoadmapData,data_label='mixed_demo' if app.state.resources.entries else 'synthetic_demo',is_mock=True)
+        return success(request,svc.make_roadmap(profile,role,payload.selected_skill_ids,payload.study_constraints,app.state.resources),app.state.market.get_snapshot(),RoadmapData,data_label='mixed_demo' if app.state.resources.has_approved_data() else 'synthetic_demo',is_mock=True)
 
     @app.post('/api/v1/progress/skills',status_code=503,response_model=APIErrorEnvelope)
     def progress(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 progress is not implemented')

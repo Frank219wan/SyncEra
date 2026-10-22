@@ -123,6 +123,9 @@ class Psychology(Strict):
         for key, choice in self.scenario_answers.items():
             if choice == 'E' and not self.other_responses.get(key, '').strip():
                 raise ValueError(f'{key} requires other response text')
+        for key in self.other_responses:
+            if self.scenario_answers.get(key) != 'E':
+                raise ValueError(f'{key} has other response text without choice E')
         return self
     mbti: str | None = None
     character_notes: str | None = None
@@ -170,6 +173,11 @@ class ConfirmRequest(Strict):
     reviewed_by_user: Literal[True]
     # Additive optional version token prevents stale updates when supplied.
     profile_revision: int | None = None
+    # Omitted values leave the uploaded/normalized profile intact. An explicit
+    # assessment object (including five null answers) replaces the old one.
+    psychology: Psychology | None = None
+    current_occupation: str | None = Field(default=None, min_length=1, max_length=500)
+    interests: list[str] | None = None
 
 class RecommendRequest(Strict):
     profile_id: str
@@ -178,6 +186,7 @@ class RecommendRequest(Strict):
     preferred_field_id: str | None = None
     top_k: int = Field(default=5,ge=1,le=20)
     snapshot_id: str | None = None
+    include_narrative: bool = False
 
 class ScoreBreakdown(Strict):
     skill_compatibility: float = Field(ge=0,le=100)
@@ -223,6 +232,20 @@ class CareerAnalysis(Strict):
     risk_and_uncertainty: str
     evidence_ids: list[str]
     model_version: str | None = None
+class CareerRadarNarrativeItem(Strict):
+    role_id: str
+    fit_summary: str = Field(min_length=1,max_length=600)
+    trend_summary: str = Field(min_length=1,max_length=600)
+    gap_summary: str = Field(min_length=1,max_length=600)
+    next_step: str = Field(min_length=1,max_length=400)
+    uncertainty: str = Field(min_length=1,max_length=500)
+    evidence_ids: list[str] = Field(min_length=1)
+
+class CareerRadarNarrative(Strict):
+    status: Literal['generated']
+    model_version: str = Field(min_length=1,max_length=128)
+    language: Literal['en','zh-CN']
+    items: list[CareerRadarNarrativeItem]
 
 class Resource(Strict):
     resource_id: str
@@ -261,6 +284,73 @@ class RoadmapRequest(Strict):
 class HealthData(Strict):
     status: Literal['ok']
     api_version: str
+
+class MarketRadarSignal(Strict):
+    id: str
+    name: str
+    source_id: str
+    source_row: int = Field(ge=1)
+    postings: int | None = Field(default=None, ge=0)
+    market_share_percent: float | None = Field(default=None, ge=0, le=100)
+    previous_postings: int | None = Field(default=None, ge=0)
+    year_ago_postings: int | None = Field(default=None, ge=0)
+    qoq_change_percent: float | None = None
+    yoy_change_percent: float | None = None
+
+class MarketMatchReadiness(Strict):
+    candidate_skills_source: str
+    position_granularity: str
+    named_positions_available: bool
+    named_skill_requirements_available: bool
+    evidence_based_matching_ready: bool
+    reason: str
+
+class MarketEmploymentMetric(Strict):
+    jobs: float = Field(ge=0)
+    filled_jobs: float = Field(ge=0)
+    vacancies: float = Field(ge=0)
+    jobs_created: float = Field(ge=0)
+    qoq_change_percent: float | None = None
+    yoy_change_percent: float | None = None
+
+class MarketSkillLevel(Strict):
+    name: Literal['Skilled','Semi-skilled','Low-skilled']
+    jobs: float = Field(ge=0)
+    filled_jobs: float = Field(ge=0)
+    vacancies: float = Field(ge=0)
+    jobs_created: float = Field(ge=0)
+
+class MarketEmploymentSector(MarketEmploymentMetric):
+    id: str
+    name: str
+    skill_levels: list[MarketSkillLevel]
+
+class MarketSource(Strict):
+    id: str
+    title: str
+    file: str
+    published_on: str
+    url: str
+    measure: str
+
+class MarketRadarData(Strict):
+    snapshot_id: str
+    region: Literal['MY']
+    data_as_of: str
+    period: str
+    periods: list[str]
+    total_job_offerings: int = Field(ge=0)
+    total_qoq_change_percent: float | None = None
+    total_yoy_change_percent: float | None = None
+    occupation_groups: list[MarketRadarSignal]
+    industries: list[MarketRadarSignal]
+    matching_readiness: MarketMatchReadiness
+    employment_totals: MarketEmploymentMetric
+    employment_sectors: list[MarketEmploymentSector]
+    sources: list[MarketSource]
+    terms_url: str
+    attribution: str
+    notes: list[str]
 
 class BubbleCategory(Strict):
     field_id: str
@@ -341,6 +431,7 @@ class RecommendData(Strict):
     ai_scenario: Literal['moderate','fast']
     recommendations: list[Recommendation]
     ai_analysis: CareerAnalysis | None = None
+    career_radar: CareerRadarNarrative | None = None
 
 class SkillMapData(Strict):
     skill_map_id: str

@@ -57,6 +57,40 @@ test('profile requests do not invent backend IDs for frontend-only demo skills',
   assert.deepEqual(profileToConfirmRequest(profile).skills.map(skill => skill.skill_id), ['skill_communication']);
 });
 
+test('uploaded CV keeps its profile ID and sends all five psychology answers through Confirm', () => {
+  const profile = {
+    ...emptyProfile, id: 'profile_uploaded_1', revision: 7, uploadedFromCv: true,
+    occupation: 'Synthetic analyst', interests: 'analytics, education',
+    psychology: {
+      assessment_version: '1.0' as const, assessment_type: 'self_report_reflection' as const,
+      scenario_answers: {S1:'A' as const,S2:null,S3:'E' as const,S4:'C' as const,S5:null},
+      other_responses: {S3:'Fictional response'}, consent_to_personalization: true,
+    },
+  };
+  const confirm = profileToConfirmRequest(profile);
+  assert.equal(confirm.profile_id, 'profile_uploaded_1');
+  assert.equal(confirm.profile_revision, 7);
+  assert.deepEqual(confirm.psychology?.scenario_answers, profile.psychology.scenario_answers);
+  assert.deepEqual(confirm.psychology?.other_responses, {S3:'Fictional response'});
+  assert.equal(confirm.psychology?.consent_to_personalization, true);
+  assert.deepEqual(confirm.interests, ['analytics', 'education']);
+  const roundTrip = mergeNormalizedProfile({
+    profile_id:profile.id,pipeline:'A',current_occupation:profile.occupation,
+    interests:['analytics','education'],skills:[],reviewed_by_user:true,revision:8,
+    psychology:profile.psychology,
+  },profile);
+  assert.equal(roundTrip.id,profile.id);
+  assert.equal(roundTrip.uploadedFromCv,true);
+  assert.equal(roundTrip.revision,8);
+  const cleared = profileToConfirmRequest({...profile, psychology: {
+    ...profile.psychology, scenario_answers:{S1:null,S2:null,S3:null,S4:null,S5:null},
+    other_responses:{}, consent_to_personalization:false,
+  }});
+  assert.deepEqual(cleared.psychology?.scenario_answers, {S1:null,S2:null,S3:null,S4:null,S5:null});
+  assert.deepEqual(cleared.psychology?.other_responses, {});
+  assert.equal(cleared.psychology?.consent_to_personalization, false);
+});
+
 test('normalized service profile maps back to editable UI fields', () => {
   const mapped = mergeNormalizedProfile({
     profile_id: 'profile_demo_001', pipeline: 'A', current_occupation: 'Junior analyst',

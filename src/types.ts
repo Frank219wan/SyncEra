@@ -9,6 +9,7 @@ export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
   region: string; synthetic: boolean; sample: boolean; revision?: number; psychology?: PsychologyAssessment;
+  uploadedFromCv?: boolean;
 }
 export interface Constraints { hours: number; budget: number; language: Locale; start: string; deadline: string; baseline: string }
 export interface Task { id: string; skill: string; title: Copy; hours: number; done: boolean; completedAt?: string; completedOffset?: number; evidence?: string; week: number }
@@ -59,6 +60,39 @@ export interface ServiceMeta {
   dataLabel: string; isMock: boolean; modelVersion: string | null;
 }
 export interface TrendPackage { snapshotId: string; snapshotAt: string | null; region: string; origin: Origin; roles: Role[]; meta: ServiceMeta; skills?: SkillTrend[]; bubbleSizeBasis?: string; warnings?: string[] }
+export interface MarketRadarSignal {
+  id: string; name: string; sourceId: string; sourceRow: number; postings: number | null; marketSharePercent: number | null; previousPostings: number | null; yearAgoPostings: number | null;
+  qoqChangePercent: number | null; yoyChangePercent: number | null;
+}
+export interface MarketMatchReadiness {
+  candidateSkillsSource: string;
+  positionGranularity: string;
+  namedPositionsAvailable: boolean;
+  namedSkillRequirementsAvailable: boolean;
+  evidenceBasedMatchingReady: boolean;
+  reason: string;
+}
+export interface MarketEmploymentMetric {
+  jobs: number; filledJobs: number; vacancies: number; jobsCreated: number;
+  qoqChangePercent: number | null; yoyChangePercent: number | null;
+}
+export interface MarketSkillLevel {
+  name: 'Skilled' | 'Semi-skilled' | 'Low-skilled'; jobs: number; filledJobs: number; vacancies: number; jobsCreated: number;
+}
+export interface MarketEmploymentSector extends MarketEmploymentMetric {
+  id: string; name: string; skillLevels: MarketSkillLevel[];
+}
+export interface MarketRadarSource {
+  id: string; title: string; file: string; publishedOn: string; url: string; measure: string;
+}
+export interface MarketRadarPackage {
+  snapshotId: string; region: string; dataAsOf: string; period: string; periods: string[];
+  totalJobOfferings: number; totalQoqChangePercent: number | null; totalYoyChangePercent: number | null;
+  occupationGroups: MarketRadarSignal[]; industries: MarketRadarSignal[];
+  matchingReadiness: MarketMatchReadiness;
+  employmentTotals: MarketEmploymentMetric; employmentSectors: MarketEmploymentSector[];
+  sources: MarketRadarSource[]; termsUrl: string; attribution: string; notes: string[]; meta: ServiceMeta;
+}
 export interface AppState {
   locale: Locale; profile: Profile; scenario: Scenario; selectedRole: string; results: Recommendation[] | null;
   snapshotId: string; serviceMeta?: ServiceMeta | null; trendPackage?: TrendPackage | null; plan: Plan | null; draft?: Plan | null; archivedPlans?: Plan[]; hr: Organization; hrProfileSaved: boolean; tvet: Organization;
