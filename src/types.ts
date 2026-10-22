@@ -5,17 +5,11 @@ export type Origin = 'synthetic_fixture' | 'public_observed' | 'computed' | 'sce
 export interface Skill { id: string; level: string; source: 'manual' | 'cv_extracted' | 'inferred'; confirmed: boolean; confidence?: number; backendSupported?: boolean }
 export type PsychologyChoice = 'A'|'B'|'C'|'D'|'E'|null;
 export interface PsychologyAssessment { assessment_version:'1.0'; assessment_type:'self_report_reflection'; scenario_answers:Record<string,PsychologyChoice>; other_responses:Record<string,string>; consent_to_personalization:boolean }
-export interface PsychologyAssessment {
-  assessment_version: '1.0'; assessment_type: 'self_report_reflection';
-  scenario_answers: Partial<Record<'S1'|'S2'|'S3'|'S4'|'S5', 'A'|'B'|'C'|'D'|'E'|null>>;
-  other_responses: Partial<Record<'S1'|'S2'|'S3'|'S4'|'S5', string>>;
-  consent_to_personalization: boolean;
-}
 export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
   region: string; synthetic: boolean; sample: boolean; revision?: number;
-  psychologyAssessment?: PsychologyAssessment | null; psychology?: PsychologyAssessment;
+  psychology?: PsychologyAssessment;
   uploadedFromCv?: boolean;
 }
 export interface Constraints { hours: number; budget: number; language: Locale; start: string; deadline: string; baseline: string }
