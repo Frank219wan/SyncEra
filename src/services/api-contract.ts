@@ -291,6 +291,7 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     occupation: profile.current_occupation ?? fallback.occupation,
     interests: profile.interests?.join(', ') || fallback.interests,
     mbti: profile.psychology?.mbti ?? fallback.mbti,
+    psychologyAssessment: profile.psychology?.assessment ?? fallback.psychologyAssessment ?? null,
     psychology: profile.psychology?.assessment_version ? {assessment_version:'1.0',assessment_type:'self_report_reflection',scenario_answers:profile.psychology.scenario_answers??{},other_responses:profile.psychology.other_responses??{},consent_to_personalization:profile.psychology.consent_to_personalization??false} : fallback.psychology,
     revision: profile.revision,
     skills: [...profile.skills.map(skill => ({
