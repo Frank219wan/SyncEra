@@ -3,9 +3,9 @@ import {Link,useParams} from 'react-router-dom';
 import {api} from '../services/api';
 import {fromContractSkillId,type ApiRoleData,type ApiTaskImpact} from '../services/api-contract';
 import {useApp} from '../store';
-import type {Evidence,Recommendation,TrendPackage} from '../types';
+import type {Evidence,MarketRadarPackage,Recommendation} from '../types';
 import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
-import {Radar} from './RadarExperience';
+import {LiveCareerRadar} from './LiveCareerRadar';
 
 function EvidenceSources({ids}:{ids:string[]}) {
   const {t}=useApp();
@@ -35,22 +35,23 @@ function EvidenceSources({ids}:{ids:string[]}) {
 
 export function ConnectedRadar(){
   const {setState,t}=useApp();
-  const [data,setData]=useState<TrendPackage|null>(null);
+  const [data,setData]=useState<MarketRadarPackage|null>(null);
   const [error,setError]=useState('');
   const [attempt,setAttempt]=useState(0);
+  const [period,setPeriod]=useState<string|undefined>();
   useEffect(()=>{
     let active=true;
     setData(null);setError('');
-    api.discovery().then(packageData=>{
+    api.marketRadar(period).then(packageData=>{
       if(!active)return;
       setData(packageData);
-      setState(previous=>({...previous,snapshotId:packageData.snapshotId,serviceMeta:packageData.meta,trendPackage:packageData}));
+      setState(previous=>({...previous,snapshotId:packageData.snapshotId,serviceMeta:packageData.meta}));
     }).catch(e=>{if(active)setError((e as Error).message);});
     return()=>{active=false;};
-  },[attempt,setState]);
+  },[attempt,period,setState]);
   if(error)return <ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>;
   if(!data)return <p className="muted">{t('Loading the current snapshot…','正在加载当前快照…','Memuatkan gambaran semasa…')}</p>;
-  return <Radar data={data}/>;
+  return <LiveCareerRadar data={data} onPeriodChange={setPeriod}/>;
 }
 export function ConnectedRecommendations(){
   const {state,setState,t}=useApp();

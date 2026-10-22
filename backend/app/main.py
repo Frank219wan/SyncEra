@@ -11,11 +11,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
+from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, MarketRadarData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
 from .storage import ProfileStore
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
+from .market_radar import MarketRadarError, build_market_radar_data, is_market_radar_enabled
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
@@ -38,7 +39,7 @@ def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
 def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
-    app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
+    app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic recommendation demo. The DOSM market radar is an explicitly enabled local data snapshot.')
     app.state.store=store or ProfileStore()
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
     app.state.market=market if market is not None else MarketRepository()
@@ -86,6 +87,18 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
 
     @app.get('/api/v1/health',response_model=Envelope[HealthData])
     def health(request:Request): return success(request,{'status':'ok','api_version':'1.0.0'},data_model=HealthData)
+
+    @app.get('/api/v1/market/radar',response_model=Envelope[MarketRadarData],responses=documented_errors(400,503))
+    def dosm_market_radar(request:Request,period:str|None=None):
+        if not is_market_radar_enabled():
+            raise svc.APIError(503,'FEATURE_DISABLED','The DOSM market radar is enabled for the local VS Code task only.')
+        try:
+            data=build_market_radar_data(period)
+        except MarketRadarError as exc:
+            raise svc.APIError(400,'BAD_REQUEST',str(exc),[{'field':'period','reason':'unknown_or_invalid'}]) from exc
+        except RuntimeError as exc:
+            raise svc.APIError(503,'SOURCE_UNAVAILABLE',str(exc),retryable=False) from exc
+        return success(request,data.model_dump(),data.snapshot_id,MarketRadarData,data_label='public_open',is_mock=False,model_version='dosm-jmi-qes-v1')
 
     @app.get('/api/v1/explore/bubbles',response_model=Envelope[BubblesData],responses=documented_errors(400,409,422))
     def bubbles(request:Request,region:str='MY',field_id:str|None=None,snapshot_id:str|None=None):
