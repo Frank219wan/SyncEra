@@ -107,6 +107,23 @@ class StudyConstraints(Strict):
     learning_pace: Literal['focused','deep']
 
 class Psychology(Strict):
+    assessment_version: Literal['1.0'] | None = None
+    assessment_type: Literal['self_report_reflection'] | None = None
+    scenario_answers: dict[str, Literal['A','B','C','D','E'] | None] = {}
+    other_responses: dict[str, str] = {}
+    consent_to_personalization: bool = False
+
+    @model_validator(mode='after')
+    def validate_assessment(self):
+        valid = {'S1','S2','S3','S4','S5'}
+        if not set(self.scenario_answers).issubset(valid) or not set(self.other_responses).issubset(valid):
+            raise ValueError('Unknown psychology scenario ID')
+        if any(len(value) > 2000 for value in self.other_responses.values()):
+            raise ValueError('Other response exceeds 2000 characters')
+        for key, choice in self.scenario_answers.items():
+            if choice == 'E' and not self.other_responses.get(key, '').strip():
+                raise ValueError(f'{key} requires other response text')
+        return self
     mbti: str | None = None
     character_notes: str | None = None
     adaptability_self_report: str | None = None
