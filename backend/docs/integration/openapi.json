@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "FutureProof AI Backend",
-    "description": "Synthetic demo fallback. Public market data is served only after reviewed local import.",
+    "description": "Synthetic recommendations with an explicitly enabled DOSM market radar.",
     "version": "1.0.0"
   },
   "paths": {
@@ -17,6 +17,72 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Envelope_HealthData_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/market/radar": {
+      "get": {
+        "summary": "Dosm Market Radar",
+        "operationId": "dosm_market_radar_api_v1_market_radar_get",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_MarketRadarData_"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -574,8 +640,28 @@
               }
             }
           },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
           "502": {
             "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -622,6 +708,16 @@
               }
             }
           },
+          "400": {
+            "description": "Invalid request length",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
           "413": {
             "description": "CV exceeds upload limit",
             "content": {
@@ -652,8 +748,28 @@
               }
             }
           },
+          "429": {
+            "description": "AI provider rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
           "502": {
             "description": "Extraction adapter invalid output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "AI provider unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -733,6 +849,55 @@
         }
       }
     },
+    "/api/v1/profiles/{profile_id}": {
+      "get": {
+        "summary": "Get Profile",
+        "operationId": "get_profile_api_v1_profiles__profile_id__get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConfirmData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recommendations": {
       "post": {
         "summary": "Recommend",
@@ -798,8 +963,28 @@
               }
             }
           },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
           "502": {
             "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -1268,6 +1453,192 @@
         ],
         "title": "BubblesData"
       },
+      "CareerAnalysis": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "minimax",
+              "rules_fallback"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "disabled",
+              "unavailable",
+              "invalid_output",
+              "in_progress",
+              "rate_limited",
+              "input_limit"
+            ],
+            "title": "Status"
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "strength_skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strength Skill Ids"
+          },
+          "gap_skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Gap Skill Ids"
+          },
+          "risk_and_uncertainty": {
+            "type": "string",
+            "title": "Risk And Uncertainty"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "status",
+          "role_id",
+          "reason",
+          "strength_skill_ids",
+          "gap_skill_ids",
+          "risk_and_uncertainty",
+          "evidence_ids"
+        ],
+        "title": "CareerAnalysis"
+      },
+      "CareerRadarNarrative": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "generated",
+            "title": "Status"
+          },
+          "model_version": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Model Version"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "zh-CN"
+            ],
+            "title": "Language"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CareerRadarNarrativeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "model_version",
+          "language",
+          "items"
+        ],
+        "title": "CareerRadarNarrative"
+      },
+      "CareerRadarNarrativeItem": {
+        "properties": {
+          "role_id": {
+            "type": "string",
+            "title": "Role Id"
+          },
+          "fit_summary": {
+            "type": "string",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Fit Summary"
+          },
+          "trend_summary": {
+            "type": "string",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Trend Summary"
+          },
+          "gap_summary": {
+            "type": "string",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Gap Summary"
+          },
+          "next_step": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Next Step"
+          },
+          "uncertainty": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Uncertainty"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Evidence Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "role_id",
+          "fit_summary",
+          "trend_summary",
+          "gap_summary",
+          "next_step",
+          "uncertainty",
+          "evidence_ids"
+        ],
+        "title": "CareerRadarNarrativeItem"
+      },
       "ConfirmData": {
         "properties": {
           "profile": {
@@ -1315,6 +1686,43 @@
               }
             ],
             "title": "Profile Revision"
+          },
+          "psychology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Psychology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_occupation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Occupation"
+          },
+          "interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interests"
           }
         },
         "additionalProperties": false,
@@ -1393,6 +1801,23 @@
           "meta"
         ],
         "title": "Envelope[HealthData]"
+      },
+      "Envelope_MarketRadarData_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/MarketRadarData"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/Meta"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "title": "Envelope[MarketRadarData]"
       },
       "Envelope_NormalizeData_": {
         "properties": {
@@ -1718,6 +2143,480 @@
         ],
         "title": "MapNode"
       },
+      "MarketEmploymentMetric": {
+        "properties": {
+          "jobs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Jobs"
+          },
+          "filled_jobs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Filled Jobs"
+          },
+          "vacancies": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Vacancies"
+          },
+          "jobs_created": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Jobs Created"
+          },
+          "qoq_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qoq Change Percent"
+          },
+          "yoy_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yoy Change Percent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jobs",
+          "filled_jobs",
+          "vacancies",
+          "jobs_created"
+        ],
+        "title": "MarketEmploymentMetric"
+      },
+      "MarketEmploymentSector": {
+        "properties": {
+          "jobs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Jobs"
+          },
+          "filled_jobs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Filled Jobs"
+          },
+          "vacancies": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Vacancies"
+          },
+          "jobs_created": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Jobs Created"
+          },
+          "qoq_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qoq Change Percent"
+          },
+          "yoy_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yoy Change Percent"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "skill_levels": {
+            "items": {
+              "$ref": "#/components/schemas/MarketSkillLevel"
+            },
+            "type": "array",
+            "title": "Skill Levels"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jobs",
+          "filled_jobs",
+          "vacancies",
+          "jobs_created",
+          "id",
+          "name",
+          "skill_levels"
+        ],
+        "title": "MarketEmploymentSector"
+      },
+      "MarketMatchReadiness": {
+        "properties": {
+          "candidate_skills_source": {
+            "type": "string",
+            "title": "Candidate Skills Source"
+          },
+          "position_granularity": {
+            "type": "string",
+            "title": "Position Granularity"
+          },
+          "named_positions_available": {
+            "type": "boolean",
+            "title": "Named Positions Available"
+          },
+          "named_skill_requirements_available": {
+            "type": "boolean",
+            "title": "Named Skill Requirements Available"
+          },
+          "evidence_based_matching_ready": {
+            "type": "boolean",
+            "title": "Evidence Based Matching Ready"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "candidate_skills_source",
+          "position_granularity",
+          "named_positions_available",
+          "named_skill_requirements_available",
+          "evidence_based_matching_ready",
+          "reason"
+        ],
+        "title": "MarketMatchReadiness"
+      },
+      "MarketRadarData": {
+        "properties": {
+          "snapshot_id": {
+            "type": "string",
+            "title": "Snapshot Id"
+          },
+          "region": {
+            "type": "string",
+            "const": "MY",
+            "title": "Region"
+          },
+          "data_as_of": {
+            "type": "string",
+            "title": "Data As Of"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "periods": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Periods"
+          },
+          "total_job_offerings": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total Job Offerings"
+          },
+          "total_qoq_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Qoq Change Percent"
+          },
+          "total_yoy_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Yoy Change Percent"
+          },
+          "occupation_groups": {
+            "items": {
+              "$ref": "#/components/schemas/MarketRadarSignal"
+            },
+            "type": "array",
+            "title": "Occupation Groups"
+          },
+          "industries": {
+            "items": {
+              "$ref": "#/components/schemas/MarketRadarSignal"
+            },
+            "type": "array",
+            "title": "Industries"
+          },
+          "matching_readiness": {
+            "$ref": "#/components/schemas/MarketMatchReadiness"
+          },
+          "employment_totals": {
+            "$ref": "#/components/schemas/MarketEmploymentMetric"
+          },
+          "employment_sectors": {
+            "items": {
+              "$ref": "#/components/schemas/MarketEmploymentSector"
+            },
+            "type": "array",
+            "title": "Employment Sectors"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/MarketSource"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "terms_url": {
+            "type": "string",
+            "title": "Terms Url"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot_id",
+          "region",
+          "data_as_of",
+          "period",
+          "periods",
+          "total_job_offerings",
+          "occupation_groups",
+          "industries",
+          "matching_readiness",
+          "employment_totals",
+          "employment_sectors",
+          "sources",
+          "terms_url",
+          "attribution",
+          "notes"
+        ],
+        "title": "MarketRadarData"
+      },
+      "MarketRadarSignal": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "source_id": {
+            "type": "string",
+            "title": "Source Id"
+          },
+          "source_row": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Source Row"
+          },
+          "postings": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postings"
+          },
+          "market_share_percent": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Share Percent"
+          },
+          "previous_postings": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Postings"
+          },
+          "year_ago_postings": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Ago Postings"
+          },
+          "qoq_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qoq Change Percent"
+          },
+          "yoy_change_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yoy Change Percent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "source_id",
+          "source_row"
+        ],
+        "title": "MarketRadarSignal"
+      },
+      "MarketSkillLevel": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "Skilled",
+              "Semi-skilled",
+              "Low-skilled"
+            ],
+            "title": "Name"
+          },
+          "jobs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Jobs"
+          },
+          "filled_jobs": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Filled Jobs"
+          },
+          "vacancies": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Vacancies"
+          },
+          "jobs_created": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Jobs Created"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "jobs",
+          "filled_jobs",
+          "vacancies",
+          "jobs_created"
+        ],
+        "title": "MarketSkillLevel"
+      },
+      "MarketSource": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "file": {
+            "type": "string",
+            "title": "File"
+          },
+          "published_on": {
+            "type": "string",
+            "title": "Published On"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "measure": {
+            "type": "string",
+            "title": "Measure"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "file",
+          "published_on",
+          "url",
+          "measure"
+        ],
+        "title": "MarketSource"
+      },
       "Meta": {
         "properties": {
           "request_id": {
@@ -1863,6 +2762,9 @@
           "psychology": {
             "$ref": "#/components/schemas/Psychology",
             "default": {
+              "scenario_answers": {},
+              "other_responses": {},
+              "consent_to_personalization": false,
               "intrinsic_motivators": []
             }
           },
@@ -1934,6 +2836,9 @@
           "psychology": {
             "$ref": "#/components/schemas/Psychology",
             "default": {
+              "scenario_answers": {},
+              "other_responses": {},
+              "consent_to_personalization": false,
               "intrinsic_motivators": []
             }
           },
@@ -2004,6 +2909,65 @@
       },
       "Psychology": {
         "properties": {
+          "assessment_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "1.0"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Version"
+          },
+          "assessment_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "self_report_reflection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Type"
+          },
+          "scenario_answers": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Scenario Answers",
+            "default": {}
+          },
+          "other_responses": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Other Responses",
+            "default": {}
+          },
+          "consent_to_personalization": {
+            "type": "boolean",
+            "title": "Consent To Personalization",
+            "default": false
+          },
           "mbti": {
             "anyOf": [
               {
@@ -2070,6 +3034,26 @@
             },
             "type": "array",
             "title": "Recommendations"
+          },
+          "ai_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CareerAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "career_radar": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CareerRadarNarrative"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -2128,6 +3112,11 @@
               }
             ],
             "title": "Snapshot Id"
+          },
+          "include_narrative": {
+            "type": "boolean",
+            "title": "Include Narrative",
+            "default": false
           }
         },
         "additionalProperties": false,

@@ -7,7 +7,7 @@ from app.models import Envelope, Recommendation
 from app.catalogue import ROLES, SKILLS
 
 EXPECTED={
-'GET':{'/api/v1/health','/api/v1/explore/bubbles','/api/v1/trends/roles','/api/v1/trends/skills','/api/v1/roles/{role_id}','/api/v1/roles/{role_id}/tasks','/api/v1/evidence/{evidence_id}','/api/v1/profiles/{profile_id}'},
+'GET':{'/api/v1/health','/api/v1/market/radar','/api/v1/explore/bubbles','/api/v1/trends/roles','/api/v1/trends/skills','/api/v1/roles/{role_id}','/api/v1/roles/{role_id}/tasks','/api/v1/evidence/{evidence_id}','/api/v1/profiles/{profile_id}'},
 'POST':{'/api/v1/profiles/normalize','/api/v1/profiles/upload','/api/v1/profiles/confirm','/api/v1/recommendations','/api/v1/learning/skill-map','/api/v1/learning/roadmap','/api/v1/progress/skills','/api/v1/organizations/{mode}/analyze','/api/v1/admin/trends/refresh'}}
 CONSTRAINTS={'weekly_hours':5,'budget_amount':100,'currency':'MYR','language':'en','target_weeks':12,'learning_pace':'focused'}
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
+import re
 from uuid import uuid4
-from .models import Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
+from .models import CareerRadarNarrative, Profile, ProfileSkill, TrendPackage, Recommendation, ScoreBreakdown, SkillGap, MapNode
 from .catalogue import SKILLS, ROLES, FIELDS
 from .ai_adapter import AIAdapterRequestError
 from .scoring_validation import validate_scored_recommendations
@@ -88,7 +89,8 @@ def normalize(adapter,req,store):
 
 def confirm(store,req):
     profile=require_profile(store,req.profile_id)
-    if profile.reviewed_by_user and req.profile_revision is None:
+    if (profile.reviewed_by_user or req.psychology is not None or
+            req.current_occupation is not None or req.interests is not None) and req.profile_revision is None:
         raise APIError(409,'PROFILE_REVISION_REQUIRED','profile_revision is required to update a confirmed profile',
                        [{'field':'profile_revision','reason':'required_for_update'}])
     if req.profile_revision is not None and req.profile_revision!=profile.revision:
@@ -97,8 +99,17 @@ def confirm(store,req):
     if len(ids)!=len(set(ids)):
         raise APIError(422,'VALIDATION_ERROR','Duplicate skill IDs',[{'field':'skills','reason':'duplicate'}])
     for sid in ids: require_skill(sid)
+    if req.current_occupation is not None and not req.current_occupation.strip():
+        raise APIError(422,'VALIDATION_ERROR','Occupation is invalid',[{'field':'current_occupation','reason':'blank'}])
+    if req.interests is not None and (len(req.interests)>50 or
+            any(not item.strip() or len(item)>200 for item in req.interests)):
+        raise APIError(422,'VALIDATION_ERROR','Interests are invalid',[{'field':'interests','reason':'invalid'}])
     old=profile.revision
-    updated=profile.model_copy(update={'skills':req.skills,'reviewed_by_user':True,'revision':old+1})
+    changes={'skills':req.skills,'reviewed_by_user':True,'revision':old+1}
+    if req.psychology is not None: changes['psychology']=req.psychology
+    if req.current_occupation is not None: changes['current_occupation']=req.current_occupation.strip()
+    if req.interests is not None: changes['interests']=req.interests
+    updated=profile.model_copy(update=changes)
     if not store.update(updated,old): raise APIError(409,'SNAPSHOT_CONFLICT','Profile revision changed',[{'field':'profile_revision','reason':'stale'}],True)
     return {'profile':updated.model_dump(),'profile_revision':updated.revision}
 
@@ -129,6 +140,54 @@ def validate_recommendations(raw,profile,snap,scenario,scoring_policy):
         return validate_scored_recommendations(raw,profile,snap,scenario,scoring_policy)
     except Exception:
         raise APIError(502,'MODEL_INVALID_OUTPUT','Matching output failed catalogue or score validation')
+
+def career_radar_language(profile: Profile) -> str:
+    value=profile.study_constraints.language.strip().casefold()
+    if value.startswith('zh') or 'chinese' in value or '中文' in value or '汉语' in value:
+        return 'zh-CN'
+    return 'en'
+
+def validate_career_radar_narrative(raw,recommendations,model_version,language):
+    """Attach trusted IDs to LLM prose and reject unsupported generated claims."""
+    fields={'role_id','fit_summary','trend_summary','gap_summary','next_step','uncertainty'}
+    text_fields=fields-{'role_id'}
+    forbidden=(
+        'guarantee','guaranteed','guarantees','certain to be hired','will be hired',
+        'promise employment','guaranteed employment','保证','一定会','必然录用','包就业','稳进',
+    )
+    try:
+        if not isinstance(raw,dict) or set(raw)!={'items'} or not isinstance(raw['items'],list):
+            raise ValueError('narrative must contain only items')
+        expected_ids=[item['role_id'] for item in recommendations]
+        if len(raw['items'])!=len(expected_ids):
+            raise ValueError('narrative count does not match recommendations')
+        validated=[]
+        for index,(item,recommendation) in enumerate(zip(raw['items'],recommendations)):
+            if not isinstance(item,dict) or set(item)!=fields:
+                raise ValueError('narrative item shape is invalid')
+            if item['role_id']!=expected_ids[index]:
+                raise ValueError('narrative role order is invalid')
+            clean={'role_id':item['role_id']}
+            for field in text_fields:
+                value=item[field]
+                if not isinstance(value,str):
+                    raise ValueError('narrative text is invalid')
+                value=value.strip()
+                folded=value.casefold()
+                if (not value or any(ord(ch)<32 for ch in value)
+                    or re.search(r'https?://|www\.',folded)
+                    or any(ch.isdigit() for ch in value)
+                    or any(term in folded for term in forbidden)):
+                    raise ValueError('narrative contains unsupported claims or citations')
+                clean[field]=value
+            clean['evidence_ids']=list(recommendation['evidence_ids'])
+            validated.append(clean)
+        return CareerRadarNarrative.model_validate({
+            'status':'generated','model_version':model_version,
+            'language':language,'items':validated,
+        }).model_dump()
+    except Exception as exc:
+        raise APIError(502,'MODEL_INVALID_OUTPUT','Career Radar narrative failed grounding validation') from exc
 
 def make_skill_map(profile,role,skill,language,budget,currency,resources):
     # The repository returns only links matched to a reviewer-owned approval manifest.

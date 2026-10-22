@@ -64,3 +64,28 @@
   .main-area{width:100%;margin-left:0}
   .topbar{height:45px}
 }
+
+/* Skillogy page feedback: clearer navigation, balanced growth cards and About branding. */
+@media(min-width:961px){
+  .growth-layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+}
+.sidebar .sidebar-brand{position:relative}
+.brand-return-hint{position:absolute;top:calc(100% + 7px);left:0;z-index:30;display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);box-shadow:var(--shadow);color:var(--action);font-family:"Noto Sans","Noto Sans SC",sans-serif;font-size:11px;font-style:normal;font-weight:500;letter-spacing:0;white-space:nowrap;opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .16s ease,transform .16s ease,visibility .16s}
+.sidebar-brand:hover .brand-return-hint,.sidebar-brand:focus-visible .brand-return-hint{opacity:1;visibility:visible;transform:translateY(0)}
+.growth-note-first{display:flex;align-items:center;gap:8px;font-family:"Noto Serif","Noto Serif SC",serif;font-size:15px}
+.growth-note p{margin-top:4px;padding-left:28px;max-width:none}
+.breadcrumb{min-width:0;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.breadcrumb::-webkit-scrollbar{display:none}
+.breadcrumb-part{display:inline-flex;align-items:center;gap:9px;flex:none}
+.breadcrumb-part a{border-radius:3px}
+.breadcrumb-part a:hover{text-decoration:underline;color:var(--action)}
+.breadcrumb-part [aria-current="page"]{color:#415547;font-weight:600}
+.topbar .locale{flex-shrink:0}
+.about-title{display:inline-flex;align-items:center;justify-content:center;gap:.22em;flex-wrap:wrap}
+.about-brand-name{font-family:"Bodoni Moda",Georgia,serif;font-style:italic;font-weight:500;letter-spacing:-.04em}
+.about-title img{width:39px;height:39px;object-fit:cover;mix-blend-mode:multiply}
+.about-sponsor{max-width:760px;margin:28px auto 0;padding:20px 24px;border:1px solid #cbd8c3;border-radius:14px;background:rgba(255,255,250,.72);display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}
+.about-sponsor strong{font-family:"Bodoni Moda",Georgia,serif;font-size:23px;font-weight:600;color:var(--ink)}
+@media(max-width:960px){.breadcrumb>.breadcrumb-part:last-child{display:inline-flex}}
+@media(max-width:680px){.breadcrumb{display:flex;gap:7px;font-size:10px}.breadcrumb-part{gap:6px}.about-title img{width:31px;height:31px}.about-sponsor{padding:16px}}
+@media(prefers-reduced-motion:reduce){.brand-return-hint{transition:none}}

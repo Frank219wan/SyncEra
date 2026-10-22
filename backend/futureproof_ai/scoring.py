@@ -16,6 +16,8 @@ from app.matching import (
 )
 from app.models import Profile, Recommendation, TrendPackage
 
+from .retrieval import retrieve_career_candidates
+
 
 def _role_signal(package: TrendPackage, role_id: str) -> dict[str, Any] | None:
     return next((row for row in package.role_signals if row.get("role_id") == role_id), None)
@@ -43,11 +45,11 @@ def score_roles(
         raise ValueError(f"snapshot has no {scenario!r} scenario assumptions")
 
     results: list[Recommendation] = []
-    for role in ROLES.values():
-        if profile.preferred_field_id and role.field_id != profile.preferred_field_id:
-            continue
+    candidates = retrieve_career_candidates(profile, trend_package)
+    for candidate in candidates:
+        role = ROLES[candidate.role_id]
         signal = _role_signal(trend_package, role.role_id)
-        if signal is None or signal.get("trend_score") is None:
+        if signal is None or signal.get("trend_score") is None:  # defensive; retrieval already checks this
             continue
         if role.role_id not in scenario_values:
             raise ValueError(f"scenario assumptions omit {role.role_id}")

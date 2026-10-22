@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
 
 import pytest
+import fitz
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -63,6 +64,80 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
     finally:
         with psycopg.connect(URL) as db:
             db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
+        store_a.close()
+        store_b.close()
+
+
+@pytest.mark.skipif(not URL, reason='TEST_DATABASE_URL is not configured')
+def test_synthetic_cv_psychology_confirm_postgres_readback(monkeypatch):
+    import json
+    import psycopg
+    from scripts.migrate_postgres import main as migrate
+
+    monkeypatch.setenv('DATABASE_URL', URL)
+    monkeypatch.setenv('PROFILE_STORE', 'postgres')
+    migrate()
+    store_a = PostgresProfileStore(URL)
+    store_b = PostgresProfileStore(URL)
+    adapter = create_adapter()  # Rule adapter: no paid MiniMax call.
+    original_extract = adapter.extract_profile
+    extracts = []
+    def counted_extract(text, form):
+        extracts.append(1)
+        return original_extract(text, form)
+    adapter.extract_profile = counted_extract
+    first = TestClient(create_app(store=store_a, adapter=adapter))
+    second = TestClient(create_app(store=store_b, adapter=create_adapter()))
+    marker = 'Synthetic psychology ' + uuid4().hex
+    pdf = fitz.open()
+    page = pdf.new_page()
+    page.insert_text((72, 72), marker + '. SQL analytics.')
+    content = pdf.tobytes()
+    pdf.close()
+    profile_id = None
+    try:
+        uploaded = first.post('/api/v1/profiles/upload',
+            data={'synthetic_input':'true','study_constraints':json.dumps(CONSTRAINTS)},
+            files={'file':('fictional.pdf', content, 'application/pdf')})
+        assert uploaded.status_code == 200, uploaded.text
+        draft = uploaded.json()['data']['profile']
+        profile_id = draft['profile_id']
+        assert draft['revision'] == 1 and len(extracts) == 1
+        answers = {'assessment_version':'1.0','assessment_type':'self_report_reflection',
+                   'scenario_answers':{'S1':'A','S2':None,'S3':'E','S4':'C','S5':None},
+                   'other_responses':{'S3':'Fictional answer'},'consent_to_personalization':True}
+        body = {'profile_id':profile_id,'profile_revision':1,'reviewed_by_user':True,
+                'skills':[{'skill_id':'skill_sql','level':3,'source':'confirmed','confidence':1}],
+                'psychology':answers}
+        confirmed = first.post('/api/v1/profiles/confirm',json=body)
+        assert confirmed.status_code == 200, confirmed.text
+        readback = second.get(f'/api/v1/profiles/{profile_id}')
+        assert readback.status_code == 200
+        saved = readback.json()['data']['profile']
+        assert saved['revision'] == 2 and saved['psychology']['scenario_answers'] == answers['scenario_answers']
+        assert saved['psychology']['other_responses'] == answers['other_responses']
+        assert saved['interests'] == draft['interests']
+        assert saved['current_occupation'] == draft['current_occupation']
+        assert saved['skills'][0]['skill_id'] == 'skill_sql'
+        assert len(extracts) == 1
+        rec = second.post('/api/v1/recommendations',json={'profile_id':profile_id,'ai_scenario':'moderate'})
+        assert rec.status_code == 200 and rec.json()['data']['recommendations']
+        role = next(item for item in rec.json()['data']['recommendations'] if item['skill_gaps'])
+        skill_id = role['skill_gaps'][0]['skill_id']
+        assert second.post('/api/v1/learning/skill-map',json={'profile_id':profile_id,
+            'role_id':role['role_id'],'skill_id':skill_id,'language':'en',
+            'budget_amount':0,'currency':'MYR'}).status_code == 200
+        assert second.post('/api/v1/learning/roadmap',json={'profile_id':profile_id,
+            'role_id':role['role_id'],'selected_skill_ids':[skill_id],
+            'study_constraints':CONSTRAINTS}).status_code == 200
+        stale = second.post('/api/v1/profiles/confirm',json=body)
+        assert stale.status_code == 409 and stale.json()['error']['code'] == 'SNAPSHOT_CONFLICT'
+        assert store_a.get(profile_id).revision == 2
+        assert len(extracts) == 1
+    finally:
+        if profile_id:
+            with psycopg.connect(URL) as db:
+                db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
         store_a.close()
         store_b.close()
 
