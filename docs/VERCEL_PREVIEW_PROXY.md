@@ -2,6 +2,8 @@
 
 The Vite frontend calls only relative `/api/v1/*` URLs. Vercel rewrites those URLs to the root `api/proxy.ts` Node.js Function. The Function sends a fixed, narrow set of API calls to the protected Backend Preview, adding the Backend project's automation bypass secret in an upstream request header. It never returns that header or the Backend response's cookies to the browser. Local `pnpm dev` still uses the Vite development proxy to a local FastAPI instance.
 
+The rewrite names its catch-all capture `proxy_path` and sends it to `/api/proxy` without an explicit query string. Vercel automatically passes named captures as query parameters; using a separate `path` capture plus an explicit `proxy_path` parameter caused `/api/v1/health` to arrive with both `path=health` and `proxy_path=health`, and the strict query allowlist correctly rejected `path`. The Function consumes only the single reserved `proxy_path` value, never forwards it, and still rejects unknown client query parameters.
+
 ## Required Vercel settings
 
 In the **Frontend** project, set these variables for **Preview only**. Mark the secret as Sensitive/Secret and do not use a `VITE_` prefix:
