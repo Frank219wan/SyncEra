@@ -10,7 +10,7 @@ export function LocaleSwitcher() {
   const {state,setState,t}=useApp();
   return <label className="locale"><Globe2 size={16}/><span className="sr-only">{t('Language','语言','Bahasa')}</span><select value={state.locale} onChange={e=>setState(s=>({...s,locale:e.target.value as typeof s.locale}))}><option value="en">English</option><option value="zh">简体中文</option><option value="ms">Bahasa Melayu</option></select></label>;
 }
-export function Brand(){return <Link to="/" className="brand" aria-label="Back to Home" title="Back to Home"><span className="brand-symbol"><Sprout size={24} strokeWidth={1.4}/></span><span>futureproof<span className="brand-ai"> AI</span></span></Link>;}
+export function Brand(){return <Link to="/" className="brand sidebar-brand" aria-label="Back to Home" title="Back to Home"><span className="brand-symbol"><img src="/images/skillogy-logo.jpg" alt=""/></span><span>Skillogy</span></Link>;}
 export function Shell({children}:{children:ReactNode}) {
   const {t}=useApp(); const {pathname}=useLocation();
   const context=routeContextFromPath(pathname);const hr=context.program==='hr',tvet=context.program==='tvet',org=context.workspace==='organization';
