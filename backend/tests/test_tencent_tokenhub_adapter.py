@@ -9,6 +9,7 @@ from app.main import create_app
 from app.storage import ProfileStore
 from futureproof_ai.tencent_tokenhub_adapter import TencentTokenHubAdapter
 from test_api import CONSTRAINTS
+from test_cv_upload import docx_bytes, pdf_bytes
 
 
 def model_response(output: dict) -> httpx.Response:
@@ -201,6 +202,38 @@ def test_extraction_metadata_identifies_real_model(tmp_path):
     assert meta["model_version"] == "tokenhub:minimax-m3"
     assert meta["data_label"] == "synthetic_demo"
     assert meta["is_mock"] is True
+
+
+@pytest.mark.parametrize('filename,make_file', [('fictional.pdf', pdf_bytes), ('fictional.docx', docx_bytes)])
+def test_upload_uses_minimax_boundary_then_requires_confirmation(tmp_path, filename, make_file):
+    observed = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        observed.append(json.loads(request.content))
+        return model_response(valid_output())
+
+    adapter = TencentTokenHubAdapter('test-secret', client=httpx.Client(transport=httpx.MockTransport(handler)))
+    client = TestClient(create_app(store=ProfileStore(str(tmp_path / 'p.sqlite')), adapter=adapter))
+    response = client.post('/api/v1/profiles/upload',
+        data={'synthetic_input': 'true', 'study_constraints': json.dumps(CONSTRAINTS)},
+        files={'file': (filename, make_file('Fictional synthetic CV with Python and SQL.'))})
+    assert response.status_code == 200, response.text
+    assert len(observed) == 1
+    assert 'Fictional synthetic CV' in observed[0]['messages'][1]['content']
+    assert observed[0]['model'] == 'minimax-m3'
+    profile = response.json()['data']['profile']
+    assert profile['reviewed_by_user'] is False
+    assert response.json()['meta']['model_version'] == 'tokenhub:minimax-m3'
+    blocked = client.post('/api/v1/recommendations', json={'profile_id': profile['profile_id'], 'ai_scenario': 'moderate'})
+    assert blocked.status_code == 422 and blocked.json()['error']['code'] == 'PROFILE_NOT_CONFIRMED'
+    skill = profile['skills'][0]
+    confirmed = client.post('/api/v1/profiles/confirm', json={
+        'profile_id': profile['profile_id'], 'skills': [{**skill, 'level': 3, 'source': 'confirmed'}],
+        'reviewed_by_user': True, 'profile_revision': profile['revision'],
+    })
+    assert confirmed.status_code == 200
+    recommended = client.post('/api/v1/recommendations', json={'profile_id': profile['profile_id'], 'ai_scenario': 'moderate'})
+    assert recommended.status_code == 200 and recommended.json()['data']['recommendations']
 
 
 def test_factory_requires_key_and_locks_model(monkeypatch):

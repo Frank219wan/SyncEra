@@ -18,6 +18,7 @@ from docx import Document
 from .services import APIError
 
 MAX_FILE_BYTES = 10 * 1024 * 1024
+VERCEL_FILE_BYTES = 3 * 1024 * 1024
 MAX_TEXT_CHARS = 50_000
 MAX_PDF_PAGES = 30
 MAX_PARSE_SECONDS = 10
@@ -27,11 +28,12 @@ MAX_ENTRY_BYTES = 10 * 1024 * 1024
 
 
 def upload_limit() -> int:
+    maximum = VERCEL_FILE_BYTES if os.getenv('VERCEL') else MAX_FILE_BYTES
     try:
-        value = int(os.getenv('MAX_CV_UPLOAD_BYTES', str(MAX_FILE_BYTES)))
+        value = int(os.getenv('MAX_CV_UPLOAD_BYTES', str(maximum)))
     except ValueError:
-        value = MAX_FILE_BYTES
-    return max(1, min(value, MAX_FILE_BYTES))
+        value = maximum
+    return max(1, min(value, maximum))
 
 
 def _bad(message: str, code: str = 'CV_INVALID_FILE', status: int = 422) -> APIError:
