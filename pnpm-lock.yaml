@@ -11,6 +11,9 @@ importers:
 
   .:
     dependencies:
+      '@fontsource/bodoni-moda':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource/noto-sans':
         specifier: ^5.2.0
         version: 5.3.0
@@ -301,6 +304,9 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@fontsource/bodoni-moda@5.3.0':
+    resolution: {integrity: sha512-Wt2XBCHivYxkTP3ydq/Ax+7VshwsOh/6ayA5om2t+yClCkGwLPj2Mi6OnyMANjyLcqDUWs4rlOHnc8SBLf6/pA==}
 
   '@fontsource/noto-sans-sc@5.3.1':
     resolution: {integrity: sha512-YxZ/VWAWo9FWzH08Q6fGTzIW6vYNP2TMhUFCnfhlimbhdXnWrxJLrzX3KWt2FKnV0s8XiM5vjpGHQiyFRlTj0w==}
@@ -1110,6 +1116,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.25.12':
     optional: true
+
+  '@fontsource/bodoni-moda@5.3.0': {}
 
   '@fontsource/noto-sans-sc@5.3.1': {}
 
