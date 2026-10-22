@@ -166,7 +166,7 @@ export function profileToNormalizeRequest(profile: Profile) {
       interests: splitInterests(profile.interests),
       skills: contractSkills(profile.skills),
     },
-    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[] },
+    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[], ...(profile.psychology ?? {}) },
     study_constraints: {
       weekly_hours: 5, budget_amount: 0, currency: 'MYR', language: 'en',
       target_weeks: 12, learning_pace: 'focused',
@@ -191,6 +191,7 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     occupation: profile.current_occupation ?? fallback.occupation,
     interests: profile.interests?.join(', ') || fallback.interests,
     mbti: profile.psychology?.mbti ?? fallback.mbti,
+    psychology: profile.psychology?.assessment_version ? {assessment_version:'1.0',assessment_type:'self_report_reflection',scenario_answers:profile.psychology.scenario_answers??{},other_responses:profile.psychology.other_responses??{},consent_to_personalization:profile.psychology.consent_to_personalization??false} : fallback.psychology,
     revision: profile.revision,
     skills: [...profile.skills.map(skill => ({
       id: fromContractSkillId(skill.skill_id),
