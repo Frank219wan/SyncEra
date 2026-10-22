@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import {emptyProfile,roles} from '../src/data.ts';
+import {handleProxy} from '../server/proxy.ts';
 import {
   applyBubbleSizes,mapRecommendations,mapTrendRoles,mergeNormalizedProfile,
   profileToConfirmRequest,profileToNormalizeRequest,
@@ -66,5 +68,84 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
     const source=await envelope<{evidence:{evidence_id:string;title:string}}>(`/evidence/${id}`);
     assert.equal(source.data.evidence.evidence_id,id);
     assert.ok(source.data.evidence.title);
+  }
+});
+
+function fictionalCv(kind: 'pdf' | 'docx'): Buffer {
+  const script = [
+    'import io, sys, fitz',
+    'from docx import Document',
+    'text = "Fictional synthetic CV. Python and SQL analytics."',
+    'if sys.argv[1] == "pdf":',
+    '    document = fitz.open(); page = document.new_page(); page.insert_text((72, 72), text)',
+    '    sys.stdout.buffer.write(document.tobytes()); document.close()',
+    'else:',
+    '    document = Document(); document.add_paragraph(text); output = io.BytesIO()',
+    '    document.save(output); sys.stdout.buffer.write(output.getvalue())',
+  ].join('\n');
+  return execFileSync(process.env.CROSS_STACK_PYTHON || 'python', ['-c', script, kind]);
+}
+
+test('protected frontend proxy uploads fictional PDF/DOCX to live backend before confirmation', async () => {
+  const backendOrigin = 'https://syncera-backend-git-integration-postgres-pre-test-frank219wan.vercel.app';
+  const frontendOrigin = 'https://syncera-frontend-git-integration-postgres-test-frank219wan.vercel.app';
+  const environment = {
+    VERCEL_ENV: 'preview', BACKEND_PREVIEW_ORIGIN: backendOrigin,
+    BACKEND_PROTECTION_BYPASS_SECRET: 'test-secret-never-deployed',
+  };
+  for (const kind of ['pdf', 'docx'] as const) {
+    const bytes = fictionalCv(kind);
+    const form = new FormData();
+    const type = kind === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    form.append('file', new Blob([bytes], { type }), `fictional.${kind}`);
+    form.append('synthetic_input', 'true');
+    form.append('study_constraints', JSON.stringify(profileToNormalizeRequest(emptyProfile).study_constraints));
+    const request = new Request(`${frontendOrigin}/api/proxy?proxy_path=profiles%2Fupload`, {
+      method: 'POST', headers: { Origin: frontendOrigin }, body: form,
+    });
+    const uploaded = await handleProxy(request, environment, async (_url, init) =>
+      fetch(`${base}/api/v1/profiles/upload`, init));
+    const payload = await uploaded.json();
+    assert.equal(uploaded.status, 200, JSON.stringify(payload));
+    assert.equal(payload.data.profile.reviewed_by_user, false);
+    const draft = {...mergeNormalizedProfile(payload.data.profile, emptyProfile), uploadedFromCv:true};
+    assert.ok(draft.skills.length > 0);
+    assert.ok(draft.skills.every(skill => !skill.confirmed));
+    const blocked = await fetch(`${base}/api/v1/recommendations`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile_id: draft.id, ai_scenario: 'moderate' }),
+    });
+    assert.equal(blocked.status, 422);
+    assert.equal((await blocked.json()).error.code, 'PROFILE_NOT_CONFIRMED');
+    const reviewed = { ...draft, psychology: {
+      assessment_version:'1.0' as const, assessment_type:'self_report_reflection' as const,
+      scenario_answers:{S1:'A' as const,S2:null,S3:'E' as const,S4:'C' as const,S5:null},
+      other_responses:{S3:'Fictional response'},consent_to_personalization:true,
+    }, skills: draft.skills.map(skill => ({ ...skill, level: 'intermediate', confirmed: true })) };
+    const confirmRequest = new Request(`${frontendOrigin}/api/proxy?proxy_path=profiles%2Fconfirm`, {
+      method:'POST', headers:{Origin:frontendOrigin,'Content-Type':'application/json'},
+      body:JSON.stringify(profileToConfirmRequest(reviewed)),
+    });
+    const confirmResponse = await handleProxy(confirmRequest, environment, async (_url, init) =>
+      fetch(`${base}/api/v1/profiles/confirm`, init));
+    const confirmText = await confirmResponse.text();
+    assert.equal(confirmResponse.status, 200, confirmText);
+    const confirmed = JSON.parse(confirmText);
+    const ready = mergeNormalizedProfile(confirmed.data.profile, reviewed);
+    assert.equal(ready.id,draft.id);
+    assert.deepEqual(ready.psychology?.scenario_answers,reviewed.psychology.scenario_answers);
+    assert.deepEqual(ready.psychology?.other_responses,reviewed.psychology.other_responses);
+    const persisted = await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>(`/profiles/${ready.id}`);
+    assert.deepEqual(persisted.data.profile.psychology?.scenario_answers,reviewed.psychology.scenario_answers);
+    const stale = await fetch(`${base}/api/v1/profiles/confirm`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(profileToConfirmRequest(reviewed)),
+    });
+    assert.equal(stale.status,409);
+    assert.ok(ready.skills.every(skill => skill.confirmed));
+    const recommended = await envelope<{ recommendations: Parameters<typeof mapRecommendations>[0] }>('/recommendations', {
+      profile_id: ready.id, region: 'MY', ai_scenario: 'moderate', top_k: 5,
+    });
+    assert.ok(mapRecommendations(recommended.data.recommendations).length > 0);
   }
 });

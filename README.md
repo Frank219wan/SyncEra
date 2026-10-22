@@ -33,7 +33,7 @@ node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node
 
 固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。前端尚未连接 CV 上传、实时市场预测、机构分析后端或课程认证评估。TXT 可本地读取。
 
-VITE_API_MODE 默认 demo。设置 `VITE_API_MODE=real` 后，个人职业雷达、推荐、职业详情和 Evidence 会请求同源 `/api/v1`，跨栈请求测试见 `tests/cross-stack.test.ts`。默认后端 AI 适配器是确定性实现；可选 Tencent TokenHub MiniMax-M3 只负责合成文本画像提取，职业评分仍使用确定性规则。机构分析、学习进度等 P1 能力尚未接入；real 不等于生产模式。详见 [完整栈集成状态](docs/INTEGRATION_STATUS.md)。
+VITE_API_MODE 默认 demo。设置 `VITE_API_MODE=real` 后，个人职业雷达、推荐、职业详情和 Evidence 会请求同源 `/api/v1`，跨栈请求测试见 `tests/cross-stack.test.ts`。Vercel Preview 通过服务端 Function 访问受保护的 Backend；部署和安全验收步骤见 [Preview API 代理](docs/VERCEL_PREVIEW_PROXY.md)。默认后端 AI 适配器是确定性实现；可选 Tencent TokenHub MiniMax-M3 只负责合成文本画像提取，职业评分仍使用确定性规则。机构分析、学习进度等 P1 能力尚未接入；real 不等于生产模式。详见 [完整栈集成状态](docs/INTEGRATION_STATUS.md)。
 
 按个人流程逐项测试，请从 [Individual-first 测试计划](docs/TEST_PLAN_INDIVIDUAL_FIRST.md) 开始。
 

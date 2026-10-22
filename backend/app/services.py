@@ -89,7 +89,8 @@ def normalize(adapter,req,store):
 
 def confirm(store,req):
     profile=require_profile(store,req.profile_id)
-    if profile.reviewed_by_user and req.profile_revision is None:
+    if (profile.reviewed_by_user or req.psychology is not None or
+            req.current_occupation is not None or req.interests is not None) and req.profile_revision is None:
         raise APIError(409,'PROFILE_REVISION_REQUIRED','profile_revision is required to update a confirmed profile',
                        [{'field':'profile_revision','reason':'required_for_update'}])
     if req.profile_revision is not None and req.profile_revision!=profile.revision:
@@ -98,8 +99,17 @@ def confirm(store,req):
     if len(ids)!=len(set(ids)):
         raise APIError(422,'VALIDATION_ERROR','Duplicate skill IDs',[{'field':'skills','reason':'duplicate'}])
     for sid in ids: require_skill(sid)
+    if req.current_occupation is not None and not req.current_occupation.strip():
+        raise APIError(422,'VALIDATION_ERROR','Occupation is invalid',[{'field':'current_occupation','reason':'blank'}])
+    if req.interests is not None and (len(req.interests)>50 or
+            any(not item.strip() or len(item)>200 for item in req.interests)):
+        raise APIError(422,'VALIDATION_ERROR','Interests are invalid',[{'field':'interests','reason':'invalid'}])
     old=profile.revision
-    updated=profile.model_copy(update={'skills':req.skills,'reviewed_by_user':True,'revision':old+1})
+    changes={'skills':req.skills,'reviewed_by_user':True,'revision':old+1}
+    if req.psychology is not None: changes['psychology']=req.psychology
+    if req.current_occupation is not None: changes['current_occupation']=req.current_occupation.strip()
+    if req.interests is not None: changes['interests']=req.interests
+    updated=profile.model_copy(update=changes)
     if not store.update(updated,old): raise APIError(409,'SNAPSHOT_CONFLICT','Profile revision changed',[{'field':'profile_revision','reason':'stale'}],True)
     return {'profile':updated.model_dump(),'profile_revision':updated.revision}
 

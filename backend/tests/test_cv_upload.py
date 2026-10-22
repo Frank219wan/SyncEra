@@ -59,6 +59,81 @@ def test_real_pdf_and_docx_http_upload_confirmation(tmp_path):
     assert 'Synthetic Demo Resume' not in (tmp_path/'profiles.sqlite').read_bytes().decode('utf-8',errors='ignore')
 
 
+def test_uploaded_cv_psychology_confirm_full_journey_without_reextract(tmp_path):
+    from futureproof_ai.futureproof_adapter import create_adapter
+
+    store = ProfileStore(str(tmp_path/'journey.sqlite'))
+    adapter = create_adapter()
+    original_extract = adapter.extract_profile
+    extracts = []
+    def counted_extract(text, form):
+        extracts.append(1)
+        return original_extract(text, form)
+    adapter.extract_profile = counted_extract
+    c = TestClient(create_app(store=store, adapter=adapter))
+    uploaded = upload(c, pdf_bytes('Synthetic analyst CV. SQL analytics.'), 'fictional.pdf')
+    assert uploaded.status_code == 200, uploaded.text
+    draft = uploaded.json()['data']['profile']
+    profile_id = draft['profile_id']
+    assert len(extracts) == 1
+    assert draft['reviewed_by_user'] is False
+    assert c.post('/api/v1/recommendations', json={'profile_id': profile_id, 'ai_scenario': 'moderate'}).status_code == 422
+
+    answers = {'assessment_version':'1.0','assessment_type':'self_report_reflection',
+               'scenario_answers':{'S1':'A','S2':None,'S3':'E','S4':'C','S5':None},
+               'other_responses':{'S3':'Fictional answer'},'consent_to_personalization':True}
+    body = {'profile_id':profile_id,'profile_revision':draft['revision'],
+            'skills':[{'skill_id':'skill_sql','level':3,'source':'confirmed','confidence':1}],
+            'reviewed_by_user':True,'psychology':answers}
+    confirmed = c.post('/api/v1/profiles/confirm', json=body)
+    assert confirmed.status_code == 200, confirmed.text
+    saved = c.get(f'/api/v1/profiles/{profile_id}').json()['data']['profile']
+    assert saved['profile_id'] == profile_id and saved['revision'] == 2
+    assert saved['psychology']['scenario_answers'] == answers['scenario_answers']
+    assert saved['psychology']['other_responses'] == answers['other_responses']
+    assert saved['psychology']['consent_to_personalization'] is True
+    assert saved['skills'][0]['skill_id'] == 'skill_sql'
+    assert saved['interests'] == draft['interests']
+    assert saved['current_occupation'] == draft['current_occupation']
+    assert len(extracts) == 1
+    missing_revision = c.post('/api/v1/profiles/confirm',json={**body,'profile_revision':None})
+    assert missing_revision.status_code == 409
+    invalid_other = c.post('/api/v1/profiles/confirm',json={**body,'profile_revision':2,
+        'psychology':{**answers,'scenario_answers':{**answers['scenario_answers'],'S3':'A'}}})
+    assert invalid_other.status_code == 422
+    assert store.get(profile_id).revision == 2
+
+    moderate = c.post('/api/v1/recommendations',json={'profile_id':profile_id,'ai_scenario':'moderate'})
+    fast = c.post('/api/v1/recommendations',json={'profile_id':profile_id,'ai_scenario':'fast'})
+    assert moderate.status_code == fast.status_code == 200
+    before = [(r['role_id'],r['match_score']) for r in moderate.json()['data']['recommendations']]
+    role = next(r for r in moderate.json()['data']['recommendations'] if r['skill_gaps'])
+    gap = role['skill_gaps'][0]
+    skill_map = c.post('/api/v1/learning/skill-map',json={'profile_id':profile_id,
+        'role_id':role['role_id'],'skill_id':gap['skill_id'],'language':'en','budget_amount':100,'currency':'MYR'})
+    roadmap = c.post('/api/v1/learning/roadmap',json={'profile_id':profile_id,
+        'role_id':role['role_id'],'selected_skill_ids':[gap['skill_id']],'study_constraints':CONSTRAINTS})
+    assert skill_map.status_code == roadmap.status_code == 200
+    assert skill_map.json()['data']['nodes'] and roadmap.json()['data']['ordered_steps']
+
+    cleared = {**body,'profile_revision':2,'psychology':{**answers,
+        'scenario_answers':{f'S{i}':None for i in range(1,6)},
+        'other_responses':{},'consent_to_personalization':False}}
+    assert c.post('/api/v1/profiles/confirm',json=cleared).status_code == 200
+    after_profile = c.get(f'/api/v1/profiles/{profile_id}').json()['data']['profile']
+    assert after_profile['revision'] == 3
+    assert after_profile['psychology']['scenario_answers'] == cleared['psychology']['scenario_answers']
+    assert after_profile['psychology']['other_responses'] == {}
+    assert after_profile['psychology']['consent_to_personalization'] is False
+    after = c.post('/api/v1/recommendations',json={'profile_id':profile_id,'ai_scenario':'moderate'})
+    assert [(r['role_id'],r['match_score']) for r in after.json()['data']['recommendations']] == before
+    stale = c.post('/api/v1/profiles/confirm',json=body)
+    assert stale.status_code == 409 and stale.json()['error']['code'] == 'SNAPSHOT_CONFLICT'
+    assert store.get(profile_id).revision == 3 and len(extracts) == 1
+    with store.connect() as db:
+        assert db.execute('SELECT count(*) FROM profiles WHERE profile_id=?',(profile_id,)).fetchone()[0] == 1
+
+
 def test_file_rejections(tmp_path):
     c=client(tmp_path)
     cases=[

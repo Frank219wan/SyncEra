@@ -24,7 +24,7 @@ export interface ApiNormalizedProfile {
   interests: string[];
   preferred_field_id?: string | null;
   study_constraints?: Record<string, unknown>;
-  psychology?: { mbti?: string | null };
+  psychology?: { mbti?: string | null; assessment_version?: string; assessment_type?: string; scenario_answers?: Record<string,'A'|'B'|'C'|'D'|'E'|null>; other_responses?: Record<string,string>; consent_to_personalization?: boolean };
   reviewed_by_user: boolean;
   revision: number;
 }
@@ -100,6 +100,18 @@ export interface ApiRecommendation {
   scenario_assumptions?: string[];
   uncertainty?: string;
   sdg_links?: Array<{ sdg: number; rationale: string }>;
+}
+
+export interface ApiCareerAnalysis {
+  source: 'minimax' | 'rules_fallback';
+  status: 'success' | 'disabled' | 'unavailable' | 'invalid_output' | 'in_progress' | 'rate_limited' | 'input_limit';
+  role_id: string | null;
+  reason: string;
+  strength_skill_ids: string[];
+  gap_skill_ids: string[];
+  risk_and_uncertainty: string;
+  evidence_ids: string[];
+  model_version: string | null;
 }
 
 export interface ApiRoadmapStep {
@@ -251,7 +263,7 @@ export function profileToNormalizeRequest(profile: Profile) {
       interests: splitInterests(profile.interests),
       skills: contractSkills(profile.skills),
     },
-    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[] },
+    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[], ...(profile.psychology ?? {}) },
     study_constraints: {
       weekly_hours: 5, budget_amount: 0, currency: 'MYR', language: 'en',
       target_weeks: 12, learning_pace: 'focused',
@@ -265,6 +277,9 @@ export function profileToConfirmRequest(profile: Profile) {
     skills: contractSkills(profile.skills, true),
     reviewed_by_user: true,
     profile_revision: profile.revision,
+    ...(profile.psychology ? { psychology: { mbti: profile.mbti || null, ...profile.psychology } } : {}),
+    ...(profile.uploadedFromCv && profile.occupation.trim() ? {current_occupation:profile.occupation.trim()} : {}),
+    ...(profile.uploadedFromCv && profile.interests.trim() ? {interests:splitInterests(profile.interests)} : {}),
   };
 }
 
@@ -276,6 +291,7 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     occupation: profile.current_occupation ?? fallback.occupation,
     interests: profile.interests?.join(', ') || fallback.interests,
     mbti: profile.psychology?.mbti ?? fallback.mbti,
+    psychology: profile.psychology?.assessment_version ? {assessment_version:'1.0',assessment_type:'self_report_reflection',scenario_answers:profile.psychology.scenario_answers??{},other_responses:profile.psychology.other_responses??{},consent_to_personalization:profile.psychology.consent_to_personalization??false} : fallback.psychology,
     revision: profile.revision,
     skills: [...profile.skills.map(skill => ({
       id: fromContractSkillId(skill.skill_id),
