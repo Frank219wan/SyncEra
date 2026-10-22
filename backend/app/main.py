@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 from uuid import uuid4
+from urllib.parse import urlsplit
 from fastapi import FastAPI, Request, Query, UploadFile, File, Form
 from pydantic import ValidationError
 from fastapi.exceptions import RequestValidationError
@@ -12,8 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
-from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS
-from .storage import ProfileStore
+from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS, SNAPSHOTS
+from .storage import create_profile_store
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
 from .approved_data import MarketRepository, ResourceRepository
 from . import services as svc
@@ -38,8 +39,13 @@ def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
 def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
+    if os.getenv('VERCEL') and os.getenv('ACTIVE_SNAPSHOT_ID') and os.getenv('ACTIVE_SNAPSHOT_ID') not in SNAPSHOTS:
+        raise RuntimeError('Hosted Preview permits only bundled synthetic snapshots')
+    if (os.getenv('VERCEL') and os.getenv('AI_ADAPTER_MODULE') == 'futureproof_ai.tencent_tokenhub_adapter'
+            and os.getenv('VERCEL_ENV') != 'preview'):
+        raise RuntimeError('TokenHub adapter is enabled only for Vercel Preview')
     app=FastAPI(title='FutureProof AI Backend',version='1.0.0',description='Synthetic demo fallback. Public market data is served only after reviewed local import.')
-    app.state.store=store or ProfileStore()
+    app.state.store=store if store is not None else create_profile_store()
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
     app.state.market=market if market is not None else MarketRepository()
     app.state.resources=resources if resources is not None else ResourceRepository()
@@ -48,7 +54,15 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         if market is None: app.state.market.load_dir(approved_dir)
         if resources is None: app.state.resources.load_dir(approved_dir)
     app.state.market.validate_active()
+    if os.getenv('VERCEL') and not os.getenv('FRONTEND_ORIGINS'):
+        raise RuntimeError('FRONTEND_ORIGINS is required for Vercel Preview')
     origins=[x.strip() for x in os.getenv('FRONTEND_ORIGINS','http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173').split(',') if x.strip()]
+    if os.getenv('VERCEL'):
+        for origin in origins:
+            parsed=urlsplit(origin)
+            if (parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password
+                    or parsed.path or parsed.query or parsed.fragment or origin != f'https://{parsed.netloc}'):
+                raise RuntimeError('FRONTEND_ORIGINS must contain only exact HTTPS origins for Vercel Preview')
     app.add_middleware(UploadBodyLimitMiddleware)
     app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST'],allow_headers=['Content-Type','X-Request-ID'],expose_headers=['X-Request-ID'])
 
@@ -148,6 +162,8 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         504:{'model':APIErrorEnvelope,'description':'Extraction adapter timeout'},
     })
     async def upload_profile(request:Request,file:UploadFile=File(...),synthetic_input:bool=Form(...),study_constraints:str=Form(...),preferred_field_id:str|None=Form(None)):
+        if os.getenv('VERCEL') and os.getenv('ENABLE_SYNTHETIC_UPLOAD') != '1':
+            raise svc.APIError(503,'UPLOAD_DISABLED','Synthetic CV upload is disabled for this Preview')
         if not synthetic_input:
             raise svc.APIError(422,'SYNTHETIC_ONLY','Only declared synthetic CVs are accepted in this demo')
         try:
@@ -174,6 +190,15 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
     @app.post('/api/v1/profiles/confirm',response_model=Envelope[ConfirmData],responses=documented_errors(404,409,422))
     def confirm(payload:ConfirmRequest,request:Request):
         return success(request,svc.confirm(app.state.store,payload),data_model=ConfirmData)
+
+    # This readback route has no ownership checks. Hosted Preview must opt in
+    # only after deployment protection has been verified.
+    if not os.getenv('VERCEL') or (os.getenv('VERCEL_ENV') == 'preview'
+                                 and os.getenv('ENABLE_PROFILE_READBACK') == '1'):
+        @app.get('/api/v1/profiles/{profile_id}',response_model=Envelope[ConfirmData],responses=documented_errors(404))
+        def get_profile(profile_id:str,request:Request):
+            profile=svc.require_profile(app.state.store,profile_id)
+            return success(request,{'profile':profile.model_dump(),'profile_revision':profile.revision},data_model=ConfirmData)
 
     @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],responses=documented_errors(400,404,409,422,429,502,503,504))
     def recommend(payload:RecommendRequest,request:Request):
