@@ -87,3 +87,17 @@ test('POST requires same-origin JSON and fictional input', async () => {
   assert.equal(called, true);
   assert.equal(response.status, 409);
 });
+
+test('recommendation analysis version header is forwarded only for the allowed route', async () => {
+  const post = (path: string, value: string) => request(path, {
+    method: 'POST', headers: { Origin: frontend, 'Content-Type': 'application/json',
+      'X-Recommendation-Analysis': value }, body: '{}',
+  });
+  const fetchWith = (expected: string | null): typeof fetch => async (_url, init) => {
+    assert.equal(new Headers(init?.headers).get('X-Recommendation-Analysis'), expected);
+    return Response.json({ data: {}, meta: {} });
+  };
+  assert.equal((await handleProxy(post('recommendations', 'v1'), env, fetchWith('v1'))).status, 200);
+  assert.equal((await handleProxy(post('recommendations', 'unknown'), env, fetchWith(null))).status, 200);
+  assert.equal((await handleProxy(post('profiles/confirm', 'v1'), env, fetchWith(null))).status, 200);
+});

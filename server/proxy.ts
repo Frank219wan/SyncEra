@@ -129,6 +129,9 @@ export async function handleProxy(
   if (method === 'POST') headers.set('Content-Type', 'application/json');
   const requestId = request.headers.get('x-request-id');
   if (requestId && /^[A-Za-z0-9_-]{1,100}$/.test(requestId)) headers.set('X-Request-ID', requestId);
+  if (path === 'recommendations' && request.headers.get('x-recommendation-analysis') === 'v1') {
+    headers.set('X-Recommendation-Analysis', 'v1');
+  }
   try {
     const response = await upstreamFetch(target, {
       method, headers, body, redirect: 'manual', signal: AbortSignal.timeout(15_000),

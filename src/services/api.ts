@@ -5,7 +5,7 @@ import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -28,7 +28,7 @@ export class ApiError extends Error {
   ) { super(message); }
 }
 
-async function request<T>(path: string, options: { body?: unknown; method?: string } = {}): Promise<SuccessEnvelope<T>> {
+async function request<T>(path: string, options: { body?: unknown; method?: string; headers?: Record<string,string> } = {}): Promise<SuccessEnvelope<T>> {
   const requestId = `web_${crypto.randomUUID()}`;
   let response: Response;
   try {
@@ -38,6 +38,7 @@ async function request<T>(path: string, options: { body?: unknown; method?: stri
         Accept: 'application/json',
         ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         'X-Request-ID': requestId,
+        ...options.headers,
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: AbortSignal.timeout(20000),
@@ -167,9 +168,10 @@ export const api = {
     return { tasks: response.data.tasks, meta: toServiceMeta(response.meta) };
   },
 
-  recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>}> => {
+  recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>; analysis?: ApiCareerAnalysis}> => {
     if (isDemo) return {results: demoRecommendations(profile, scenario), meta: demoMeta(snapshotId)};
-    const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[] }>('/recommendations', {
+    const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[]; ai_analysis?: ApiCareerAnalysis }>('/recommendations', {
+      headers: {'X-Recommendation-Analysis':'v1'},
       body: {
         profile_id: profile.id,
         region: regionCode(profile.region),
@@ -179,7 +181,7 @@ export const api = {
       },
     });
     if (!Array.isArray(response.data.recommendations)) throw new ApiError(502, 'INVALID_RESPONSE', 'Missing recommendations in service response.');
-    return {results: mapRecommendations(response.data.recommendations), meta: toServiceMeta(response.meta)};
+    return {results: mapRecommendations(response.data.recommendations), meta: toServiceMeta(response.meta), analysis: response.data.ai_analysis};
   },
 
   recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> =>

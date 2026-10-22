@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
+from .models import Envelope, Meta, NormalizeRequest, ConfirmRequest, RecommendRequest, Recommendation, SkillMapRequest, RoadmapRequest, HealthData, BubblesData, RolesData, SkillsData, RoleData, TasksData, EvidenceData, NormalizeData, ConfirmData, RecommendData, SkillMapData, RoadmapData, APIErrorEnvelope
 from .catalogue import ROLES, SKILLS, EVIDENCE, FIELDS, SNAPSHOTS
 from .storage import create_profile_store
 from .ai_adapter import AIAdapterRequestError, load_ai_adapter
@@ -22,6 +22,8 @@ from .approved_data import MarketRepository, ResourceRepository
 from . import services as svc
 from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
+from .career_analysis import CareerAnalyzer, rule_fallback
+from .career_analysis_ledger import PostgresCareerAnalysisLedger
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +44,7 @@ class SPAStaticFiles(StaticFiles):
 def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
-def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None):
+def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,career_analyzer=None):
     if os.getenv('VERCEL') and os.getenv('ACTIVE_SNAPSHOT_ID') and os.getenv('ACTIVE_SNAPSHOT_ID') not in SNAPSHOTS:
         raise RuntimeError('Hosted Preview permits only bundled synthetic snapshots')
     if (os.getenv('VERCEL') and os.getenv('AI_ADAPTER_MODULE') == 'futureproof_ai.tencent_tokenhub_adapter'
@@ -53,6 +55,19 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
     if callable(getattr(app.state.store, 'close', None)):
         app.add_event_handler('shutdown', app.state.store.close)
     app.state.adapter=adapter if adapter is not None else load_ai_adapter()
+    if career_analyzer is not None:
+        app.state.career_analyzer=career_analyzer
+    else:
+        live_career=os.getenv('ENABLE_LIVE_CAREER_RECOMMENDATION')=='1'
+        ledger=None
+        if live_career and os.getenv('VERCEL_ENV')=='preview':
+            if not hasattr(app.state.store,'pool'):
+                raise RuntimeError('Live career analysis requires the shared PostgreSQL ledger')
+            ledger=PostgresCareerAnalysisLedger(app.state.store.pool)
+        app.state.career_analyzer=CareerAnalyzer(
+            ledger=ledger,live_enabled=live_career,
+            api_key=os.getenv('TENCENT_TOKENHUB_API_KEY','') if live_career else '',
+        )
     app.state.market=market if market is not None else MarketRepository()
     app.state.resources=resources if resources is not None else ResourceRepository()
     if market is None or resources is None:
@@ -70,7 +85,7 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
                     or parsed.path or parsed.query or parsed.fragment or origin != f'https://{parsed.netloc}'):
                 raise RuntimeError('FRONTEND_ORIGINS must contain only exact HTTPS origins for Vercel Preview')
     app.add_middleware(UploadBodyLimitMiddleware)
-    app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST'],allow_headers=['Content-Type','X-Request-ID'],expose_headers=['X-Request-ID'])
+    app.add_middleware(CORSMiddleware,allow_origins=origins,allow_methods=['GET','POST'],allow_headers=['Content-Type','X-Request-ID','X-Recommendation-Analysis'],expose_headers=['X-Request-ID'])
 
     @app.middleware('http')
     async def request_id(request:Request,call_next):
@@ -213,7 +228,7 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
             profile=svc.require_profile(app.state.store,profile_id)
             return success(request,{'profile':profile.model_dump(),'profile_revision':profile.revision},data_model=ConfirmData)
 
-    @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],responses=documented_errors(400,404,409,422,429,502,503,504))
+    @app.post('/api/v1/recommendations',response_model=Envelope[RecommendData],response_model_exclude_none=True,responses=documented_errors(400,404,409,422,429,502,503,504))
     def recommend(payload:RecommendRequest,request:Request):
         profile=svc.require_profile(app.state.store,payload.profile_id,confirmed=True)
         svc.require_field(payload.preferred_field_id)
@@ -234,8 +249,17 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None)
         if selected_field and any(ROLES[x['role_id']].field_id!=selected_field for x in recommendations):
             raise svc.APIError(502,'MODEL_INVALID_OUTPUT','Matching output violates selected field')
         recommendations=recommendations[:payload.top_k]
+        analysis=None
+        if request.headers.get('X-Recommendation-Analysis')=='v1':
+            try:
+                analysis=app.state.career_analyzer.analyze(scoring_profile,package,payload.ai_scenario,recommendations,scoring_policy)
+            except Exception as exc:
+                logger.warning('Career analysis degraded request_id=%s exception_type=%s',request.state.request_id,type(exc).__name__)
+                analysis=rule_fallback([Recommendation.model_validate(row) for row in recommendations[:5]],'unavailable')
         version=getattr(app.state.adapter,'scoring_model_version','rules-v0.1')
-        return success(request,{'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations},snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True,model_version=version)
+        data={'profile_id':profile.profile_id,'ai_scenario':payload.ai_scenario,'recommendations':recommendations}
+        if analysis is not None: data['ai_analysis']=analysis.model_dump()
+        return success(request,data,snap,RecommendData,data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo',is_mock=True,model_version=version)
 
     @app.post('/api/v1/learning/skill-map',response_model_exclude_none=True,response_model=Envelope[SkillMapData],responses=documented_errors(404,422))
     def skill_map(payload:SkillMapRequest,request:Request):

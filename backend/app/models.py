@@ -196,6 +196,17 @@ class Recommendation(Strict):
             raise ValueError('match_score does not match score_breakdown')
         return self
 
+class CareerAnalysis(Strict):
+    source: Literal['minimax','rules_fallback']
+    status: Literal['success','disabled','unavailable','invalid_output','in_progress','rate_limited','input_limit']
+    role_id: str | None
+    reason: str
+    strength_skill_ids: list[str]
+    gap_skill_ids: list[str]
+    risk_and_uncertainty: str
+    evidence_ids: list[str]
+    model_version: str | None = None
+
 class Resource(Strict):
     resource_id: str
     title: str
@@ -312,6 +323,7 @@ class RecommendData(Strict):
     profile_id: str
     ai_scenario: Literal['moderate','fast']
     recommendations: list[Recommendation]
+    ai_analysis: CareerAnalysis | None = None
 
 class SkillMapData(Strict):
     skill_map_id: str
