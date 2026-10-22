@@ -106,6 +106,25 @@ class StudyConstraints(Strict):
     target_weeks: int = Field(gt=0)
     learning_pace: Literal['focused','deep']
 
+class PsychologyAssessment(Strict):
+    assessment_version: Literal['1.0'] = '1.0'
+    assessment_type: Literal['self_report_reflection'] = 'self_report_reflection'
+    scenario_answers: dict[Literal['S1','S2','S3','S4','S5'], Literal['A','B','C','D','E'] | None] = Field(default_factory=dict)
+    other_responses: dict[Literal['S1','S2','S3','S4','S5'], str] = Field(default_factory=dict)
+    consent_to_personalization: bool = False
+
+    @model_validator(mode='after')
+    def validate_answers(self):
+        for key, value in self.other_responses.items():
+            if len(value) > 1000:
+                raise ValueError('Other response cannot exceed 1000 characters')
+            if self.scenario_answers.get(key) != 'E':
+                raise ValueError('Other response requires E answer')
+        for key, value in self.scenario_answers.items():
+            if value == 'E' and not self.other_responses.get(key, '').strip():
+                raise ValueError('E requires nonempty other response')
+        return self
+
 class Psychology(Strict):
     assessment_version: Literal['1.0'] | None = None
     assessment_type: Literal['self_report_reflection'] | None = None
@@ -131,6 +150,7 @@ class Psychology(Strict):
     character_notes: str | None = None
     adaptability_self_report: str | None = None
     intrinsic_motivators: list[str] = []
+    assessment: PsychologyAssessment | None = None
 
 class ProfileSkill(Strict):
     skill_id: str
