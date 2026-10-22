@@ -23,6 +23,7 @@ import {ConnectedRadar} from './pages/ConnectedCareers';
 import {isDemo} from './services/api';
 import {MindMap,RoadmapDraft,LearningJourney,LearningJourneyOverview} from './pages/Learning';
 import {OrganizationPages,HRDepartmentDetails} from './pages/Organization';
+import {RouteLoadingScreen} from './LoadingScreen';
 function ProfileRoute(){const [params]=useSearchParams();const {state}=useApp();return params.get('edit')==='1'?<ProfileEdit/>:!state.profile.stage||!state.profile.goal?<Navigate to="/individual/intake/start" replace/>:<ProfileInput/>;}
 function RadarRoute(){return isDemo?<Radar/>:<ConnectedRadar/>;}
 function RecommendationsRoute(){
@@ -40,7 +41,7 @@ class ErrorBoundary extends React.Component<{children:React.ReactNode},{error:bo
   static getDerivedStateFromError(){return{error:true};}
   render(){return this.state.error?<main className="crash-page"><h1>Something needs a fresh start.</h1><p>Your saved progress remains on this device. Reload the page to try again.</p><button className="button" onClick={()=>window.location.reload()}>Reload page</button></main>:this.props.children;}
 }
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><Provider><BrowserRouter><Routes><Route path="/" element={<Home/>}/><Route element={<Shell><Outlet/></Shell>}>
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><Provider><BrowserRouter><div id="site-routes"><Routes><Route path="/" element={<Home/>}/><Route element={<Shell><Outlet/></Shell>}>
   <Route path="/individual" element={<IndividualHome/>}/>
   <Route path="/individual/radar" element={<RadarRoute/>}/>
   <Route path="/individual/intake" element={<Intake/>}/>
@@ -64,4 +65,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><
   <Route path="/organization/hr/department/:departmentId" element={<HRDepartmentDetails/>}/>
   {['students','trends','gaps','cohort','insights'].map(p=><Route key={p} path={`/organization/tvet/${p}`} element={<OrganizationPages key={`tvet-${p}`}/>}/>)}
   <Route path="*" element={<NotFound/>}/>
-</Route></Routes></BrowserRouter></Provider></ErrorBoundary></React.StrictMode>);
+</Route></Routes></div><RouteLoadingScreen/></BrowserRouter></Provider></ErrorBoundary></React.StrictMode>);
