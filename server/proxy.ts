@@ -1,6 +1,10 @@
 // Server-only Vercel Preview proxy. Never import this module from src/.
 const MAX_BODY_BYTES = 64 * 1024;
+const MAX_UPLOAD_BODY_BYTES = 3 * 1024 * 1024;
+const MAX_UPLOAD_FILE_BYTES = MAX_UPLOAD_BODY_BYTES - 16 * 1024;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
+const UPLOAD_TIMEOUT_MS = 52_000;
+const UPLOAD_READ_TIMEOUT_MS = 10_000;
 const WINDOW_MS = 60_000;
 const requests = new Map<string, { until: number; count: number }>();
 
@@ -13,7 +17,7 @@ const GET_ROUTES: Array<[RegExp, ReadonlySet<string>]> = [
   [/^evidence\/[A-Za-z0-9_-]{1,80}$/, new Set()],
 ];
 const POST_ROUTES = new Set([
-  'profiles/normalize', 'profiles/confirm', 'recommendations',
+  'profiles/normalize', 'profiles/upload', 'profiles/confirm', 'recommendations',
   'learning/skill-map', 'learning/roadmap',
 ]);
 
@@ -39,7 +43,9 @@ function takeRateSlot(request: Request, method: string, now: number): boolean {
   return slot.count <= (method === 'POST' ? 10 : 30);
 }
 
-async function readBoundedBody(request: Request | Response, maxBytes: number): Promise<Uint8Array | null> {
+class BodyTimeoutError extends Error {}
+
+async function readBoundedBody(request: Request | Response, maxBytes: number, deadline = Infinity): Promise<Uint8Array | null> {
   const length = request.headers.get('content-length');
   if (length && (!/^\d+$/.test(length) || Number(length) > maxBytes)) return null;
   const reader = request.body?.getReader();
@@ -47,11 +53,24 @@ async function readBoundedBody(request: Request | Response, maxBytes: number): P
   const chunks: Uint8Array[] = [];
   let size = 0;
   for (;;) {
-    const { done, value } = await reader.read();
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) { throw new BodyTimeoutError(); }
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let result: ReadableStreamReadResult<Uint8Array>;
+    try {
+      if (Number.isFinite(remaining)) {
+        const timeout = new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => reject(new BodyTimeoutError()), remaining);
+        });
+        result = await Promise.race([reader.read(), timeout]);
+      } else result = await reader.read();
+    }
+    catch (error) { throw error; }
+    finally { if (timer) clearTimeout(timer); }
+    const { done, value } = result;
     if (done) break;
     size += value.byteLength;
     if (size > maxBytes) {
-      await reader.cancel();
       return null;
     }
     chunks.push(value);
@@ -60,6 +79,78 @@ async function readBoundedBody(request: Request | Response, maxBytes: number): P
   let offset = 0;
   for (const chunk of chunks) { body.set(chunk, offset); offset += chunk.byteLength; }
   return body;
+}
+
+async function validatedUpload(request: Request, deadline: number): Promise<FormData | Response> {
+  const contentType = request.headers.get('content-type') || '';
+  if (!/^multipart\/form-data\s*;\s*boundary=[A-Za-z0-9'()+_,.\/:=?-]{1,70}$/i.test(contentType)) {
+    return jsonError(415, 'MULTIPART_REQUIRED', 'Multipart form data is required.');
+  }
+  let bytes: Uint8Array | null;
+  try { bytes = await readBoundedBody(request, MAX_UPLOAD_BODY_BYTES, deadline); }
+  catch (error) {
+    if (error instanceof BodyTimeoutError) return jsonError(408, 'UPLOAD_TIMEOUT', 'Upload took too long.');
+    return jsonError(400, 'INVALID_MULTIPART', 'Invalid multipart request.');
+  }
+  if (!bytes) return jsonError(413, 'CV_REQUEST_TOO_LARGE', 'Upload request exceeds 3 MiB.');
+  let incoming: FormData;
+  const buffered = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffered).set(bytes);
+  try { incoming = await new Response(buffered, { headers: { 'Content-Type': contentType } }).formData(); }
+  catch { return jsonError(400, 'INVALID_MULTIPART', 'Invalid multipart request.'); }
+  const allowed = new Set(['file', 'synthetic_input', 'study_constraints']);
+  if ([...incoming.keys()].some(key => !allowed.has(key)) ||
+      [...allowed].some(key => incoming.getAll(key).length !== 1)) {
+    return jsonError(422, 'INVALID_UPLOAD_FIELDS', 'Upload fields are invalid.');
+  }
+  if (incoming.get('synthetic_input') !== 'true') {
+    return jsonError(422, 'SYNTHETIC_ONLY', 'Only declared fictional CVs are accepted.');
+  }
+  const rawConstraints = incoming.get('study_constraints');
+  if (typeof rawConstraints !== 'string' || rawConstraints.length > 1024) {
+    return jsonError(422, 'INVALID_UPLOAD_FIELDS', 'Study constraints are invalid.');
+  }
+  let constraints: unknown;
+  try { constraints = JSON.parse(rawConstraints); }
+  catch { return jsonError(422, 'INVALID_UPLOAD_FIELDS', 'Study constraints are invalid.'); }
+  if (!constraints || typeof constraints !== 'object' || Array.isArray(constraints)) {
+    return jsonError(422, 'INVALID_UPLOAD_FIELDS', 'Study constraints are invalid.');
+  }
+  const values = constraints as Record<string, unknown>;
+  if (Object.keys(values).sort().join(',') !== 'budget_amount,currency,language,learning_pace,target_weeks,weekly_hours' ||
+      typeof values.weekly_hours !== 'number' || values.weekly_hours <= 0 || values.weekly_hours > 80 ||
+      typeof values.budget_amount !== 'number' || values.budget_amount < 0 || values.budget_amount > 1_000_000 ||
+      typeof values.currency !== 'string' || !/^[A-Z]{3}$/.test(values.currency) ||
+      typeof values.language !== 'string' || !/^[a-z]{2,5}$/.test(values.language) ||
+      !Number.isInteger(values.target_weeks) || (values.target_weeks as number) < 1 || (values.target_weeks as number) > 104 ||
+      !['focused', 'deep'].includes(String(values.learning_pace))) {
+    return jsonError(422, 'INVALID_UPLOAD_FIELDS', 'Study constraints are invalid.');
+  }
+  const file = incoming.get('file');
+  if (!(file instanceof Blob) || typeof (file as File).name !== 'string') {
+    return jsonError(422, 'INVALID_UPLOAD_FIELDS', 'A CV file is required.');
+  }
+  const name = (file as File).name;
+  const kind = /\.pdf$/i.test(name) ? 'pdf' : /\.docx$/i.test(name) ? 'docx' : null;
+  if (!kind || name.length > 160 || /[\\/\u0000-\u001f]/.test(name)) {
+    return jsonError(415, 'CV_UNSUPPORTED_TYPE', 'Only PDF and DOCX files are supported.');
+  }
+  if (!file.size) return jsonError(422, 'CV_INVALID_FILE', 'The file is empty.');
+  if (file.size > MAX_UPLOAD_FILE_BYTES) return jsonError(413, 'CV_TOO_LARGE', 'The file exceeds the Preview upload limit.');
+  const allowedType = kind === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (![allowedType, 'application/octet-stream', ''].includes(file.type.toLowerCase())) {
+    return jsonError(415, 'CV_UNSUPPORTED_TYPE', 'File media type does not match its extension.');
+  }
+  const signature = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  const expected = kind === 'pdf' ? [37, 80, 68, 70, 45] : [80, 75, 3, 4];
+  if (!expected.every((value, index) => signature[index] === value)) {
+    return jsonError(422, 'CV_INVALID_FILE', 'File content does not match its extension.');
+  }
+  const safe = new FormData();
+  safe.append('synthetic_input', 'true');
+  safe.append('study_constraints', rawConstraints);
+  safe.append('file', file, name);
+  return safe;
 }
 
 export async function handleProxy(
@@ -101,22 +192,30 @@ export async function handleProxy(
   if (incoming.search.length > 2048) return jsonError(414, 'QUERY_TOO_LARGE', 'API query is too large.');
   if (!takeRateSlot(request, method, Date.now())) return jsonError(429, 'RATE_LIMITED', 'Too many requests.');
 
-  let body: string | undefined;
+  const upload = path === 'profiles/upload';
+  const deadline = Date.now() + UPLOAD_TIMEOUT_MS;
+  let body: string | FormData | undefined;
   if (method === 'POST') {
     const origin = request.headers.get('origin');
     if (origin && origin !== incoming.origin) return jsonError(403, 'BAD_ORIGIN', 'Cross-origin requests are unavailable.');
-    if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get('content-type') || '')) {
-      return jsonError(415, 'JSON_REQUIRED', 'JSON request required.');
-    }
-    const read = await readBoundedBody(request, MAX_BODY_BYTES);
-    if (!read) return jsonError(413, 'REQUEST_TOO_LARGE', 'Request is too large.');
-    body = new TextDecoder().decode(read);
-    let parsed: unknown;
-    try { parsed = JSON.parse(body); }
-    catch { return jsonError(400, 'BAD_JSON', 'Invalid JSON request.'); }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return jsonError(400, 'BAD_JSON', 'JSON object required.');
-    if (path === 'profiles/normalize' && (parsed as Record<string, unknown>).synthetic_input !== true) {
-      return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional test profiles are accepted.');
+    if (upload) {
+      const validated = await validatedUpload(request, Math.min(deadline, Date.now() + UPLOAD_READ_TIMEOUT_MS));
+      if (validated instanceof Response) return validated;
+      body = validated;
+    } else {
+      if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get('content-type') || '')) {
+        return jsonError(415, 'JSON_REQUIRED', 'JSON request required.');
+      }
+      const read = await readBoundedBody(request, MAX_BODY_BYTES);
+      if (!read) return jsonError(413, 'REQUEST_TOO_LARGE', 'Request is too large.');
+      body = new TextDecoder().decode(read);
+      let parsed: unknown;
+      try { parsed = JSON.parse(body); }
+      catch { return jsonError(400, 'BAD_JSON', 'Invalid JSON request.'); }
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return jsonError(400, 'BAD_JSON', 'JSON object required.');
+      if (path === 'profiles/normalize' && (parsed as Record<string, unknown>).synthetic_input !== true) {
+        return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional test profiles are accepted.');
+      }
     }
   }
 
@@ -126,7 +225,7 @@ export async function handleProxy(
     Accept: 'application/json',
     'x-vercel-protection-bypass': secret,
   });
-  if (method === 'POST') headers.set('Content-Type', 'application/json');
+  if (method === 'POST' && !upload) headers.set('Content-Type', 'application/json');
   const requestId = request.headers.get('x-request-id');
   if (requestId && /^[A-Za-z0-9_-]{1,100}$/.test(requestId)) headers.set('X-Request-ID', requestId);
   if (path === 'recommendations' && request.headers.get('x-recommendation-analysis') === 'v1') {
@@ -134,7 +233,8 @@ export async function handleProxy(
   }
   try {
     const response = await upstreamFetch(target, {
-      method, headers, body, redirect: 'manual', signal: AbortSignal.timeout(15_000),
+      method, headers, body, redirect: 'manual',
+      signal: AbortSignal.timeout(upload ? Math.max(1, deadline - Date.now()) : 15_000),
     });
     if (response.status >= 300 && response.status < 400) return jsonError(502, 'UPSTREAM_REDIRECT', 'Backend returned a redirect.');
     if (!(response.headers.get('content-type') || '').toLowerCase().startsWith('application/json')) {
@@ -142,14 +242,17 @@ export async function handleProxy(
     }
     const declared = response.headers.get('content-length');
     if (declared && Number(declared) > MAX_RESPONSE_BYTES) return jsonError(502, 'UPSTREAM_RESPONSE', 'Backend response is too large.');
-    const bytes = await readBoundedBody(response, MAX_RESPONSE_BYTES);
+    const bytes = await readBoundedBody(response, MAX_RESPONSE_BYTES, upload ? deadline : Infinity);
     if (!bytes) return jsonError(502, 'UPSTREAM_RESPONSE', 'Backend response is too large.');
     const responseBody = new ArrayBuffer(bytes.byteLength);
     new Uint8Array(responseBody).set(bytes);
     return new Response(responseBody, { status: response.status, headers: {
       'Content-Type': 'application/json', 'Cache-Control': 'no-store',
     } });
-  } catch {
+  } catch (error) {
+    if (upload && (error instanceof BodyTimeoutError || (error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)))) {
+      return jsonError(504, 'UPSTREAM_TIMEOUT', 'Profile extraction took too long. Please retry.');
+    }
     return jsonError(502, 'UPSTREAM_UNAVAILABLE', 'Backend is unavailable.');
   }
 }

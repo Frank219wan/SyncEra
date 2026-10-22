@@ -1,6 +1,7 @@
 import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
+import { validateSyntheticCvFile } from './cv-upload';
 import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
@@ -28,20 +29,20 @@ export class ApiError extends Error {
   ) { super(message); }
 }
 
-async function request<T>(path: string, options: { body?: unknown; method?: string; headers?: Record<string,string> } = {}): Promise<SuccessEnvelope<T>> {
+async function request<T>(path: string, options: { body?: unknown; form?: FormData; method?: string; headers?: Record<string,string>; timeoutMs?: number } = {}): Promise<SuccessEnvelope<T>> {
   const requestId = `web_${crypto.randomUUID()}`;
   let response: Response;
   try {
     response = await fetch(`${apiRoot}${path}`, {
-      method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
+      method: options.method ?? (options.body === undefined && !options.form ? 'GET' : 'POST'),
       headers: {
         Accept: 'application/json',
         ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         'X-Request-ID': requestId,
         ...options.headers,
       },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: AbortSignal.timeout(20000),
+      body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
     });
   } catch (error) {
     const message = error instanceof DOMException && error.name === 'TimeoutError'
@@ -92,6 +93,20 @@ export const api = {
   normalize: async (profile: Profile): Promise<Profile> => {
     if (isDemo) return structuredClone(profile);
     const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: profileToNormalizeRequest(profile) });
+    return mergeNormalizedProfile(response.data.profile, profile);
+  },
+
+  uploadSyntheticCv: async (file: File, profile: Profile): Promise<Profile> => {
+    if (isDemo) throw new ApiError(0, 'UPLOAD_REQUIRES_PREVIEW', 'PDF and DOCX upload requires the protected real API Preview.');
+    const issue = await validateSyntheticCvFile(file);
+    if (issue || !/\.(pdf|docx)$/i.test(file.name)) {
+      throw new ApiError(400, 'CV_INVALID_FILE', 'Choose a valid text-based PDF or DOCX under 3 MiB.');
+    }
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('synthetic_input', 'true');
+    form.append('study_constraints', JSON.stringify(profileToNormalizeRequest(profile).study_constraints));
+    const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/upload', { form, timeoutMs: 58_000 });
     return mergeNormalizedProfile(response.data.profile, profile);
   },
 

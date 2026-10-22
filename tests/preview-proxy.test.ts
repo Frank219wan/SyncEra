@@ -10,6 +10,7 @@ const env = {
   BACKEND_PROTECTION_BYPASS_SECRET: 'test-secret-never-deployed',
 };
 const rewrite = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8')).rewrites[0];
+let requestNumber = 0;
 // Vercel appends the named source capture as a query parameter when the
 // destination does not consume it. The original query string is preserved.
 const request = (pathAndQuery: string, init?: RequestInit) => {
@@ -19,7 +20,9 @@ const request = (pathAndQuery: string, init?: RequestInit) => {
   const rewritten = new URL(rewrite.destination, frontend);
   for (const [key, value] of new URLSearchParams(query)) rewritten.searchParams.append(key, value);
   rewritten.searchParams.append('proxy_path', path);
-  return new Request(rewritten, init);
+  const headers = new Headers(init?.headers);
+  headers.set('X-Forwarded-For', `test-${++requestNumber}`);
+  return new Request(rewritten, { ...init, headers });
 };
 const neverFetch: typeof fetch = async () => { throw new Error('unexpected upstream call'); };
 
@@ -44,7 +47,7 @@ test('rejects production, missing configuration, arbitrary routes and methods', 
   assert.equal((await handleProxy(request('health'), { ...env, BACKEND_PROTECTION_BYPASS_SECRET: '' }, neverFetch)).status, 503);
   assert.equal((await handleProxy(request('health'), { ...env, BACKEND_PREVIEW_ORIGIN: 'https://evil.example' }, neverFetch)).status, 503);
   assert.equal((await handleProxy(request('admin/trends/refresh'), env, neverFetch)).status, 404);
-  assert.equal((await handleProxy(request('profiles/upload', { method: 'POST' }), env, neverFetch)).status, 404);
+  assert.equal((await handleProxy(request('profiles/upload/other', { method: 'POST' }), env, neverFetch)).status, 404);
   assert.equal((await handleProxy(request('health', { method: 'DELETE' }), env, neverFetch)).status, 405);
   assert.equal((await handleProxy(request('profiles/../health'), env, neverFetch)).status, 404);
   assert.equal((await handleProxy(request('health?target=https://evil.example'), env, neverFetch)).status, 400);
@@ -100,4 +103,80 @@ test('recommendation analysis version header is forwarded only for the allowed r
   assert.equal((await handleProxy(post('recommendations', 'v1'), env, fetchWith('v1'))).status, 200);
   assert.equal((await handleProxy(post('recommendations', 'unknown'), env, fetchWith(null))).status, 200);
   assert.equal((await handleProxy(post('profiles/confirm', 'v1'), env, fetchWith(null))).status, 200);
+});
+
+const constraints = JSON.stringify({ weekly_hours: 5, budget_amount: 0, currency: 'MYR', language: 'en', target_weeks: 12, learning_pace: 'focused' });
+function uploadRequest(name = 'fictional.pdf', content = '%PDF-fictional', type = 'application/pdf', override?: (form: FormData) => void) {
+  const form = new FormData();
+  form.append('file', new Blob([content], { type }), name);
+  form.append('synthetic_input', 'true');
+  form.append('study_constraints', constraints);
+  override?.(form);
+  return request('profiles/upload', { method: 'POST', headers: { Origin: frontend }, body: form });
+}
+
+test('only synthetic PDF/DOCX multipart reaches the exact backend upload route', async () => {
+  for (const [name, content, type] of [
+    ['fictional.pdf', '%PDF-fictional', 'application/pdf'],
+    ['fictional.docx', 'PK\x03\x04fictional', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  ]) {
+    const response = await handleProxy(uploadRequest(name, content, type), env, async (url, init) => {
+      assert.equal(url.toString(), `${backend}/api/v1/profiles/upload`);
+      const headers = new Headers(init?.headers);
+      assert.equal(headers.get('content-type'), null); // fetch generates a fresh boundary
+      assert.equal(headers.get('cookie'), null);
+      assert.equal(headers.get('x-vercel-protection-bypass'), env.BACKEND_PROTECTION_BYPASS_SECRET);
+      assert.ok(init?.body instanceof FormData);
+      const form = init.body as FormData;
+      assert.deepEqual([...form.keys()].sort(), ['file', 'study_constraints', 'synthetic_input']);
+      assert.equal(form.get('synthetic_input'), 'true');
+      assert.deepEqual(JSON.parse(String(form.get('study_constraints'))), JSON.parse(constraints));
+      assert.equal((form.get('file') as File).name, name);
+      assert.equal(init.signal?.aborted, false);
+      return Response.json({ data: { profile: { profile_id: 'profile_fictional', reviewed_by_user: false } }, meta: { is_mock: true } });
+    });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).data.profile.reviewed_by_user, false);
+  }
+});
+
+test('upload rejects missing authorization, cross-origin use, non-synthetic and extra form fields', async () => {
+  assert.equal((await handleProxy(uploadRequest(), { ...env, VERCEL_ENV: 'production' }, neverFetch)).status, 503);
+  assert.equal((await handleProxy(uploadRequest(), { ...env, BACKEND_PROTECTION_BYPASS_SECRET: '' }, neverFetch)).status, 503);
+  assert.equal((await handleProxy(request('profiles/upload', { method: 'POST', headers: { Origin: 'https://evil.example' }, body: new FormData() }), env, neverFetch)).status, 403);
+  assert.equal((await handleProxy(uploadRequest('fictional.pdf', '%PDF-fictional', 'application/pdf', form => form.set('synthetic_input', 'false')), env, neverFetch)).status, 422);
+  assert.equal((await handleProxy(uploadRequest('fictional.pdf', '%PDF-fictional', 'application/pdf', form => form.append('file', new Blob(['x']), 'another.pdf')), env, neverFetch)).status, 422);
+  assert.equal((await handleProxy(uploadRequest('fictional.pdf', '%PDF-fictional', 'application/pdf', form => form.append('extra', 'x')), env, neverFetch)).status, 422);
+  assert.equal((await handleProxy(uploadRequest('fictional.pdf', '%PDF-fictional', 'application/pdf', form => form.set('study_constraints', '{"weekly_hours":0}')), env, neverFetch)).status, 422);
+  assert.equal((await handleProxy(request('profiles/upload', { method: 'POST', headers: { Origin: frontend, 'Content-Type': 'application/json' }, body: '{}' }), env, neverFetch)).status, 415);
+});
+
+test('upload rejects spoofed formats, damaged bodies and oversize requests before backend', async () => {
+  const cases: Array<[string, string, string, number]> = [
+    ['fictional.txt', 'fictional', 'text/plain', 415],
+    ['fictional.pdf', 'not a PDF', 'application/pdf', 422],
+    ['fictional.pdf', '%PDF-fictional', 'text/plain', 415],
+    ['fictional.docx', '%PDF-fictional', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 422],
+  ];
+  for (const [name, content, type, status] of cases) {
+    assert.equal((await handleProxy(uploadRequest(name, content, type), env, neverFetch)).status, status);
+  }
+  const oversized = new FormData();
+  oversized.append('file', new Blob([new ArrayBuffer(3 * 1024 * 1024)], { type: 'application/pdf' }), 'fictional.pdf');
+  oversized.append('synthetic_input', 'true');
+  oversized.append('study_constraints', constraints);
+  assert.equal((await handleProxy(request('profiles/upload', { method: 'POST', headers: { Origin: frontend }, body: oversized }), env, neverFetch)).status, 413);
+  const malformed = request('profiles/upload', { method: 'POST', headers: { Origin: frontend, 'Content-Type': 'multipart/form-data; boundary=missing' }, body: 'not multipart' });
+  assert.equal((await handleProxy(malformed, env, neverFetch)).status, 400);
+});
+
+test('upload timeout has a bounded, sanitized response', async () => {
+  const response = await handleProxy(uploadRequest(), env, async () => {
+    throw new DOMException('private provider detail', 'TimeoutError');
+  });
+  assert.equal(response.status, 504);
+  const text = await response.text();
+  assert.match(text, /UPSTREAM_TIMEOUT/);
+  assert.doesNotMatch(text, /private provider detail|test-secret-never-deployed/);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
 });
