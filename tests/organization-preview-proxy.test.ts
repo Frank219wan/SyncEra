@@ -18,10 +18,21 @@ test('Organization integration branch may use only its protected Backend Preview
   assert.equal(requested,`${backendOrigin}/api/v1/health`);
 });
 
+test('verified B1 Backend Preview branch alias is allowed exactly',async()=>{
+  const backendOrigin='https://syncera-backend-git-feature-organization-b1-hr-frank219wan.vercel.app';
+  let requested='';
+  const response=await handleProxy(new Request('https://frontend.example/api/proxy?proxy_path=health'),{
+    VERCEL_ENV:'preview',BACKEND_PREVIEW_ORIGIN:backendOrigin,
+    BACKEND_PROTECTION_BYPASS_SECRET:'organization-preview-test-secret',
+  },async input=>{requested=String(input);return Response.json({data:{status:'ok'},meta:{}});});
+  assert.equal(response.status,200);
+  assert.equal(requested,`${backendOrigin}/api/v1/health`);
+});
+
 test('Organization origin allowlist still rejects main and arbitrary hosts',async()=>{
   for(const backendOrigin of [
     'https://syncera-backend-git-main-test-frank219wan.vercel.app',
-    // No B1 branch alias has been verified in Vercel yet; fail closed.
+    // A lookalike host must remain blocked even after the exact alias is approved.
     'https://syncera-backend-git-feature-organization-b1-hr-test-frank219wan.vercel.app',
     'https://attacker.example',
   ]){
