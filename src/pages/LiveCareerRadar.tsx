@@ -4,6 +4,7 @@ import {PageHeader} from '../components';
 import {useApp} from '../store';
 import type {MarketEmploymentSector,MarketRadarPackage,MarketRadarSignal} from '../types';
 import './LiveCareerRadar.css';
+import {barWidth,sortMarketSignals} from './radarCompare';
 
 type RadarTab='occupations'|'industries'|'employment';
 
@@ -83,6 +84,18 @@ function MarketBubbles({items,selectedId,onSelect}:{items:MarketRadarSignal[];se
   </div>;
 }
 
+function CategoryComparison({items,selectedId,onSelect,descending}:{items:MarketRadarSignal[];selectedId:string;onSelect:(id:string)=>void;descending:boolean}){
+  const {t}=useApp();
+  const max=Math.max(0,...items.map(item=>item.postings??0));
+  return <div className="market-comparison" role="group" aria-label={t('Compare online job offerings','比较线上招聘广告','Banding iklan kerja dalam talian')}>
+    {sortMarketSignals(items,descending).map(item=><button type="button" key={item.id} className={`market-comparison-row${selectedId===item.id?' is-selected':''}`} aria-pressed={selectedId===item.id} onClick={()=>onSelect(item.id)}>
+      <span className="market-comparison-name">{item.name}</span>
+      <span className="market-comparison-track" aria-hidden="true"><span style={{width:`${barWidth(item.postings,max)}%`}}/></span>
+      <span className="market-comparison-value"><strong>{item.postings===null?t('Unavailable','暂无数据','Tiada data'):formatCount(item.postings)}</strong>{item.marketSharePercent!==null&&<small>{item.marketSharePercent.toFixed(1)}% {t('share','占比','bahagian')}</small>}</span>
+    </button>)}
+  </div>;
+}
+
 function SignalHighlights({items,tab,selectedId,onSelect}:{items:MarketRadarSignal[];tab:'occupations'|'industries';selectedId:string;onSelect:(id:string)=>void}){
   const {t}=useApp();
   const classified=items.filter(item=>item.postings!==null&&(tab!=='industries'||item.name.toLowerCase()!=='unclassified'));
@@ -112,7 +125,7 @@ function MatchPreparation({readiness}:{readiness:MarketRadarPackage['matchingRea
   return <section className="market-match-prep surface" aria-label={t('CV to position matching preparation','简历与职位匹配准备','Persediaan padanan CV dan jawatan')}>
     <div><span className="market-eyebrow">{t('Next radar step','雷达下一步','Langkah radar seterusnya')}</span><h2>{t('Prepare CV-to-position matching','准备简历与职位匹配','Sediakan padanan CV dengan jawatan')}</h2>
       <p>{ready?t('The selected data package includes named positions and sourced skill requirements.','所选数据包包含具体职位名称及有来源依据的技能要求。','Pakej data terpilih merangkumi jawatan khusus dan keperluan kemahiran bersumber.'):t('The CV side can use normalized, user-confirmed skills. This DOSM file has broad occupation groups and ad counts, but no job titles or required named skills, so an evidence-based LLM match needs a detailed position-and-skills source first.','简历侧可使用已标准化并由用户确认的技能。此 DOSM 文件只有宽泛职业大类和广告数量，没有职位名称或具体技能要求，因此需要先接入详细职位与技能来源，才能进行有依据的 LLM 匹配。','Bahagian CV boleh menggunakan kemahiran yang dinormalkan dan disahkan pengguna. Fail DOSM ini hanya mengandungi kumpulan pekerjaan luas dan jumlah iklan, tanpa tajuk jawatan atau kemahiran khusus yang diperlukan. Sumber jawatan dan kemahiran terperinci diperlukan sebelum padanan LLM berasaskan bukti.')}</p>
-    </div><div className="market-match-status"><span className={readiness.candidateSkillsSource?'is-ready':''}>{t('CV skill input','Input kemahiran CV','输入 CV 技能')}: {t('confirmed profile skills','已确认的个人技能','kemahiran profil disahkan')}</span><span className={ready?'is-ready':'is-pending'}>{t('Position skill evidence','职位技能依据','Bukti kemahiran jawatan')}: {ready?t('available','可用','tersedia'):t('needed','待补充','diperlukan')}</span><small>{t('Only confirmed skill IDs and levels should be sent to the matching adapter; do not send the raw CV by default.','匹配适配器只应接收已确认的技能 ID 和等级；默认不要发送原始简历。','Hanya ID dan tahap kemahiran yang disahkan patut dihantar kepada penyesuai padanan; jangan hantar CV mentah secara lalai.')}</small></div>
+    </div><div className="market-match-status"><span className={readiness.candidateSkillsSource?'is-ready':''}>{t('CV skill input','CV 技能输入','Input kemahiran CV')}: {t('confirmed profile skills','已确认的个人技能','kemahiran profil disahkan')}</span><span className={ready?'is-ready':'is-pending'}>{t('Position skill evidence','职位技能依据','Bukti kemahiran jawatan')}: {ready?t('available','可用','tersedia'):t('needed','待补充','diperlukan')}</span><small>{t('Only confirmed skill IDs and levels should be sent to the matching adapter; do not send the raw CV by default.','匹配适配器只应接收已确认的技能 ID 和等级；默认不要发送原始简历。','Hanya ID dan tahap kemahiran yang disahkan patut dihantar kepada penyesuai padanan; jangan hantar CV mentah secara lalai.')}</small></div>
   </section>;
 }
 
@@ -123,7 +136,7 @@ function SignalDetail({item,period}:{item:MarketRadarSignal;period:string}){
   return <aside className="market-signal-detail">
     <div><span className="market-eyebrow">{t('Selected category','所选类别','Kategori dipilih')}</span><h3>{item.name}</h3></div>
     {item.postings===null?<p className="market-detail-empty">{t('DOSM reports no comparable value for this category and period.','DOSM 未报告此类别和时期的可比数值。','DOSM tidak melaporkan nilai setanding bagi kategori dan tempoh ini.')}</p>:<>
-      <div className="market-detail-primary"><strong>{formatCount(item.postings)}</strong><span>{t('online job offerings','线上招聘广告','iklan kerja dalam talian')} · {period}</span></div>
+      <div className="market-detail-primary"><strong>{formatCount(item.postings)}</strong><span>{t('online job offerings · DOSM JMI','线上招聘广告 · DOSM JMI','iklan kerja dalam talian · DOSM JMI')} · {period}</span><small>{t('Market share','市场占比','Bahagian pasaran')}: {item.marketSharePercent===null?t('Unavailable','暂无数据','Tiada data'):`${item.marketSharePercent.toFixed(1)}%`}</small></div>
       <div className="market-detail-comparisons">
         <div><span>{t('Quarter over quarter','环比','Suku ke suku')}</span><strong>{formatPercent(item.qoqChangePercent)}</strong><small>{item.previousPostings===null?t('No previous quarter value','无上一季度数值','Tiada nilai suku sebelumnya'):`${formatCount(item.previousPostings)} · ${t('prior quarter','上一季度','suku sebelumnya')}`}</small></div>
         <div><span>{t('Year over year','同比','Tahun ke tahun')}</span><strong>{formatPercent(item.yoyChangePercent)}</strong><small>{item.yearAgoPostings===null?t('No same-quarter value','无去年同期数值','Tiada nilai suku sama tahun lalu'):`${formatCount(item.yearAgoPostings)} · ${quarter} ${Number(year)-1}`}</small></div>
@@ -169,6 +182,8 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
   const {t}=useApp();
   const [tab,setTab]=useState<RadarTab>('occupations');
   const [selectedId,setSelectedId]=useState('');
+  const [view,setView]=useState<'compare'|'bubbles'>('compare');
+  const [descending,setDescending]=useState(true);
   const items=tab==='industries'?data.industries:data.occupationGroups;
   const selected=items.find(item=>item.id===selectedId)??items[0];
   const selectedPeriod=data.period;
@@ -183,7 +198,7 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
   return <>
     <PageHeader title={t('Malaysia Career Radar','马来西亚职业雷达','Radar Kerjaya Malaysia')} description={t('Explore observed job-ad demand and employment context from DOSM quarterly data.','通过 DOSM 季度数据探索实际招聘广告需求和就业背景。','Teroka permintaan iklan kerja dan konteks pekerjaan daripada data suku tahunan DOSM.')} action={<span className="market-source-badge"><RadioTower size={15}/>{t('DOSM source data','DOSM 来源数据','Data sumber DOSM')}</span>}/>
     <section className="market-radar-context surface">
-      <div className="market-context-copy"><span className="market-eyebrow">{t('Latest source snapshot','最新来源快照','Gambaran sumber terkini')}</span><strong>{data.period} <span>· {t('Malaysia','马来西亚','Malaysia')}</span></strong><p>{t('Q2 2026 is the latest period in the files you supplied. Values refresh when a new DOSM release is imported.','你提供的文件截至 2026 年第二季度。导入 DOSM 新发布数据后即可更新。','Suku kedua 2026 ialah tempoh terkini dalam fail yang diberi. Data dikemas kini selepas keluaran DOSM baharu diimport.')}</p></div>
+      <div className="market-context-copy"><span className="market-eyebrow">{t('Selected reporting quarter','所选报告季度','Suku laporan dipilih')}</span><strong>{data.period} <span>· {t('Malaysia','马来西亚','Malaysia')}</span></strong><p>{t(`Showing ${data.period}; latest available ${data.periods.at(-1)??data.period}.`,`当前显示 ${data.period}；可用的最新季度为 ${data.periods.at(-1)??data.period}。`,`Memaparkan ${data.period}; suku terkini tersedia ${data.periods.at(-1)??data.period}.`)}</p></div>
       <label className="market-period-select">{t('Quarter','季度','Suku')}<select value={data.period} onChange={event=>onPeriodChange(event.target.value)} aria-label={t('Choose reporting quarter','选择报告季度','Pilih suku laporan')}>{[...data.periods].reverse().map(period=><option key={period} value={period}>{period}</option>)}</select></label>
     </section>
     <div className="market-kpi-grid">
@@ -194,16 +209,16 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
     <nav className="market-radar-tabs" aria-label={t('Radar views','雷达视图','Paparan radar')} role="tablist">{tabs.map(([id,label])=><button type="button" role="tab" aria-selected={tab===id} className={tab===id?'is-active':''} key={id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
     <section className="market-radar-surface surface">
       {tab==='employment'?<EmploymentView data={data}/>:<>
-        <div className="market-section-intro"><div><h2>{tab==='occupations'?t('Online job ads by major occupation group','按主要职业大类统计的线上招聘广告','Iklan kerja mengikut kumpulan utama pekerjaan'):t('Online job ads by economic activity','按经济活动统计的线上招聘广告','Iklan kerja mengikut aktiviti ekonomi')}</h2><p>{tab==='occupations'?t('Each bubble is a DOSM major occupation group. Larger circles represent more ads.','每个气泡代表 DOSM 的一个主要职业大类；气泡越大，广告数量越多。','Setiap gelembung mewakili kumpulan pekerjaan utama DOSM. Lebih besar, lebih banyak iklan.'):t('Each bubble is an industry category. Unclassified ads remain visible when reported.','每个气泡代表一个行业类别；已分类为“未分类”的广告仍会显示。','Setiap gelembung mewakili kategori industri. Iklan tidak dikelaskan dikekalkan.')}</p></div><span className="market-unit-tag">{t('Bubble size = ad count','气泡大小 = 广告数','Saiz gelembung = bilangan iklan')}</span></div>
-        <SignalHighlights items={items} tab={tab} selectedId={selected?.id??''} onSelect={setSelectedId}/>
-        <MarketBubbles items={items} selectedId={selected?.id??''} onSelect={setSelectedId}/>
+        <div className="market-section-intro"><div><h2>{tab==='occupations'?t('Online job ads by major occupation group','按主要职业大类统计的线上招聘广告','Iklan kerja mengikut kumpulan utama pekerjaan'):t('Online job ads by economic activity','按经济活动统计的线上招聘广告','Iklan kerja mengikut aktiviti ekonomi')}</h2><p>{tab==='occupations'?t('Compare observed ad counts for DOSM major occupation groups.','比较 DOSM 主要职业大类的实际广告数量。','Banding bilangan iklan bagi kumpulan pekerjaan utama DOSM.'):t('Compare observed ad counts by industry; unclassified ads remain visible.','比较各行业的实际广告数量；未分类广告仍会显示。','Banding bilangan iklan mengikut industri; iklan tidak dikelaskan kekal dipaparkan.')}</p></div><span className="market-unit-tag">{t('DOSM JMI · online job advertisements','DOSM JMI · 线上招聘广告','DOSM JMI · iklan kerja dalam talian')}</span></div>
+        <div className="market-view-controls"><div className="market-view-toggle" role="group" aria-label={t('Visualization view','可视化视图','Paparan visual')}><button type="button" aria-pressed={view==='compare'} onClick={()=>setView('compare')}>{t('Compare','对比','Banding')}</button><button type="button" aria-pressed={view==='bubbles'} onClick={()=>setView('bubbles')}>{t('Explore bubbles','探索气泡','Teroka gelembung')}</button></div>{view==='compare'&&<label>{t('Sort by ad count','按广告数量排序','Susun mengikut bilangan iklan')}<select value={descending?'desc':'asc'} onChange={event=>setDescending(event.target.value==='desc')}><option value="desc">{t('Highest first','从高到低','Tertinggi dahulu')}</option><option value="asc">{t('Lowest first','从低到高','Terendah dahulu')}</option></select></label>}</div>
+        {view==='compare'?<CategoryComparison items={items} selectedId={selected?.id??''} onSelect={setSelectedId} descending={descending}/>:<><SignalHighlights items={items} tab={tab} selectedId={selected?.id??''} onSelect={setSelectedId}/><MarketBubbles items={items} selectedId={selected?.id??''} onSelect={setSelectedId}/></>}
         {selected&&<SignalDetail item={selected} period={selectedPeriod}/>}
       </>}
     </section>
     <MatchPreparation readiness={data.matchingReadiness}/>
     <section className="market-source-notes surface">
       <div className="market-section-intro"><div><h2>{t('Sources and reading notes','来源与阅读说明','Sumber dan nota bacaan')}</h2><p>{data.attribution}</p></div></div>
-      <ul className="market-note-list">{data.notes.map(note=><li key={note}>{note}</li>)}</ul>
+      <p className="market-source-period">{t('Selected period','所选季度','Suku dipilih')}: {data.period} · {t('Latest available','最新可用','Terkini tersedia')}: {data.periods.at(-1)??data.period}</p><p className="market-source-warning">{t('JMI online ads and QES employment are separate measures. Missing comparisons are unavailable, not zero.','JMI 线上广告与 QES 就业统计是不同指标。缺失的对比数据表示不可用，并非零。','Iklan JMI dan pekerjaan QES ialah ukuran berbeza. Perbandingan yang tiada bukan sifar.')}</p><details className="market-methodology"><summary>{t('Methodology and limitations','方法与局限','Kaedah dan batasan')}</summary><ul className="market-note-list">{data.notes.map(note=><li key={note}>{note}</li>)}</ul></details>
       <div className="market-source-links">{data.sources.map(source=><a href={source.url} key={source.id} target="_blank" rel="noreferrer"><strong>{source.title}</strong><span>{source.file} · {t('released','发布于','diterbitkan')} {source.publishedOn}</span></a>)}<a href={data.termsUrl} target="_blank" rel="noreferrer"><strong>{t('DOSM terms of use','DOSM 使用条款','Syarat penggunaan DOSM')}</strong><span>{t('Attribution and reuse terms','署名与再使用条款','Terma atribusi dan penggunaan semula')}</span></a></div>
     </section>
   </>;
