@@ -8,8 +8,6 @@ import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,
 import {LiveCareerRadar} from './LiveCareerRadar';
 import {Radar} from './RadarExperience';
 
-const dosmRadarEnabled=import.meta.env.VITE_DOSM_MARKET_RADAR_ENABLED==='true';
-
 function EvidenceSources({ids}:{ids:string[]}) {
   const {t}=useApp();
   const [items,setItems]=useState<Array<{evidence:Evidence;isMock:boolean}>>([]);
@@ -36,8 +34,8 @@ function EvidenceSources({ids}:{ids:string[]}) {
   </div>;
 }
 
-export function ConnectedRadar(){
-  return dosmRadarEnabled?<ConnectedDosmRadar/>:<ConnectedMatchingRadar/>;
+export function ConnectedRadar({mode}:{mode:'matching'|'dosm'}){
+  return mode==='dosm'?<ConnectedDosmRadar/>:<ConnectedMatchingRadar/>;
 }
 
 function ConnectedMatchingRadar(){

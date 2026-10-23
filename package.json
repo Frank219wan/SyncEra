@@ -8,7 +8,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --experimental-strip-types --test tests/api-contract.test.ts tests/cv-upload.test.ts tests/domain.test.ts tests/hr-state.test.ts tests/loading.test.ts tests/preview-proxy.test.ts tests/radar-filters.test.ts tests/radar-layout.test.ts tests/routing.test.ts tests/training-growth.test.ts tests/trend-semantics.test.ts"
+    "test": "node --experimental-strip-types --test tests/api-contract.test.ts tests/cv-upload.test.ts tests/domain.test.ts tests/hr-state.test.ts tests/individual-state.test.ts tests/loading.test.ts tests/preview-proxy.test.ts tests/psychology-validation.test.ts tests/radar-filters.test.ts tests/radar-layout.test.ts tests/radar-mode.test.ts tests/routing.test.ts tests/training-growth.test.ts tests/trend-semantics.test.ts"
   },
   "dependencies": {
     "@fontsource/bodoni-moda": "5.3.0",

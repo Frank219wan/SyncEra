@@ -347,8 +347,8 @@ export function profileToConfirmRequest(profile: Profile) {
     reviewed_by_user: true,
     profile_revision: profile.revision,
     ...(profile.psychology ? { psychology: { mbti: profile.mbti || null, ...profile.psychology } } : {}),
-    ...(profile.uploadedFromCv && profile.occupation.trim() ? {current_occupation:profile.occupation.trim()} : {}),
-    ...(profile.uploadedFromCv && profile.interests.trim() ? {interests:splitInterests(profile.interests)} : {}),
+    ...(profile.occupation.trim() ? {current_occupation:profile.occupation.trim()} : {}),
+    ...(profile.interests.trim() ? {interests:splitInterests(profile.interests)} : {}),
   };
 }
 

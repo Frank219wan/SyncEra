@@ -147,5 +147,40 @@ test('protected frontend proxy uploads fictional PDF/DOCX to live backend before
       profile_id: ready.id, region: 'MY', ai_scenario: 'moderate', top_k: 5,
     });
     assert.ok(mapRecommendations(recommended.data.recommendations).length > 0);
+    const scoreBefore=recommended.data.recommendations.map(item=>[item.role_id,item.match_score]);
+    const edited={...ready,psychology:{
+      ...reviewed.psychology,
+      scenario_answers:{S1:'B' as const,S2:null,S3:null,S4:'C' as const,S5:'E' as const},
+      other_responses:{S5:'Another fictional response'},consent_to_personalization:false,
+    }};
+    const editedResponse=await handleProxy(new Request(`${frontendOrigin}/api/proxy?proxy_path=profiles%2Fconfirm`,{
+      method:'POST',headers:{Origin:frontendOrigin,'Content-Type':'application/json'},
+      body:JSON.stringify(profileToConfirmRequest(edited)),
+    }),environment,async (_url,init)=>fetch(`${base}/api/v1/profiles/confirm`,init));
+    assert.equal(editedResponse.status,200,await editedResponse.clone().text());
+    const editPayload=await editedResponse.json();
+    const updated=mergeNormalizedProfile(editPayload.data.profile,edited);
+    assert.equal(updated.id,ready.id);
+    assert.equal(updated.revision,(ready.revision??0)+1);
+    assert.deepEqual(updated.psychology?.scenario_answers,edited.psychology.scenario_answers);
+    assert.deepEqual(updated.psychology?.other_responses,edited.psychology.other_responses);
+    const readback=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>(`/profiles/${ready.id}`);
+    assert.deepEqual(readback.data.profile.psychology?.scenario_answers,edited.psychology.scenario_answers);
+    assert.equal(readback.data.profile.psychology?.consent_to_personalization,false);
+    const staleEdit=await fetch(`${base}/api/v1/profiles/confirm`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileToConfirmRequest(edited)),
+    });
+    assert.equal(staleEdit.status,409);
+    const afterEdit=await envelope<{recommendations:Parameters<typeof mapRecommendations>[0]}>('/recommendations',{
+      profile_id:ready.id,region:'MY',ai_scenario:'moderate',top_k:5,
+    });
+    assert.deepEqual(afterEdit.data.recommendations.map(item=>[item.role_id,item.match_score]),scoreBefore);
+    const cleared={...updated,psychology:{...edited.psychology,
+      scenario_answers:{S1:null,S2:null,S3:null,S4:null,S5:null},other_responses:{},consent_to_personalization:false,
+    }};
+    const clearedResult=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>('/profiles/confirm',profileToConfirmRequest(cleared));
+    assert.equal(clearedResult.data.profile.profile_id,ready.id);
+    assert.deepEqual(clearedResult.data.profile.psychology?.other_responses,{});
+    assert.deepEqual(clearedResult.data.profile.psychology?.scenario_answers,cleared.psychology.scenario_answers);
   }
 });

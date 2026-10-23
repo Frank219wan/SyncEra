@@ -10,6 +10,7 @@ const requests = new Map<string, { until: number; count: number }>();
 
 const GET_ROUTES: Array<[RegExp, ReadonlySet<string>]> = [
   [/^health$/, new Set()],
+  [/^market\/radar$/, new Set(['period'])],
   [/^explore\/bubbles$/, new Set(['region', 'field_id', 'snapshot_id'])],
   [/^trends\/(?:roles|skills)$/, new Set(['region', 'limit', 'field_id', 'cursor', 'snapshot_id'])],
   [/^roles\/[A-Za-z0-9_-]{1,80}$/, new Set()],
@@ -185,7 +186,8 @@ export async function handleProxy(
   const allowedQuery = route?.[1] ?? new Set<string>();
   for (const [key, value] of incoming.searchParams) {
     if (key === 'proxy_path') continue;
-    if (!allowedQuery.has(key) || value.length > 256 || incoming.searchParams.getAll(key).length !== 1) {
+    if (!allowedQuery.has(key) || value.length > 256 || incoming.searchParams.getAll(key).length !== 1 ||
+        (path === 'market/radar' && key === 'period' && !/^\d{4}-Q[1-4]$/.test(value))) {
       return jsonError(400, 'BAD_QUERY', 'Unsupported API query.');
     }
   }
