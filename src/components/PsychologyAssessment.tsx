@@ -12,25 +12,62 @@ const items = [
 export const emptyPsychology = ():PsychologyAssessment=>({assessment_version:'1.0',assessment_type:'self_report_reflection',scenario_answers:{S1:null,S2:null,S3:null,S4:null,S5:null},other_responses:{},consent_to_personalization:false});
 
 export function PsychologyAssessmentForm({value,onChange}:{value?:PsychologyAssessment;onChange:(value:PsychologyAssessment)=>void}) {
- const [index,setIndex]=useState(0);
- const current=value??emptyPsychology(), key='S'+(index+1), choice=current.scenario_answers[key]??null, other=current.other_responses[key]??'';
- const update=(selected:PsychologyChoice)=>onChange({...current,scenario_answers:{...current.scenario_answers,[key]:selected},other_responses:selected==='E'?current.other_responses:Object.fromEntries(Object.entries(current.other_responses).filter(([k])=>k!==key))});
- return <section className="surface form-panel" aria-label="Optional psychological readiness assessment">
-  <div className="section-heading"><h2>Understanding Your Growth Journey</h2><span className="subtle-tag">Optional · {index+1}/5</span></div>
-  <p className="muted">Everyone responds differently to career changes. These five short questions help us understand how to support your learning journey.</p>
-  <progress max={5} value={index+1} aria-label="Question progress" style={{width:'100%'}}/>
-  <fieldset><legend>{items[index].title}</legend><p>{items[index].situation}</p><p><strong>{items[index].question}</strong></p>
-   {items[index].options.map((label,i)=>{const answer=('ABCD'[i]) as PsychologyChoice;return <label className="choice" key={answer}><input type="radio" name={key} checked={choice===answer} onChange={()=>update(answer)}/><span>{answer}) {label}</span></label>})}
-   <label className="choice"><input type="radio" name={key} checked={choice==='E'} onChange={()=>update('E')}/>E) Other (Open response)</label>
-   {choice==='E'&&<textarea aria-label="Other response" maxLength={2000} required value={other} onChange={e=>onChange({...current,other_responses:{...current.other_responses,[key]:e.target.value}})} rows={3}/>}
-  </fieldset>
-  <label className="choice"><input type="checkbox" checked={current.consent_to_personalization} onChange={e=>onChange({...current,consent_to_personalization:e.target.checked})}/>Use these responses to personalize learning support</label>
-  <p className="fine-print">This optional reflection is not a clinical or psychological diagnosis. Career eligibility and match scores are not decided by these answers.</p>
-  <div className="form-actions">
-   <button className="button secondary" type="button" disabled={index===0} onClick={()=>setIndex(v=>v-1)}>Back</button>
-   <button className="button secondary" type="button" onClick={()=>{update(null);setIndex(v=>Math.min(4,v+1))}}>Skip question</button>
-   <button className="button secondary" type="button" onClick={()=>onChange(emptyPsychology())}>Clear assessment</button>
-   <button className="button secondary" type="button" disabled={index===4||(choice==='E'&&!other.trim())} onClick={()=>setIndex(v=>v+1)}>Next question</button>
-  </div>
- </section>;
+  const [index,setIndex]=useState(0);
+  const current=value??emptyPsychology();
+  const key='S'+(index+1);
+  const choice=current.scenario_answers[key]??null;
+  const other=current.other_responses[key]??'';
+  const update=(selected:PsychologyChoice)=>onChange({
+    ...current,
+    scenario_answers:{...current.scenario_answers,[key]:selected},
+    other_responses:selected==='E'
+      ?current.other_responses
+      :Object.fromEntries(Object.entries(current.other_responses).filter(([k])=>k!==key)),
+  });
+
+  return <section className="surface form-panel psychology-assessment" aria-label="Optional growth reflection">
+    <div className="section-heading psychology-heading">
+      <h2>Understanding Your Growth Journey</h2>
+      <span className="subtle-tag">Optional · {index+1}/5</span>
+    </div>
+    <p className="muted psychology-intro">Everyone responds differently to career changes. These five short questions help us understand how to support your learning journey.</p>
+    <progress className="psychology-progress" max={5} value={index+1} aria-label="Question progress"/>
+    <fieldset className="psychology-question">
+      <legend>{items[index].title}</legend>
+      <p className="psychology-situation">{items[index].situation}</p>
+      <p className="psychology-prompt"><strong>{items[index].question}</strong></p>
+      <div className="psychology-options">
+        {items[index].options.map((label,i)=>{
+          const answer=('ABCD'[i]) as PsychologyChoice;
+          return <label className={`psychology-option${choice===answer?' selected':''}`} key={answer}>
+            <input type="radio" name={key} value={answer} checked={choice===answer} onChange={()=>update(answer)}/>
+            <span className="psychology-option-letter">{answer})</span>
+            <span>{label}</span>
+          </label>;
+        })}
+        <label className={`psychology-option${choice==='E'?' selected':''}`}>
+          <input type="radio" name={key} value="E" checked={choice==='E'} onChange={()=>update('E')}/>
+          <span className="psychology-option-letter">E)</span>
+          <span>Other (Open response)</span>
+        </label>
+      </div>
+      {choice==='E'&&<label className="psychology-other">
+        <span>Tell us in your own words</span>
+        <textarea aria-label="Other response" maxLength={2000} required value={other} onChange={e=>onChange({...current,other_responses:{...current.other_responses,[key]:e.target.value}})} rows={3}/>
+      </label>}
+    </fieldset>
+    <label className="psychology-consent">
+      <input type="checkbox" checked={current.consent_to_personalization} onChange={e=>onChange({...current,consent_to_personalization:e.target.checked})}/>
+      <span>Use these responses to personalize learning support</span>
+    </label>
+    <p className="fine-print psychology-disclaimer">This optional reflection is not a clinical or psychological diagnosis. Career eligibility and match scores are not decided by these answers.</p>
+    <div className="form-actions psychology-actions">
+      <button className="button secondary" type="button" disabled={index===0} onClick={()=>setIndex(v=>v-1)}>Back</button>
+      <button className="button secondary" type="button" onClick={()=>{update(null);setIndex(v=>Math.min(4,v+1));}}>Skip question</button>
+      <button className="button secondary" type="button" onClick={()=>onChange(emptyPsychology())}>Clear assessment</button>
+      {index===4
+        ?<span className="psychology-last-step" role="status">Last question — continue with “Review my profile” below.</span>
+        :<button className="button" type="button" disabled={choice==='E'&&!other.trim()} onClick={()=>setIndex(v=>v+1)}>Next question</button>}
+    </div>
+  </section>;
 }
