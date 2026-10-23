@@ -254,6 +254,22 @@ def test_b1_employee_baseline_drives_coverage_mobility_and_scenario(tmp_path):
     assert data["organization_summary"]["capacity"]["budget_status"] == "not_assessed"
 
 
+def test_b1_empty_skill_baseline_does_not_create_mobility_or_measured_coverage(tmp_path):
+    body = hr_request_body()
+    employee = body["payload"]["employees"][0]
+    employee["baseline_known"] = True
+    employee["skills"] = []
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=body)
+    assert response.status_code == 200, response.text
+    department = next(
+        item for item in response.json()["data"]["department_results"]
+        if item["department_id"] == "dept-data"
+    )
+    assert department["known_baseline_count"] == 0
+    assert department["mobility_suggestions"] == []
+    assert all(item["coverage_state"] == "unknown" for item in department["skill_coverage"])
+
+
 def test_b1_rejects_employee_with_unknown_department(tmp_path):
     body = hr_request_body()
     body["payload"]["employees"][0]["department_id"] = "dept-missing"

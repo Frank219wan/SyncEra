@@ -1,5 +1,13 @@
 import {emptyHr,hrSample} from './data.ts';
-import type {Organization} from './types.ts';
+import type {Organization,Scenario} from './types.ts';
+
+export function hrAnalysisView(org: Organization, scenario: Scenario, demo: boolean): 'demo' | 'connected' | 'needs_analysis' {
+  if (demo) return 'demo';
+  return org.hrAnalysis?.mode === 'hr'
+    && org.analyzedRevision === org.revision
+    && org.hrAnalysis.scenario === scenario
+    ? 'connected' : 'needs_analysis';
+}
 
 export function restoreHr(saved: Partial<Organization> | undefined, savedFlag: unknown): {hr: Organization; hrProfileSaved: boolean} {
   const previous=saved||{};

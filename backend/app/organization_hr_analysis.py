@@ -82,7 +82,7 @@ def _mobility_suggestion(
     snapshot: TrendSnapshot,
     scenario: str,
 ) -> HRMobilitySuggestion | None:
-    if not employee.baseline_known:
+    if not employee.baseline_known or not employee.skills:
         return None
     candidates = [
         _employee_role_score(employee, role, snapshot, scenario)
@@ -139,7 +139,7 @@ def analyze_hr(
     department_results: list[HRDepartmentResult] = []
     for department in payload.departments:
         employees = employees_by_department[department.department_id]
-        known = [item for item in employees if item.baseline_known]
+        known = [item for item in employees if item.baseline_known and item.skills]
         coverage_items: list[HRSkillCoverage] = []
         for skill_id in _department_skills(payload, department.department_id):
             with_skill = [item for item in known if skill_id in {skill.skill_id for skill in item.skills}]
@@ -234,7 +234,7 @@ def analyze_hr(
     cross_priorities.sort(key=lambda item: (priority_order[item.priority], item.skill_id))
 
     reported_headcount = sum(item.headcount for item in payload.departments)
-    known_count = sum(1 for item in payload.employees if item.baseline_known)
+    known_count = sum(1 for item in payload.employees if item.baseline_known and item.skills)
     profile_count = len(payload.employees)
     profile_coverage = round(100 * profile_count / reported_headcount, 2) if reported_headcount else 0.0
     profile_coverage = min(100.0, profile_coverage)
