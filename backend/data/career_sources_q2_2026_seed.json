@@ -1,0 +1,182 @@
+{
+  "catalogue_version": "masco-dosm-2026q2-seed-v1",
+  "sources": [
+    {
+      "source_id": "src_dosm_job_market_2026q2",
+      "provider": "dosm",
+      "source_url": "https://www.dosm.gov.my/site/downloadrelease?id=big-data-analytics-job-market-insights-q22026&lang=English",
+      "source_version": "Q2 2026 release, 18 August 2026",
+      "published_at": "2026-08-18",
+      "collected_at": "2026-10-23T04:41:00Z",
+      "method_version": "manual-transcription-v1"
+    },
+    {
+      "source_id": "src_dosm_job_market_2026q1",
+      "provider": "dosm",
+      "source_url": "https://www.dosm.gov.my/site/downloadrelease?admin_view=&id=big-data-analytics-job-market-insights-q12026&lang=English",
+      "source_version": "Q1 2026 release, 25 June 2026",
+      "published_at": "2026-06-25",
+      "collected_at": "2026-10-23T04:41:00Z",
+      "method_version": "manual-transcription-v1"
+    },
+    {
+      "source_id": "src_dosm_job_market_2023q2",
+      "provider": "dosm",
+      "source_url": "https://www.dosm.gov.my/site/downloadrelease?id=big-data-analytics-job-market-insights-and-my-job-profile-second-quarter-of-2023&lang=English",
+      "source_version": "Q2 2023 release, 30 November 2023",
+      "published_at": "2023-11-30",
+      "collected_at": "2026-10-23T04:41:00Z",
+      "method_version": "manual-transcription-v1"
+    },
+    {
+      "source_id": "src_emasco_2512_20261023",
+      "provider": "emasco",
+      "source_url": "https://emasco.mohr.gov.my/masco/2512",
+      "source_version": "eMASCO page collected 2026-10-23",
+      "published_at": null,
+      "collected_at": "2026-10-23T04:41:00Z",
+      "method_version": "manual-curation-v1"
+    },
+    {
+      "source_id": "src_emasco_2512_01_20261023",
+      "provider": "emasco",
+      "source_url": "https://emasco.mohr.gov.my/masco/2512-01",
+      "source_version": "eMASCO page collected 2026-10-23",
+      "published_at": null,
+      "collected_at": "2026-10-23T04:41:00Z",
+      "method_version": "manual-curation-v1"
+    }
+  ],
+  "skills": [
+    {
+      "skill_id": "skill_software_programming",
+      "name": "Software programming",
+      "category": "general_technical",
+      "aliases": ["programming", "coding"]
+    },
+    {
+      "skill_id": "skill_version_control",
+      "name": "Version control",
+      "category": "general_technical",
+      "aliases": ["git", "source control"]
+    },
+    {
+      "skill_id": "skill_software_testing",
+      "name": "Software testing and quality assurance",
+      "category": "general_technical",
+      "aliases": ["testing", "quality assurance"]
+    }
+  ],
+  "occupations": [
+    {
+      "masco_code": "2512",
+      "role_id": null,
+      "field_id": null,
+      "name": "Software Developers (MASCO unit group)",
+      "description": "Software-developer occupational unit group; DOSM demand is attached only at this group granularity.",
+      "tasks": ["Analyse software needs", "Design, build and test software"],
+      "official_skill_summary": [],
+      "source_id": "src_emasco_2512_20261023",
+      "source_url": "https://emasco.mohr.gov.my/masco/2512",
+      "is_active": false
+    },
+    {
+      "masco_code": "2512-01",
+      "role_id": "role_masco_2512_01",
+      "field_id": "field_software_development",
+      "name": "Software Developer",
+      "description": "Designs, builds, tests and maintains software applications and systems for organisational or client needs.",
+      "tasks": ["Translate requirements into software", "Develop and maintain applications", "Test and debug software"],
+      "official_skill_summary": ["Programming languages", "Version control", "Software testing and quality assurance"],
+      "source_id": "src_emasco_2512_01_20261023",
+      "source_url": "https://emasco.mohr.gov.my/masco/2512-01",
+      "is_active": false
+    }
+  ],
+  "demand_quarters": [
+    {
+      "unit_group_code": "2512",
+      "period": "2023-Q2",
+      "region": "MY",
+      "job_offerings": 7779,
+      "total_job_offerings": 261231,
+      "measurement_series_id": "dosm-jmi-online-vacancies-legacy-v1",
+      "quality_status": "method_pending",
+      "scenario_eligible": false,
+      "source_id": "src_dosm_job_market_2023q2",
+      "source_row": "p2: Software Developers among the most in-demand jobs",
+      "limitation": "The report calls these online job vacancies. Its comparability with the 2026 online job offerings series is unverified. This period is an explicitly selected product-scenario reference, not evidence of a measured longitudinal AI effect."
+    },
+    {
+      "unit_group_code": "2512",
+      "period": "2026-Q1",
+      "region": "MY",
+      "job_offerings": 20089,
+      "total_job_offerings": 626861,
+      "measurement_series_id": "dosm-jmi-online-job-offerings-v1",
+      "quality_status": "reviewed_conflict",
+      "scenario_eligible": false,
+      "source_id": "src_dosm_job_market_2026q1",
+      "source_row": "p2: Software Developers among higher-demand jobs",
+      "limitation": "The Q1 release and Q2 infographic (https://www.dosm.gov.my/uploads/release-content/file_20260818075305.pdf) both state Q1=20,089. Q2 media statement Exhibit 2 (https://www.dosm.gov.my/uploads/release-content/file_20260818075401.pdf) instead labels 17,722 as Q1; Q1's own Exhibit 2 labels 17,722 as Q4 2025. Curator provisionally accepts the two agreeing sources for scenario use; no official corrigendum has been identified."
+    },
+    {
+      "unit_group_code": "2512",
+      "period": "2026-Q2",
+      "region": "MY",
+      "job_offerings": 19899,
+      "total_job_offerings": 555509,
+      "measurement_series_id": "dosm-jmi-online-job-offerings-v1",
+      "quality_status": "clear",
+      "scenario_eligible": true,
+      "source_id": "src_dosm_job_market_2026q2",
+      "source_row": "p2: Higher demand was observed for Software Developers",
+      "limitation": "DOSM reports Software Developers as a group. The 2512 crosswalk is based on eMASCO nomenclature; this is not a 2512-01-specific count. No comparable 2025-Q2 observation was imported."
+    }
+  ],
+  "scenario_anchors": [
+    {
+      "unit_group_code": "2512",
+      "region": "MY",
+      "moderate_period": "2023-Q2",
+      "fast_period": "2026-Q2",
+      "rationale": "Product-selected historical references for Moderate and Fast AI-development scenarios; not a DOSM AI-speed measure.",
+      "limitation": "2023 describes online vacancies and 2026 describes online offerings. Methodological equivalence is unverified, so the two figures must not be presented as a measured AI-growth rate."
+    }
+  ],
+  "skill_assertions": [
+    {
+      "role_id": "role_masco_2512_01",
+      "skill_id": "skill_software_programming",
+      "origin": "emasco_page",
+      "source_id": "src_emasco_2512_01_20261023",
+      "source_excerpt": "Kecekapan dalam bahasa pengaturcaraan",
+      "target_level": 3,
+      "target_level_origin": "human_set",
+      "importance": "high",
+      "status": "draft"
+    },
+    {
+      "role_id": "role_masco_2512_01",
+      "skill_id": "skill_version_control",
+      "origin": "emasco_page",
+      "source_id": "src_emasco_2512_01_20261023",
+      "source_excerpt": "Kecekapan dalam kawalan versi",
+      "target_level": 3,
+      "target_level_origin": "human_set",
+      "importance": "medium",
+      "status": "draft"
+    },
+    {
+      "role_id": "role_masco_2512_01",
+      "skill_id": "skill_software_testing",
+      "origin": "emasco_page",
+      "source_id": "src_emasco_2512_01_20261023",
+      "source_excerpt": "pengujian dan jaminan kualiti",
+      "target_level": 3,
+      "target_level_origin": "human_set",
+      "importance": "high",
+      "status": "draft"
+    }
+  ]
+}
