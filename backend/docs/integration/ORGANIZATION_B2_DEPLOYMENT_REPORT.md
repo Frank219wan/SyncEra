@@ -62,6 +62,7 @@ project and branch identity before an authorized write:
 ```powershell
 cd backend
 $env:DATABASE_URL = '<reviewed Neon Preview direct TLS URL>'
+$env:PGSSLROOTCERT = '<absolute path to trusted CA bundle>'
 python -m scripts.migrate_postgres --preflight
 # After separate deployment-owner approval:
 python -m scripts.migrate_postgres --apply-preview

@@ -46,12 +46,26 @@ Use the reviewed direct (non-pooler) Neon Preview endpoint for migrations. Reche
 the project, branch, endpoint and database in the Neon control plane. Run the
 read-only preflight first; only the deployment owner may authorize the apply:
 
+Set `PGSSLROOTCERT` to the absolute path of a trusted CA bundle. The migration
+runner requires this setting, forces `sslmode=verify-full` on **each** connection,
+and checks the client's libpq TLS state. A missing or invalid CA fails closed.
+For example, with the installed Python `certifi` package, the CA path can be
+obtained locally with `python -c "import certifi; print(certifi.where())"`.
+Keep the database URL and credentials out of terminal logs and chat.
+
 ```powershell
 $env:DATABASE_URL = '<reviewed Neon Preview direct TLS URL>'
+$env:PGSSLROOTCERT = '<absolute path to trusted CA bundle>'
 python -m scripts.migrate_postgres --preflight
 # After separate deployment-owner approval:
 python -m scripts.migrate_postgres --apply-preview
 ```
+
+The reported `server_pg_stat_ssl` is diagnostic only. The acceptance gate is
+the successful client `verify-full` handshake, client `ssl_in_use`, and
+`current_database()` on the actual connection. The printed Project/Branch IDs
+are expected values from a prior review; confirm their Endpoint mapping again
+in the independent Neon control plane before any authorized write.
 
 Confirm that these tables exist:
 
