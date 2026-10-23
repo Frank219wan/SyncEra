@@ -89,3 +89,34 @@
 @media(max-width:960px){.breadcrumb>.breadcrumb-part:last-child{display:inline-flex}}
 @media(max-width:680px){.breadcrumb{display:flex;gap:7px;font-size:10px}.breadcrumb-part{gap:6px}.about-title img{width:31px;height:31px}.about-sponsor{padding:16px}}
 @media(prefers-reduced-motion:reduce){.brand-return-hint{transition:none}}
+
+/* Optional growth-reflection choices: distinct from the tall intake stage .choice cards. */
+.psychology-assessment{min-width:0}
+.psychology-assessment .psychology-heading{align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.psychology-assessment .psychology-heading h2{margin:0;font-size:clamp(20px,2.5vw,25px)}
+.psychology-intro{margin:0 0 14px;max-width:70ch;line-height:1.7}
+.psychology-progress{display:block;width:100%;height:7px;margin:0 0 20px;accent-color:var(--action)}
+.psychology-progress::-webkit-progress-bar{background:#dfe5db;border-radius:999px}
+.psychology-progress::-webkit-progress-value{background:var(--action);border-radius:999px}
+.psychology-progress::-moz-progress-bar{background:var(--action);border-radius:999px}
+.psychology-question{margin:0;padding:0;border:0;min-width:0}
+.psychology-question legend{margin-bottom:10px;font-size:20px}
+.psychology-situation{margin:0 0 12px;line-height:1.75}
+.psychology-prompt{margin:0 0 14px;line-height:1.6}
+.psychology-options{display:grid;gap:9px}
+.psychology-option{display:flex;align-items:center;gap:12px;min-height:54px;margin:0;padding:12px 15px;background:#fafaf5;border:1px solid #bbcbb5;border-radius:10px;cursor:pointer;font-size:14px;line-height:1.6;transition:background .18s,border-color .18s}
+.psychology-option:hover{background:#edf3e8}
+.psychology-option.selected{background:#e2ecd9;border-color:#628052}
+.psychology-option:focus-within{outline:2px solid #6b854f;outline-offset:2px}
+.psychology-option input[type=radio]{position:static;inset:auto;opacity:1;width:18px;height:18px;margin:0;flex:none;accent-color:var(--action);cursor:pointer}
+.psychology-option-letter{flex:none;font-weight:600;color:var(--action)}
+.psychology-option>span:last-child{min-width:0}
+.psychology-other{display:flex;flex-direction:column;gap:7px;margin-top:14px;font-size:13px;font-weight:500}
+.psychology-other textarea{width:100%;max-width:100%;min-height:74px;font-weight:400}
+.psychology-consent{display:flex;gap:11px;align-items:flex-start;margin:20px 0 10px;cursor:pointer;font-size:13px;line-height:1.7}
+.psychology-consent input[type=checkbox]{position:static;inset:auto;opacity:1;flex:none;width:18px;height:18px;margin:2px 0 0;accent-color:var(--action)}
+.psychology-disclaimer{margin-top:6px}
+.psychology-actions{justify-content:flex-start;flex-wrap:wrap;gap:10px 12px;margin-top:20px;padding-top:18px}
+.psychology-actions .button{min-height:42px;padding:10px 14px}
+.psychology-last-step{font-size:12px;color:var(--muted)}
+@media(max-width:680px){.psychology-option{padding:11px 12px;gap:9px;font-size:13px}.psychology-question legend{font-size:18px}.psychology-actions .button{flex:1 1 auto}.psychology-last-step{width:100%}}
