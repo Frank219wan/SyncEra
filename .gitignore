@@ -7,3 +7,5 @@ dist/
 .openai/*.zip
 artifacts/
 *.tsbuildinfo
+.vercel
+.env*
