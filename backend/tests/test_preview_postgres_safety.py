@@ -35,7 +35,7 @@ class ReadOnlyDb:
 
 
 def test_live_test_gate_requires_existing_schema_and_verify_full(monkeypatch, tmp_path):
-    ca = tmp_path / 'ca.pem'
+    ca = tmp_path / 'trusted ca.pem'
     ca.write_text('fictional certificate')
     monkeypatch.setenv('PGSSLROOTCERT', str(ca))
     db = ReadOnlyDb(safety.REQUIRED_TABLES)
@@ -50,6 +50,8 @@ def test_live_test_gate_requires_existing_schema_and_verify_full(monkeypatch, tm
     query = parse_qs(urlsplit(safe).query)
     assert query['sslmode'] == ['verify-full']
     assert query['sslrootcert'] == [str(ca)]
+    assert '%20' in safe and 'sslrootcert=' in safe
+    assert '+' not in safe
     assert db.statements and all(sql.startswith('SELECT') for sql in db.statements)
 
 
