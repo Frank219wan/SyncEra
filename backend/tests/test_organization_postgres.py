@@ -17,15 +17,19 @@ def test_organization_postgres_persistence_and_concurrent_cas(monkeypatch):
     from psycopg_pool import ConnectionPool
 
     from app.organization_storage import OrganizationRevisionConflict, PostgresOrganizationRepository
-    from scripts.migrate_postgres import apply_migrations
+    from scripts.preview_test_db import checked_test_url, check_test_connection
 
-    monkeypatch.setenv('DATABASE_URL', TEST_DATABASE_URL)
-    with psycopg.connect(TEST_DATABASE_URL) as db:
-        apply_migrations(db)
+    safe_url = checked_test_url(TEST_DATABASE_URL)
+    monkeypatch.setenv('DATABASE_URL', safe_url)
     suffix=uuid.uuid4().hex
     workspace_id=f'org_pgtest_{suffix}'
     snapshot_id=f'snap_pgtest_{suffix}'
-    pool=ConnectionPool(TEST_DATABASE_URL,min_size=0,max_size=3,open=True,timeout=5)
+    def check_connection(db):
+        ConnectionPool.check_connection(db)
+        check_test_connection(db)
+
+    pool=ConnectionPool(safe_url,min_size=0,max_size=3,open=True,timeout=5,
+                        check=check_connection)
     repository=PostgresOrganizationRepository(pool)
     common={
         'workspace_id':workspace_id,
@@ -42,10 +46,12 @@ def test_organization_postgres_persistence_and_concurrent_cas(monkeypatch):
         'result':{'synthetic':True},
         'warnings':[],
     }
+    created = False
     try:
         assert repository.save_analysis(
             **common,expected_revision=None,analysis_id=f'organalysis_initial_{suffix}',
         )==1
+        created = True
 
         outcomes=[]
         lock=threading.Lock()
@@ -81,7 +87,8 @@ def test_organization_postgres_persistence_and_concurrent_cas(monkeypatch):
         assert revision==2
         assert count==2
     finally:
-        with pool.connection() as db:
-            db.execute('DELETE FROM public.organization_analyses WHERE workspace_id=%s',(workspace_id,))
-            db.execute('DELETE FROM public.organization_workspaces WHERE workspace_id=%s',(workspace_id,))
+        if created:
+            with pool.connection() as db:
+                db.execute('DELETE FROM public.organization_analyses WHERE workspace_id=%s',(workspace_id,))
+                db.execute('DELETE FROM public.organization_workspaces WHERE workspace_id=%s',(workspace_id,))
         pool.close()
