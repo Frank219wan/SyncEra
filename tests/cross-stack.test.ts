@@ -5,7 +5,7 @@ import {emptyProfile,roles} from '../src/data.ts';
 import {handleProxy} from '../server/proxy.ts';
 import {
   applyBubbleSizes,mapRecommendations,mapTrendRoles,mergeNormalizedProfile,
-  profileToConfirmRequest,profileToNormalizeRequest,
+  profileToConfirmRequest,profileToNormalizeRequest,validateRecommendationPayload,
 } from '../src/services/api-contract.ts';
 
 const base=(process.env.CROSS_STACK_API_URL??'http://127.0.0.1:8000').replace(/\/$/,'');
@@ -47,9 +47,21 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
     profile_id:ready.id,region:'MY',ai_scenario:'moderate',top_k:5,snapshot_id:trends.meta.snapshot_id,
   });
   assert.equal(recommended.meta.snapshot_id,trends.meta.snapshot_id);
-  const cards=mapRecommendations(recommended.data.recommendations);
+  const verified=validateRecommendationPayload(recommended.data,recommended.meta,{
+    profileId:ready.id,scenario:'moderate',snapshotId:trends.meta.snapshot_id!,topK:5,
+  });
+  assert.ok(verified.some(row=>row.skill_gaps?.some(gap=>gap.current_level===undefined)),
+    'the synthetic backend should omit at least one unknown current_level');
+  const cards=mapRecommendations(verified);
   assert.ok(cards.length>0);
+  assert.ok(cards.some(card=>card.skillGaps?.some(gap=>gap.currentLevel===null)));
   assert.ok(cards.every(card=>card.origin==='computed'&&card.matchScore!==null&&card.reason&&card.evidenceIds));
+  const fast=await envelope<{recommendations:Parameters<typeof mapRecommendations>[0]}>('/recommendations',{
+    profile_id:ready.id,region:'MY',ai_scenario:'fast',top_k:5,snapshot_id:trends.meta.snapshot_id,
+  });
+  assert.deepEqual(validateRecommendationPayload(fast.data,fast.meta,{
+    profileId:ready.id,scenario:'fast',snapshotId:trends.meta.snapshot_id!,topK:5,
+  }),fast.data.recommendations);
 
   const first=cards[0];
   const contractRoleId=`role_${first.roleId.replace(/-/g,'_')}`;

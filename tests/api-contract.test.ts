@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyProfile } from '../src/data.ts';
 import {
-  applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
+  applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRecommendations, mapRoadmap, mapTrendRoles,
   mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
   targetWeeks, toContractLevel, toContractRoleId, toContractSkillId, validateRecommendationPayload,
 } from '../src/services/api-contract.ts';
@@ -26,6 +26,12 @@ test('real recommendations require matching profile, snapshot, ranking, scores a
   assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,match_score:95}]},meta,expected));
   assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,evidence_ids:['bad/url']}]},meta,expected));
   assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,skill_gaps:[{...first.skill_gaps[0],current_level:3}]}]},meta,expected));
+  const unknownGap={skill_id:'skill_python',name:'Python',target_level:3,importance:'high'};
+  const omittedLevel={...payload,recommendations:[{...first,skill_gaps:[unknownGap]}]};
+  const verified=validateRecommendationPayload(omittedLevel,meta,expected);
+  assert.equal(mapRecommendations(verified)[0].skillGaps?.[0].currentLevel,null);
+  assert.doesNotThrow(()=>validateRecommendationPayload({...payload,recommendations:[{...first,skill_gaps:[{...unknownGap,current_level:null}]}]},meta,expected));
+  assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,skill_gaps:[{...unknownGap,current_level:'unknown'}]}]},meta,expected));
 });
 
 test('contract IDs round-trip without leaking display names into keys', () => {
