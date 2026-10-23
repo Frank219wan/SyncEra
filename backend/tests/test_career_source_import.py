@@ -104,10 +104,17 @@ def test_ai_generated_requirement_cannot_claim_official_excerpt():
 
 def test_active_role_needs_active_requirement():
     data = payload()
+    next(row for row in data["occupations"] if row["role_id"])["is_active"] = True
     for assertion in data["skill_assertions"]:
         assertion["status"] = "draft"
     with pytest.raises(ValidationError, match="active named role"):
         CareerImportManifest.model_validate(data)
+
+
+def test_seed_keeps_unapproved_role_and_assertions_inactive():
+    manifest = CareerImportManifest.model_validate(payload())
+    assert not any(row.is_active for row in manifest.occupations)
+    assert all(row.status == "draft" for row in manifest.skill_assertions)
 
 
 def test_prior_year_quarter_can_be_added_without_changing_existing_source():

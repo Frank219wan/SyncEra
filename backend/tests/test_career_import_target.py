@@ -93,6 +93,16 @@ def test_lower_level_apply_cannot_bypass_guard(monkeypatch):
         importer.apply_manifest(manifest, URL)
 
 
+def test_unreviewed_activation_is_rejected_before_connect(monkeypatch):
+    fake_psycopg(monkeypatch, lambda *args, **kwargs: pytest.fail("connected"))
+    data = payload()
+    next(row for row in data["occupations"] if row["role_id"])["is_active"] = True
+    for row in data["skill_assertions"]:
+        row["status"] = "active"
+    with pytest.raises(target.PreviewTargetError, match="Activation"):
+        importer.apply_manifest(importer.CareerImportManifest.model_validate(data), URL)
+
+
 def test_verified_target_connection_failure_is_sanitized(metadata, monkeypatch):
     fake_psycopg(monkeypatch, lambda *args, **kwargs: (_ for _ in ()).throw(
         RuntimeError("postgresql://owner:secret@private.invalid/production")))

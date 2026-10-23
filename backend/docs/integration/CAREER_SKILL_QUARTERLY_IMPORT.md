@@ -6,6 +6,7 @@
 - 19,899 是 DOSM 报告中的 **Software Developers 组**数量，绝不是 `2512-01` 单个岗位数量。`2512` crosswalk 由职业名称与 eMASCO 编码对应推定，保留在 `limitation`；若将来获得 DOSM 原始编码表，以原始编码表复核。
 - 三项技能的文本来源为 eMASCO 当前网页；**技能等级 3 和重要性是项目人工设定**，不是 eMASCO 或 DOSM 给出的等级。
 - 目前样例没有 LLM 生成的技能，也未调用 MiniMax。新的 `role_skill_assertions` 允许存储 `ai_generated` 记录，但必须保留 `model_version`、`prompt_version`、`generated_at`，且前端要显示“AI 生成”。这响应产品侧允许存储 AI 补齐数据的决定，不可将其显示为官方要求。
+- 预置 Manifest 的具体岗位、技能记录和技能断言在入库时分别保持 `is_active=false`、`is_active=false` 和 `draft`；尚未获得 reviewer-owned 审核清单，不自动激活在线职业目录或技能投影。
 - 当前只完成离线入库路径；FastAPI 推荐仍使用已有静态目录。写入 SQL 表**不会自动切换**线上匹配。也不写入真实 CV、个人信息或 API Key。
 
 ## 一季度一记录，未来如何追加

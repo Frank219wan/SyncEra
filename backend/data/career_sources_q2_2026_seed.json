@@ -90,7 +90,7 @@
       "official_skill_summary": ["Programming languages", "Version control", "Software testing and quality assurance"],
       "source_id": "src_emasco_2512_01_20261023",
       "source_url": "https://emasco.mohr.gov.my/masco/2512-01",
-      "is_active": true
+      "is_active": false
     }
   ],
   "demand_quarters": [
@@ -154,7 +154,7 @@
       "target_level": 3,
       "target_level_origin": "human_set",
       "importance": "high",
-      "status": "active"
+      "status": "draft"
     },
     {
       "role_id": "role_masco_2512_01",
@@ -165,7 +165,7 @@
       "target_level": 3,
       "target_level_origin": "human_set",
       "importance": "medium",
-      "status": "active"
+      "status": "draft"
     },
     {
       "role_id": "role_masco_2512_01",
@@ -176,7 +176,7 @@
       "target_level": 3,
       "target_level_origin": "human_set",
       "importance": "high",
-      "status": "active"
+      "status": "draft"
     }
   ]
 }

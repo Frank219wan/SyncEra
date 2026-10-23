@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .quarterly_market import (
     market_signal_from_report_share, quarter_number, select_historical_reference,
 )
-from .career_import_target import verify_connected_preview, verify_preview_target
+from .career_import_target import PreviewTargetError, verify_connected_preview, verify_preview_target
 
 
 def _official_url(value: str, provider: str) -> str:
@@ -369,6 +369,10 @@ def apply_manifest(manifest: CareerImportManifest, database_url: str) -> dict[st
     receive new IDs so a past source/snapshot cannot silently change meaning.
     """
 
+    if any(row.is_active for row in manifest.occupations) or any(
+        row.status == "active" for row in manifest.skill_assertions
+    ):
+        raise PreviewTargetError("Activation requires a separate reviewed release workflow")
     verify_preview_target(database_url)
     from psycopg import connect  # Optional batch-import dependency, not an API import.
 
@@ -376,7 +380,6 @@ def apply_manifest(manifest: CareerImportManifest, database_url: str) -> dict[st
     try:
         connection = connect(database_url, connect_timeout=10, sslrootcert="system")
     except Exception:
-        from .career_import_target import PreviewTargetError
         raise PreviewTargetError("Verified Preview database connection failed") from None
     with connection:
         verify_connected_preview(connection)
@@ -423,8 +426,8 @@ def apply_manifest(manifest: CareerImportManifest, database_url: str) -> dict[st
                     raise ValueError(f"skill_id {row.skill_id} conflicts with existing catalogue")
                 cursor.execute(
                     """INSERT INTO futureproof.skills
-                       (skill_id,name,category,aliases,catalogue_version)
-                       VALUES (%s,%s,%s,%s,%s) ON CONFLICT (skill_id) DO NOTHING""",
+                       (skill_id,name,category,aliases,catalogue_version,is_active)
+                       VALUES (%s,%s,%s,%s,%s,FALSE) ON CONFLICT (skill_id) DO NOTHING""",
                     (row.skill_id, row.name, row.category, row.aliases, manifest.catalogue_version),
                 )
 
