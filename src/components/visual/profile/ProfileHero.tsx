@@ -40,7 +40,7 @@ export function ProfileHero({role,education,stage,region,careerGoal,missingLabel
         <span><MapPin size={14}/>{region||missingLabel}</span>
       </div>
       <div className="profile-goal-strip"><span>{careerGoalLabel}</span><strong>{careerGoal||missingLabel}</strong></div>
-      <Link className="button profile-edit-action" to="/individual/intake/profile?edit=1">{editLabel}<ArrowRight size={16}/></Link>
+      <Link className="button profile-edit-action" to="/individual/intake/profile?edit=1"><span className="profile-edit-action-label">{editLabel}<ArrowRight size={16}/></span></Link>
     </div>
     <div className="profile-identity-art" aria-hidden="true"><BotanicalProfileEmblem/></div>
   </section>;
