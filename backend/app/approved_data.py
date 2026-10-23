@@ -283,6 +283,9 @@ class ResourceRepository:
         if resources.exists() != approvals.exists(): raise ImportRejected('resource approval pair incomplete')
         if resources.exists(): self.import_approved(json.loads(resources.read_text()),json.loads(approvals.read_text()))
 
+    def has_approved_data(self) -> bool:
+        return bool(self.entries)
+
     def select(self, skill_id: str, language: str, currency: str, budget: float):
         options=[entry.resource for entry in self.entries.values() if skill_id in entry.skill_ids and entry.resource.language==language and entry.resource.currency==currency and entry.resource.cost_amount<=budget]
         return sorted(options,key=lambda r:(r.cost_amount,r.resource_id))[0] if options else None
