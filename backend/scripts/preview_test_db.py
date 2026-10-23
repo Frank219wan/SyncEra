@@ -1,6 +1,6 @@
 """Fail-closed connection setup for synthetic tests on the reviewed Neon Preview."""
 
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from scripts.migrate_postgres import (
     PREVIEW_DATABASE, verified_preview_connection, validate_preview_target,
@@ -34,7 +34,8 @@ def checked_test_url(raw_url: str) -> str:
     parsed = urlsplit(raw_url)
     options = dict(parse_qsl(parsed.query, keep_blank_values=True))
     options.update(sslmode='verify-full', sslrootcert=ca_file, connect_timeout='5')
-    return urlunsplit(parsed._replace(query=urlencode(options)))
+    # libpq URI options decode %20, but do not treat '+' as a space in paths.
+    return urlunsplit(parsed._replace(query=urlencode(options, quote_via=quote)))
 
 
 def check_test_connection(db) -> None:
