@@ -21,11 +21,12 @@ CONSTRAINTS = {'weekly_hours': 5, 'budget_amount': 0, 'currency': 'MYR',
 @pytest.mark.skipif(not URL, reason='TEST_DATABASE_URL is not configured')
 def test_persistent_http_flow_and_atomic_revision(monkeypatch):
     import psycopg
-    from scripts.migrate_postgres import main as migrate
+    from scripts.migrate_postgres import apply_migrations
     monkeypatch.setenv('DATABASE_URL', URL)
     monkeypatch.setenv('PROFILE_STORE', 'postgres')
-    migrate()
-    migrate()  # Idempotent initialization.
+    with psycopg.connect(URL) as db:
+        apply_migrations(db)
+        apply_migrations(db)  # Idempotent initialization.
     store_a = PostgresProfileStore(URL)
     store_b = PostgresProfileStore(URL)
     first = TestClient(create_app(store=store_a, adapter=create_adapter()))
@@ -72,11 +73,12 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
 def test_synthetic_cv_psychology_confirm_postgres_readback(monkeypatch):
     import json
     import psycopg
-    from scripts.migrate_postgres import main as migrate
+    from scripts.migrate_postgres import apply_migrations
 
     monkeypatch.setenv('DATABASE_URL', URL)
     monkeypatch.setenv('PROFILE_STORE', 'postgres')
-    migrate()
+    with psycopg.connect(URL) as db:
+        apply_migrations(db)
     store_a = PostgresProfileStore(URL)
     store_b = PostgresProfileStore(URL)
     adapter = create_adapter()  # Rule adapter: no paid MiniMax call.

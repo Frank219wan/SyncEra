@@ -13,13 +13,15 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_organization_postgres_persistence_and_concurrent_cas(monkeypatch):
+    import psycopg
     from psycopg_pool import ConnectionPool
 
     from app.organization_storage import OrganizationRevisionConflict, PostgresOrganizationRepository
-    from scripts.migrate_postgres import main as migrate
+    from scripts.migrate_postgres import apply_migrations
 
     monkeypatch.setenv('DATABASE_URL', TEST_DATABASE_URL)
-    migrate()
+    with psycopg.connect(TEST_DATABASE_URL) as db:
+        apply_migrations(db)
     suffix=uuid.uuid4().hex
     workspace_id=f'org_pgtest_{suffix}'
     snapshot_id=f'snap_pgtest_{suffix}'
