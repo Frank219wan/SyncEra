@@ -168,7 +168,7 @@ export async function handleProxy(
   try { backend = new URL(configuredOrigin); }
   catch { return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.'); }
   if (backend.protocol !== 'https:' || backend.origin !== configuredOrigin ||
-      !/^syncera-backend-git-integration-postgres-pre-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname)) {
+      !/^syncera-backend-git-integration-(?:postgres-pre|career-rada)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname)) {
     return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.');
   }
 

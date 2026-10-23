@@ -102,6 +102,75 @@ export interface ApiRecommendation {
   sdg_links?: Array<{ sdg: number; rationale: string }>;
 }
 
+/** Reject mismatched or malformed service results before the UI labels scores as computed. */
+export function validateRecommendationPayload(
+  data: unknown,
+  meta: ApiMeta | undefined,
+  expected: { profileId: string; scenario: 'moderate' | 'fast'; snapshotId: string; topK: number },
+): ApiRecommendation[] {
+  const record = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  const id = (value: unknown, prefix: string): value is string =>
+    typeof value === 'string' && new RegExp(`^${prefix}[A-Za-z0-9_-]{1,80}$`).test(value);
+  const score = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+  const uniqueIds = (value: unknown, prefix: string): value is string[] =>
+    Array.isArray(value) && value.every(item => id(item, prefix)) && new Set(value).size === value.length;
+  const text = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
+  const textList = (value: unknown): value is string[] => Array.isArray(value) && value.every(text);
+
+  if (!record(data) || data.profile_id !== expected.profileId || data.ai_scenario !== expected.scenario ||
+      !Array.isArray(data.recommendations) || data.recommendations.length > expected.topK) {
+    throw new TypeError('Recommendation context does not match the confirmed profile and scenario.');
+  }
+  if (!meta || !text(meta.request_id) || meta.snapshot_id !== expected.snapshotId ||
+      !text(meta.model_version) || !['synthetic_demo', 'mixed_demo', 'public_open'].includes(meta.data_label ?? '') ||
+      typeof meta.is_mock !== 'boolean' ||
+      (meta.data_label === 'public_open' ? meta.is_mock : !meta.is_mock)) {
+    throw new TypeError('Recommendation provenance does not match the requested snapshot.');
+  }
+
+  const seen = new Set<string>();
+  let previous = 101;
+  for (const [index, raw] of data.recommendations.entries()) {
+    if (!record(raw) || !id(raw.role_id, 'role_') || seen.has(raw.role_id) ||
+        raw.rank !== index + 1 || !text(raw.role_name) || !score(raw.match_score) ||
+        raw.match_score > previous || !record(raw.score_breakdown)) {
+      throw new TypeError('Recommendation IDs, ranking, or scores are invalid.');
+    }
+    seen.add(raw.role_id);
+    previous = raw.match_score;
+    const breakdown = raw.score_breakdown;
+    const keys = ['skill_compatibility', 'interests_preferences', 'scenario_outlook', 'transition_feasibility'] as const;
+    if (!keys.every(key => score(breakdown[key]))) {
+      throw new TypeError('Recommendation score breakdown is invalid.');
+    }
+    const weighted = Math.round((0.45 * (breakdown.skill_compatibility as number) +
+      0.20 * (breakdown.interests_preferences as number) +
+      0.20 * (breakdown.scenario_outlook as number) +
+      0.15 * (breakdown.transition_feasibility as number)) * 100) / 100;
+    if (Math.abs(weighted - raw.match_score) > 0.011 ||
+        !uniqueIds(raw.strengths, 'skill_') || !uniqueIds(raw.evidence_ids, '') ||
+        !Array.isArray(raw.skill_gaps) || !text(raw.reason) || !text(raw.uncertainty) ||
+        !textList(raw.scenario_assumptions)) {
+      throw new TypeError('Recommendation evidence or skill gaps are invalid.');
+    }
+    const gaps = new Set<string>();
+    for (const gap of raw.skill_gaps) {
+      if (!record(gap) || !id(gap.skill_id, 'skill_') || gaps.has(gap.skill_id) ||
+          (raw.strengths as string[]).includes(gap.skill_id) || !text(gap.name) ||
+          !Number.isInteger(gap.target_level) || (gap.target_level as number) < 0 || (gap.target_level as number) > 5 ||
+          (gap.current_level !== null && (!Number.isInteger(gap.current_level) ||
+            (gap.current_level as number) < 0 || (gap.current_level as number) >= (gap.target_level as number))) ||
+          !['high', 'medium', 'low'].includes(String(gap.importance))) {
+        throw new TypeError('Recommendation skill gap is invalid.');
+      }
+      gaps.add(gap.skill_id);
+    }
+  }
+  return data.recommendations as ApiRecommendation[];
+}
+
 export interface ApiCareerAnalysis {
   source: 'minimax' | 'rules_fallback';
   status: 'success' | 'disabled' | 'unavailable' | 'invalid_output' | 'in_progress' | 'rate_limited' | 'input_limit';

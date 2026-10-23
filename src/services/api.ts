@@ -5,7 +5,7 @@ import { validateSyntheticCvFile } from './cv-upload';
 import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
-  toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
+  toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta, validateRecommendationPayload,
   type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
   mapMarketRadar,
 } from './api-contract';
@@ -202,8 +202,17 @@ export const api = {
         snapshot_id: snapshotId,
       },
     });
-    if (!Array.isArray(response.data.recommendations)) throw new ApiError(502, 'INVALID_RESPONSE', 'Missing recommendations in service response.');
-    return {results: mapRecommendations(response.data.recommendations), meta: toServiceMeta(response.meta), analysis: response.data.ai_analysis};
+    let verified: ApiRecommendation[];
+    try {
+      verified = validateRecommendationPayload(response.data, response.meta, {
+        profileId: profile.id, scenario, snapshotId, topK: 5,
+      });
+    } catch {
+      throw new ApiError(502, 'INVALID_RECOMMENDATIONS',
+        'The service returned recommendations that do not match this profile or snapshot.',
+        false, [], response.meta?.request_id ?? '');
+    }
+    return {results: mapRecommendations(verified), meta: toServiceMeta(response.meta), analysis: response.data.ai_analysis};
   },
 
   recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> =>
