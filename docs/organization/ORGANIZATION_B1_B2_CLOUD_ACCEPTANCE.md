@@ -47,7 +47,7 @@
 ## 已有本地证据与后续顺序
 
 - #37 Frontend：`corepack pnpm test` 为 `88 passed`；`corepack pnpm exec tsc -b` PASS；`VITE_API_MODE=real corepack pnpm build` PASS。本地合成 FastAPI/React 契约测试 `4 passed`，非 Cloud。
-- Backend 全量与最终 GitHub CI 需以最新提交复跑为准；上述 `2 passed` 和 `11 passed` 是真实 Preview Neon 专项测试。
+- #37 Backend 最新代码全量本地测试：`159 passed, 4 skipped`；跳过的是真实数据库用例，已另行用上述核验 Preview Neon 运行 `2 passed` 和 `11 passed`。最终 GitHub CI 仍须按最新提交核对。
 - 先提交并核查 #36/#37 最新 CI；再只为 #37 Preview 分支安全配置 Secret/Config，保持 Authentication；手动部署 Backend，记录 ID、SHA 和实际 Host；精确更新 Proxy 白名单并部署 Frontend；仅在可限定 Preview Host 时发布 WAF；最后运行合成 Cloud E2E、回读和精确清理。
 
 **建议合并 PR #36：NO；建议合并 PR #37：NO。** 尚未请求独立 Reviewer Approval。
