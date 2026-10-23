@@ -70,9 +70,9 @@ def load_profile_repository(module_path: str | None = None) -> ProfileRepository
     configured = _configured_module(module_path, "PROFILE_REPOSITORY_MODULE")
     if configured:
         return _load_factory(configured, "create_profile_repository", ("save_new", "get", "update"))
-    from .storage import ProfileStore
+    from .storage import create_profile_store
 
-    return ProfileStore()
+    return create_profile_store()
 
 
 def load_market_repository(module_path: str | None = None) -> MarketSnapshotRepository:

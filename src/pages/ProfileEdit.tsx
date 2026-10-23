@@ -1,9 +1,11 @@
 import {useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {PageHeader,DemoNotice,Field,icons} from '../components';
+import {PsychologyAssessmentForm} from '../components/PsychologyAssessment';
 import {sampleProfile,skillNames} from '../data';
 import {useApp} from '../store';
 import {isDemo} from '../services/api';
+import {hasIncompleteOther} from '../services/psychology-validation';
 import type {Profile,Skill} from '../types';
 
 const {ArrowRight,ArrowLeft,X}=icons;
@@ -17,6 +19,7 @@ export function ProfileEdit(){
   const [skill,setSkill]=useState('python');
   const [level,setLevel]=useState('beginner');
   const [fileError,setFileError]=useState('');
+  const [assessmentError,setAssessmentError]=useState('');
   const [fileName,setFileName]=useState('');
   const change=<K extends keyof Profile>(key:K,value:Profile[K])=>setDraft(current=>({...current,[key]:value,sample:false}));
   const skills=(value:Skill[])=>change('skills',value);
@@ -28,10 +31,18 @@ export function ProfileEdit(){
     change('experience',await file.text());
   }
   function save(){
+    if(hasIncompleteOther(draft.psychology)){
+      setAssessmentError(t('Write an Other response or skip that question before continuing.','继续前请填写“其他”回答，或跳过该题。','Tulis jawapan Lain-lain atau langkau soalan itu sebelum meneruskan.'));
+      return;
+    }
     const changed=JSON.stringify(draft)!==JSON.stringify(state.profile);
-    setState(current=>changed?({...current,profile:{...draft,id:isDemo?draft.id:'',revision:(current.profile.revision||0)+1},results:null,plan:current.plan?{...current.plan,revisionPending:true}:null}):current);
-    toast(changed?t('Profile saved. Calculate matches from your current information.','画像已保存；请根据当前资料重新计算职业推荐。','Profil disimpan. Kira padanan daripada maklumat semasa.'):t('Profile unchanged.','画像未作修改。','Profil tidak berubah.'));
-    nav('/individual/intake');
+    if(!changed){toast(t('Profile unchanged.','画像未作修改。','Profil tidak berubah.'));nav('/individual/intake');return;}
+    setState(current=>({...current,profile:{...draft,id:current.profile.id,revision:current.profile.revision},
+      results:null,snapshotId:'',serviceMeta:null,trendPackage:null,draft:null,
+      plan:current.plan?{...current.plan,revisionPending:true}:null}));
+    if(isDemo){toast(t('Profile saved. Calculate matches from your current information.','画像已保存；请根据当前资料重新计算职业推荐。','Profil disimpan. Kira padanan daripada maklumat semasa.'));nav('/individual/intake');return;}
+    toast(t('Review and confirm your changes to save them to the profile service.','请核对并确认修改，资料才会保存到画像服务。','Semak dan sahkan perubahan untuk menyimpannya ke perkhidmatan profil.'));
+    nav(state.profile.id&&state.profile.revision?'/individual/intake/review':'/individual/intake/profile');
   }
   const source=state.profile;
   return <><PageHeader title={t('Edit my profile','编辑我的画像','Edit profil saya')} description={t('Review each field, then save your changes.','核对各项资料后再保存。','Semak setiap medan sebelum menyimpan.')} action={<DemoNotice/>}/><div className="profile-layout"><form className="surface form-panel" onSubmit={event=>{event.preventDefault();save();}}>
@@ -45,6 +56,8 @@ export function ProfileEdit(){
     <h2 className="form-section-title">{t('What matters to you','你在意什么','Apa yang penting bagi anda')}</h2><Field label={t('Interests and industries *','兴趣与行业偏好 *','Minat dan industri *')}><input required value={draft.interests} onChange={e=>change('interests',e.target.value)}/></Field><Field label={t('Your future vision *','未来愿景 *','Visi masa depan *')}><textarea required rows={2} value={draft.vision} onChange={e=>change('vision',e.target.value)}/></Field>
     <div className="field-grid"><Field label={t('Work preferences (optional)','工作偏好（选填）','Keutamaan kerja (pilihan)')}><input value={draft.preferences} onChange={e=>change('preferences',e.target.value)}/></Field><Field label={t('MBTI (optional)','MBTI（选填）','MBTI (pilihan)')}><select value={draft.mbti} onChange={e=>change('mbti',e.target.value)}><option value="">{t('Prefer not to say','暂不填写','Tidak mahu berkongsi')}</option>{['INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP','ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP'].map(id=><option key={id}>{id}</option>)}</select></Field></div>
     <Field label={t('Career region','职业地区','Wilayah kerjaya')}><select value={draft.region} onChange={e=>change('region',e.target.value)}><option>Malaysia</option><option>Singapore</option><option>Global / remote</option></select></Field>
-    <div className="form-actions"><button type="button" className="button secondary" onClick={()=>nav('/individual/intake')}><ArrowLeft size={16}/>{t('Cancel','取消','Batal')}</button><button className="button" type="submit">{t('Save profile','保存画像','Simpan profil')}<ArrowRight size={16}/></button></div>
-  </form><aside className="profile-aside"><div className="sample-cv"><h3>{t('Try a fresh perspective','先试一次，发现可能','Cuba perspektif baharu')}</h3><p>{t('Load a fictional graduate profile into this draft.','把虚构毕业生画像载入当前草稿。','Muat profil graduan rekaan ke dalam draf ini.')}</p><button type="button" className="button secondary" onClick={()=>setDraft({...structuredClone(sampleProfile),stage:draft.stage||'graduate',goal:draft.goal||'explore'})}>{t('Use sample CV','使用示例简历','Guna CV contoh')}</button></div><div className="upload-box"><h3>{t('Have a synthetic CV?','已有合成简历？','Ada CV sintetik?')}</h3><label className="button secondary upload-label">{t('Choose a file','选择文件','Pilih fail')}<input type="file" accept=".txt,.pdf,.docx" onChange={e=>void upload(e.target.files?.[0])}/></label>{fileName&&<p>{fileName}</p>}{fileError&&<p className="field-error" role="alert">{fileError}</p>}</div><p className="aside-note">{t('Changes are saved only when you press Save profile.','只有按下“保存画像”才会写入修改。','Perubahan disimpan hanya apabila anda menekan Simpan profil.')}{source.sample?' · '+t('Current saved profile uses a synthetic example.','当前已保存画像使用合成示例。','Profil tersimpan menggunakan contoh sintetik.'):''}</p></aside></div></>;
+    {assessmentError&&<p className="field-error" role="alert">{assessmentError}</p>}
+    <PsychologyAssessmentForm value={draft.psychology} onChange={psychology=>{setAssessmentError('');change('psychology',psychology);}}/>
+    <div className="form-actions"><button type="button" className="button secondary" onClick={()=>nav('/individual/intake')}><ArrowLeft size={16}/>{t('Cancel','取消','Batal')}</button><button className="button" type="submit">{isDemo?t('Save profile','保存画像','Simpan profil'):t('Review changes','核对修改','Semak perubahan')}<ArrowRight size={16}/></button></div>
+  </form><aside className="profile-aside"><div className="sample-cv"><h3>{t('Try a fresh perspective','先试一次，发现可能','Cuba perspektif baharu')}</h3><p>{t('Load a fictional graduate profile into this draft.','把虚构毕业生画像载入当前草稿。','Muat profil graduan rekaan ke dalam draf ini.')}</p><button type="button" className="button secondary" onClick={()=>setDraft({...structuredClone(sampleProfile),id:draft.id,revision:draft.revision,uploadedFromCv:draft.uploadedFromCv,psychology:draft.psychology,stage:draft.stage||'graduate',goal:draft.goal||'explore'})}>{t('Use sample CV','使用示例简历','Guna CV contoh')}</button></div><div className="upload-box"><h3>{t('Have a synthetic CV?','已有合成简历？','Ada CV sintetik?')}</h3><label className="button secondary upload-label">{t('Choose a file','选择文件','Pilih fail')}<input type="file" accept=".txt,.pdf,.docx" onChange={e=>void upload(e.target.files?.[0])}/></label>{fileName&&<p>{fileName}</p>}{fileError&&<p className="field-error" role="alert">{fileError}</p>}</div><p className="aside-note">{isDemo?t('Changes are saved in this browser when you press Save profile.','按下“保存画像”后，修改会保存在当前浏览器。','Perubahan disimpan dalam pelayar ini selepas menekan Simpan profil.'):t('Review and confirm to save supported profile fields to the service. Education, experience, vision and work preferences remain browser notes in this version.','请核对并确认，以将服务支持的画像字段保存至后台。本版本中的教育、经历、愿景和工作偏好仍是浏览器笔记。','Semak dan sahkan untuk menyimpan medan profil yang disokong. Pendidikan, pengalaman, visi dan keutamaan kerja kekal sebagai nota pelayar dalam versi ini.')}{source.sample?' · '+t('Current saved profile uses a synthetic example.','当前已保存画像使用合成示例。','Profil tersimpan menggunakan contoh sintetik.'):''}</p></aside></div></>;
 }

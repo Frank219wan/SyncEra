@@ -24,7 +24,7 @@ export interface ApiNormalizedProfile {
   interests: string[];
   preferred_field_id?: string | null;
   study_constraints?: Record<string, unknown>;
-  psychology?: { mbti?: string | null };
+  psychology?: { mbti?: string | null; assessment_version?: string; assessment_type?: string; scenario_answers?: Record<string,'A'|'B'|'C'|'D'|'E'|null>; other_responses?: Record<string,string>; consent_to_personalization?: boolean };
   reviewed_by_user: boolean;
   revision: number;
 }
@@ -76,6 +76,25 @@ export interface ApiRoleData {
   required_skills: Array<{ skill_id: string; name: string; target_level: number; importance: string }>;
   evidence_ids: string[];
   sdg_links: Array<{ sdg: number; rationale: string }>;
+  // Reserved for a future agreed contract. Current v1.0 responses omit this field.
+  alignment_tags?: unknown;
+}
+
+export interface VerifiedRoleAlignmentTag {
+  kind: 'interest' | 'goal' | 'work_style';
+  label: string;
+  source: 'MASCO' | 'curated' | 'ai_generated';
+}
+
+export function verifiedRoleAlignmentTags(role: ApiRoleData): VerifiedRoleAlignmentTag[] {
+  if(!Array.isArray(role.alignment_tags))return [];
+  return role.alignment_tags.filter((item:unknown):item is VerifiedRoleAlignmentTag=>{
+    if(!item||typeof item!=='object')return false;
+    const tag=item as Record<string,unknown>;
+    return ['interest','goal','work_style'].includes(String(tag.kind))
+      && typeof tag.label==='string' && Boolean(tag.label.trim())
+      && ['MASCO','curated','ai_generated'].includes(String(tag.source));
+  });
 }
 
 export interface ApiTaskImpact {
@@ -94,12 +113,94 @@ export interface ApiRecommendation {
   match_score: number | null;
   score_breakdown?: Record<string, number | null>;
   strengths?: string[];
-  skill_gaps?: Array<{ skill_id: string; name: string; current_level: number | null; target_level: number; importance: string }>;
+  // FastAPI's response_model_exclude_none omits an unknown current_level.
+  skill_gaps?: Array<{ skill_id: string; name: string; current_level?: number | null; target_level: number; importance: string }>;
   reason?: string;
   evidence_ids?: string[];
   scenario_assumptions?: string[];
   uncertainty?: string;
   sdg_links?: Array<{ sdg: number; rationale: string }>;
+}
+
+/** Reject mismatched or malformed service results before the UI labels scores as computed. */
+export function validateRecommendationPayload(
+  data: unknown,
+  meta: ApiMeta | undefined,
+  expected: { profileId: string; scenario: 'moderate' | 'fast'; snapshotId: string; topK: number },
+): ApiRecommendation[] {
+  const record = (value: unknown): value is Record<string, unknown> =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
+  const id = (value: unknown, prefix: string): value is string =>
+    typeof value === 'string' && new RegExp(`^${prefix}[A-Za-z0-9_-]{1,80}$`).test(value);
+  const score = (value: unknown): value is number =>
+    typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
+  const uniqueIds = (value: unknown, prefix: string): value is string[] =>
+    Array.isArray(value) && value.every(item => id(item, prefix)) && new Set(value).size === value.length;
+  const text = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
+  const textList = (value: unknown): value is string[] => Array.isArray(value) && value.every(text);
+
+  if (!record(data) || data.profile_id !== expected.profileId || data.ai_scenario !== expected.scenario ||
+      !Array.isArray(data.recommendations) || data.recommendations.length > expected.topK) {
+    throw new TypeError('Recommendation context does not match the confirmed profile and scenario.');
+  }
+  if (!meta || !text(meta.request_id) || meta.snapshot_id !== expected.snapshotId ||
+      !text(meta.model_version) || !['synthetic_demo', 'mixed_demo', 'public_open'].includes(meta.data_label ?? '') ||
+      typeof meta.is_mock !== 'boolean' ||
+      (meta.data_label === 'public_open' ? meta.is_mock : !meta.is_mock)) {
+    throw new TypeError('Recommendation provenance does not match the requested snapshot.');
+  }
+
+  const seen = new Set<string>();
+  let previous = 101;
+  for (const [index, raw] of data.recommendations.entries()) {
+    if (!record(raw) || !id(raw.role_id, 'role_') || seen.has(raw.role_id) ||
+        raw.rank !== index + 1 || !text(raw.role_name) || !score(raw.match_score) ||
+        raw.match_score > previous || !record(raw.score_breakdown)) {
+      throw new TypeError('Recommendation IDs, ranking, or scores are invalid.');
+    }
+    seen.add(raw.role_id);
+    previous = raw.match_score;
+    const breakdown = raw.score_breakdown;
+    const keys = ['skill_compatibility', 'interests_preferences', 'scenario_outlook', 'transition_feasibility'] as const;
+    if (!keys.every(key => score(breakdown[key]))) {
+      throw new TypeError('Recommendation score breakdown is invalid.');
+    }
+    const weighted = Math.round((0.45 * (breakdown.skill_compatibility as number) +
+      0.20 * (breakdown.interests_preferences as number) +
+      0.20 * (breakdown.scenario_outlook as number) +
+      0.15 * (breakdown.transition_feasibility as number)) * 100) / 100;
+    if (Math.abs(weighted - raw.match_score) > 0.011 ||
+        !uniqueIds(raw.strengths, 'skill_') || !uniqueIds(raw.evidence_ids, '') ||
+        !Array.isArray(raw.skill_gaps) || !text(raw.reason) || !text(raw.uncertainty) ||
+        !textList(raw.scenario_assumptions)) {
+      throw new TypeError('Recommendation evidence or skill gaps are invalid.');
+    }
+    const gaps = new Set<string>();
+    for (const gap of raw.skill_gaps) {
+      if (!record(gap) || !id(gap.skill_id, 'skill_') || gaps.has(gap.skill_id) ||
+          (raw.strengths as string[]).includes(gap.skill_id) || !text(gap.name) ||
+          !Number.isInteger(gap.target_level) || (gap.target_level as number) < 0 || (gap.target_level as number) > 5 ||
+          (gap.current_level !== null && gap.current_level !== undefined && (!Number.isInteger(gap.current_level) ||
+            (gap.current_level as number) < 0 || (gap.current_level as number) >= (gap.target_level as number))) ||
+          !['high', 'medium', 'low'].includes(String(gap.importance))) {
+        throw new TypeError('Recommendation skill gap is invalid.');
+      }
+      gaps.add(gap.skill_id);
+    }
+  }
+  return data.recommendations as ApiRecommendation[];
+}
+
+export interface ApiCareerAnalysis {
+  source: 'minimax' | 'rules_fallback';
+  status: 'success' | 'disabled' | 'unavailable' | 'invalid_output' | 'in_progress' | 'rate_limited' | 'input_limit';
+  role_id: string | null;
+  reason: string;
+  strength_skill_ids: string[];
+  gap_skill_ids: string[];
+  risk_and_uncertainty: string;
+  evidence_ids: string[];
+  model_version: string | null;
 }
 
 export interface ApiRoadmapStep {
@@ -251,12 +352,16 @@ export function profileToNormalizeRequest(profile: Profile) {
       interests: splitInterests(profile.interests),
       skills: contractSkills(profile.skills),
     },
-    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[] },
+    psychology: { mbti: profile.mbti || null, intrinsic_motivators: [] as string[], ...(profile.psychology ?? {}) },
     study_constraints: {
       weekly_hours: 5, budget_amount: 0, currency: 'MYR', language: 'en',
       target_weeks: 12, learning_pace: 'focused',
     },
   };
+}
+
+export function syntheticTextToNormalizeRequest(profile: Profile, text: string) {
+  return {...profileToNormalizeRequest(profile), input_type: 'synthetic_cv_text' as const, text: text.trim(), form: null};
 }
 
 export function profileToConfirmRequest(profile: Profile) {
@@ -265,6 +370,9 @@ export function profileToConfirmRequest(profile: Profile) {
     skills: contractSkills(profile.skills, true),
     reviewed_by_user: true,
     profile_revision: profile.revision,
+    ...(profile.psychology ? { psychology: { mbti: profile.mbti || null, ...profile.psychology } } : {}),
+    ...(profile.occupation.trim() ? {current_occupation:profile.occupation.trim()} : {}),
+    ...(profile.interests.trim() ? {interests:splitInterests(profile.interests)} : {}),
   };
 }
 
@@ -275,7 +383,9 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     id: profile.profile_id,
     occupation: profile.current_occupation ?? fallback.occupation,
     interests: profile.interests?.join(', ') || fallback.interests,
-    mbti: profile.psychology?.mbti ?? fallback.mbti,
+    // MBTI remains self-reported context; normalization never infers it from a CV.
+    mbti: fallback.mbti,
+    psychology: profile.psychology?.assessment_version ? {assessment_version:'1.0',assessment_type:'self_report_reflection',scenario_answers:profile.psychology.scenario_answers??{},other_responses:profile.psychology.other_responses??{},consent_to_personalization:profile.psychology.consent_to_personalization??false} : fallback.psychology,
     revision: profile.revision,
     skills: [...profile.skills.map(skill => ({
       id: fromContractSkillId(skill.skill_id),
@@ -299,7 +409,7 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
     skillGaps: item.skill_gaps?.map(gap => ({
       skillId: fromContractSkillId(gap.skill_id),
       name: gap.name,
-      currentLevel: gap.current_level,
+      currentLevel: gap.current_level ?? null,
       targetLevel: gap.target_level,
       importance: gap.importance,
     })),

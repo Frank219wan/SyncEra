@@ -3,10 +3,18 @@ export type Copy = readonly [string, string, string];
 export type Scenario = 'moderate' | 'fast';
 export type Origin = 'synthetic_fixture' | 'public_observed' | 'computed' | 'scenario_model' | 'llm_generated';
 export interface Skill { id: string; level: string; source: 'manual' | 'cv_extracted' | 'inferred'; confirmed: boolean; confidence?: number; backendSupported?: boolean }
+export type PsychologyChoice = 'A'|'B'|'C'|'D'|'E'|null;
+export interface PsychologyAssessment { assessment_version:'1.0'; assessment_type:'self_report_reflection'; scenario_answers:Record<string,PsychologyChoice>; other_responses:Record<string,string>; consent_to_personalization:boolean }
 export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
+  goalTags?: string[];
+  workStyle?: { collaboration: string; pace: string; structure: string };
+  personalSources?: Partial<Record<'interests' | 'vision' | 'workStyle', 'self_reported' | 'sample' | 'ai_draft'>>;
+  personalConfirmed?: Partial<Record<'interests' | 'vision' | 'workStyle', boolean>>;
   region: string; synthetic: boolean; sample: boolean; revision?: number;
+  psychology?: PsychologyAssessment;
+  uploadedFromCv?: boolean;
 }
 export interface Constraints { hours: number; budget: number; language: Locale; start: string; deadline: string; baseline: string }
 export interface Task { id: string; skill: string; title: Copy; hours: number; done: boolean; completedAt?: string; completedOffset?: number; evidence?: string; week: number }

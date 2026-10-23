@@ -1,14 +1,13 @@
 import {useEffect,useState} from 'react';
 import {Link,useParams} from 'react-router-dom';
 import {api} from '../services/api';
-import {fromContractSkillId,type ApiRoleData,type ApiTaskImpact} from '../services/api-contract';
+import {fromContractSkillId,verifiedRoleAlignmentTags,type ApiCareerAnalysis,type ApiRoleData,type ApiTaskImpact} from '../services/api-contract';
+import {hasPersonalValue,personalFields} from '../profilePersonalization';
 import {useApp} from '../store';
 import type {Evidence,MarketRadarPackage,Recommendation,TrendPackage} from '../types';
 import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
 import {LiveCareerRadar} from './LiveCareerRadar';
 import {Radar} from './RadarExperience';
-
-const dosmRadarEnabled=import.meta.env.VITE_DOSM_MARKET_RADAR_ENABLED==='true';
 
 function EvidenceSources({ids}:{ids:string[]}) {
   const {t}=useApp();
@@ -36,8 +35,8 @@ function EvidenceSources({ids}:{ids:string[]}) {
   </div>;
 }
 
-export function ConnectedRadar(){
-  return dosmRadarEnabled?<ConnectedDosmRadar/>:<ConnectedMatchingRadar/>;
+export function ConnectedRadar({mode}:{mode:'matching'|'dosm'}){
+  return mode==='dosm'?<ConnectedDosmRadar/>:<ConnectedMatchingRadar/>;
 }
 
 function ConnectedMatchingRadar(){
@@ -83,15 +82,16 @@ export function ConnectedRecommendations(){
   const {state,setState,t}=useApp();
   const eligible=Boolean(state.snapshotId&&state.results?.length&&state.results.every(item=>item.origin==='computed'));
   const [results,setResults]=useState<Recommendation[]|null>(eligible?state.results:null);
+  const [analysis,setAnalysis]=useState<ApiCareerAnalysis|undefined>();
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
   const [attempt,setAttempt]=useState(0);
   useEffect(()=>{
     if(!eligible)return;
     let active=true;
-    setResults(null);setError('');setBusy(true);
-    api.recommendDetailed(state.profile,state.scenario,state.selectedRole,state.snapshotId).then(({results:rows,meta})=>{
-      if(active){setResults(rows);setState(previous=>({...previous,results:rows,serviceMeta:meta}));}
+    setResults(null);setAnalysis(undefined);setError('');setBusy(true);
+    api.recommendDetailed(state.profile,state.scenario,state.selectedRole,state.snapshotId).then(({results:rows,meta,analysis:detail})=>{
+      if(active){setResults(rows);setAnalysis(detail);setState(previous=>({...previous,results:rows,serviceMeta:meta}));}
     }).catch(e=>{if(active)setError((e as Error).message);}).finally(()=>{if(active)setBusy(false);});
     return()=>{active=false;};
   },[eligible,state.profile.id,state.scenario,state.snapshotId,attempt,setState]);
@@ -99,10 +99,22 @@ export function ConnectedRecommendations(){
   return <>
     <PageHeader title={t('Career matches','职业推荐','Padanan kerjaya')} description={t('Relative fit from the selected snapshot and scenario.','基于所选快照和情景的相对匹配。','Padanan relatif daripada gambaran dan senario terpilih.')} action={<DemoNotice/>}/>
     <div className="results-context"><div><strong>{t('Current snapshot','当前快照','Gambaran semasa')}: {state.snapshotId}</strong><p>{state.serviceMeta?.dataLabel} · {t('Scores are not hiring probabilities.','评分不代表录用概率。','Skor bukan kebarangkalian diambil bekerja.')}</p></div><ScenarioSwitcher/></div>
+    <p className="inline-note">{t('Career vision and work style are not included in this score yet. Only the service calculates scores; no 8/7/5 sub-scores are shown.','愿景与工作方式尚未参与本次评分。评分仅来自服务端；不展示尚未实现的 8/7/5 分项。','Visi kerjaya dan gaya kerja belum termasuk dalam skor ini. Hanya perkhidmatan mengira skor.')}</p>
+    {personalFields.some(field=>!hasPersonalValue(state.profile,field))&&<p className="muted">{t('Some optional answers are missing; personalized interpretation may be less reliable. Missing answers do not exclude roles in the frontend.','部分选填信息未提供，个性化解读的可信度可能较低；前端不会因缺失答案排除岗位。','Sebahagian jawapan pilihan tiada; tafsiran peribadi mungkin kurang boleh dipercayai.')}</p>}
     {error&&<ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>}
     {busy&&<p className="muted">{t('Checking this scenario…','正在计算此情景…','Mengira senario ini…')}</p>}
+    {analysis&&results&&!error&&<section className="surface" aria-label="Career recommendation analysis">
+      <h2>{analysis.source==='minimax'?t('MiniMax career analysis','MiniMax 职业分析','Analisis kerjaya MiniMax'):t('Rule recommendation','规则推荐','Cadangan berasaskan peraturan')}</h2>
+      {analysis.source==='rules_fallback'&&<p className="muted">{t('MiniMax was not used for this result.','此结果未使用 MiniMax。','MiniMax tidak digunakan untuk hasil ini.')} ({analysis.status})</p>}
+      {analysis.role_id&&<p><strong>{t('Recommended direction','推荐方向','Arah disyorkan')}:</strong> {results.find(item=>item.roleId===analysis.role_id?.replace(/^role_/,'').replace(/_/g,'-'))?.roleName??analysis.role_id}</p>}
+      <p>{analysis.reason}</p>
+      {!!analysis.strength_skill_ids.length&&<div><strong>{t('Existing strengths','已有优势','Kekuatan sedia ada')}:</strong> <span className="skill-row">{analysis.strength_skill_ids.map(id=><SkillChip key={id} id={fromContractSkillId(id)} tone="strength"/>)}</span></div>}
+      {!!analysis.gap_skill_ids.length&&<div><strong>{t('Main skill gaps','主要技能缺口','Jurang kemahiran utama')}:</strong> <span className="skill-row">{analysis.gap_skill_ids.map(id=><SkillChip key={id} id={fromContractSkillId(id)}/>)}</span></div>}
+      <p><strong>{t('Scenario risks and uncertainty','情境风险与不确定性','Risiko senario dan ketidakpastian')}:</strong> {analysis.risk_and_uncertainty}</p>
+      {!!analysis.evidence_ids.length&&<details><summary>{t('Evidence','依据','Bukti')}</summary><EvidenceSources ids={analysis.evidence_ids}/></details>}
+    </section>}
     {results&&!error&&<div className="career-grid">{results.map(item=><article className="career-card" key={item.roleId}>
-      <div className="career-top"><span className="rank-number">{item.rank}</span><span className="fit-score">{item.matchScore??'—'}<small>{t('relative fit / 100','相对匹配 / 100','padanan relatif / 100')}</small></span></div>
+      <div className="career-top"><span className="rank-number">{item.rank}</span><span className="fit-score">{item.matchScore??'—'}<small>{t('Service-calculated score','服务计算评分','Skor dikira perkhidmatan')}</small></span></div>
       <h2><Link to={`/individual/roles/${item.roleId}`}>{item.roleName??item.roleId}</Link></h2>
       <p>{item.reason}</p>
       <div className="skill-row">{item.strengths?.map(id=><SkillChip key={id} id={id} tone="strength"/>)}</div>
@@ -141,7 +153,11 @@ export function ConnectedRoleDetail(){
     {tasksError&&<ErrorState message={tasksError} retry={()=>setAttempt(value=>value+1)}/>}
     {role&&<><section className="surface"><h2>{t('Required skills','所需技能','Kemahiran diperlukan')}</h2>
       {role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {skill.importance}</span></div>)}
-      {result&&<p>{t('Your relative fit','你的相对匹配','Padanan relatif anda')}: {result.matchScore??'—'} / 100 · {result.reason}</p>}
+      {result&&<p>{t('Service-calculated score','服务计算评分','Skor dikira perkhidmatan')}: {result.matchScore??'—'} · {result.reason}</p>}
+    </section>
+    <section className="surface"><h2>{t('Role alignment tags and sources','岗位关联标签与来源','Tag padanan kerjaya dan sumber')}</h2>
+      {verifiedRoleAlignmentTags(role).length?verifiedRoleAlignmentTags(role).map((tag,index)=><p key={`${tag.kind}-${tag.label}-${index}`}>{tag.label} · {tag.kind==='interest'?t('Interest','兴趣','Minat'):tag.kind==='goal'?t('Goal','目标','Matlamat'):t('Work style','工作方式','Gaya kerja')} · {tag.source==='MASCO'?'MASCO':tag.source==='curated'?t('Manually curated','人工整理','Disusun secara manual'):t('AI generated','AI 生成','Dijana AI')}</p>)
+        :<p className="muted">{t('API v1.0 does not yet provide sourced interest, goal or work-style tags for this role. No tags are invented here.','API v1.0 尚未提供该岗位带来源的兴趣、目标或工作方式标签；此处不编造标签。','API v1.0 belum menyediakan tag bersumber untuk kerjaya ini; tiada tag direka.')}</p>}
     </section>
     <section className="surface"><h2>{t('Task impacts','任务影响','Impak tugas')}</h2>
       <p className="muted">{t('Illustrative task scenarios from synthetic data. They do not predict job loss or replace human review.','来自合成数据的任务示例，不代表岗位流失预测，也不能替代人工审查。','Senario tugas ilustrasi daripada data sintetik. Ia bukan ramalan kehilangan kerja atau pengganti semakan manusia.')}</p>

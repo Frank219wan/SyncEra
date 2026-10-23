@@ -177,7 +177,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -297,7 +297,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -417,7 +417,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -466,7 +466,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -541,7 +541,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -590,7 +590,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -631,7 +631,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -837,11 +837,60 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiles/{profile_id}": {
+      "get": {
+        "summary": "Get Profile",
+        "operationId": "get_profile_api_v1_profiles__profile_id__get",
+        "parameters": [
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConfirmData_"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -905,7 +954,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -993,7 +1042,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -1041,7 +1090,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "Unprocessable Entity",
             "content": {
               "application/json": {
                 "schema": {
@@ -1404,6 +1453,95 @@
         ],
         "title": "BubblesData"
       },
+      "CareerAnalysis": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "minimax",
+              "rules_fallback"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "success",
+              "disabled",
+              "unavailable",
+              "invalid_output",
+              "in_progress",
+              "rate_limited",
+              "input_limit"
+            ],
+            "title": "Status"
+          },
+          "role_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "strength_skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Strength Skill Ids"
+          },
+          "gap_skill_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Gap Skill Ids"
+          },
+          "risk_and_uncertainty": {
+            "type": "string",
+            "title": "Risk And Uncertainty"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Ids"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "status",
+          "role_id",
+          "reason",
+          "strength_skill_ids",
+          "gap_skill_ids",
+          "risk_and_uncertainty",
+          "evidence_ids"
+        ],
+        "title": "CareerAnalysis"
+      },
       "CareerRadarNarrative": {
         "properties": {
           "status": {
@@ -1548,6 +1686,43 @@
               }
             ],
             "title": "Profile Revision"
+          },
+          "psychology": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Psychology"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_occupation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Occupation"
+          },
+          "interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interests"
           }
         },
         "additionalProperties": false,
@@ -2587,6 +2762,9 @@
           "psychology": {
             "$ref": "#/components/schemas/Psychology",
             "default": {
+              "scenario_answers": {},
+              "other_responses": {},
+              "consent_to_personalization": false,
               "intrinsic_motivators": []
             }
           },
@@ -2658,6 +2836,9 @@
           "psychology": {
             "$ref": "#/components/schemas/Psychology",
             "default": {
+              "scenario_answers": {},
+              "other_responses": {},
+              "consent_to_personalization": false,
               "intrinsic_motivators": []
             }
           },
@@ -2728,6 +2909,65 @@
       },
       "Psychology": {
         "properties": {
+          "assessment_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "1.0"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Version"
+          },
+          "assessment_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "self_report_reflection"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Type"
+          },
+          "scenario_answers": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "A",
+                    "B",
+                    "C",
+                    "D",
+                    "E"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Scenario Answers",
+            "default": {}
+          },
+          "other_responses": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Other Responses",
+            "default": {}
+          },
+          "consent_to_personalization": {
+            "type": "boolean",
+            "title": "Consent To Personalization",
+            "default": false
+          },
           "mbti": {
             "anyOf": [
               {
@@ -2794,6 +3034,16 @@
             },
             "type": "array",
             "title": "Recommendations"
+          },
+          "ai_analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CareerAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "career_radar": {
             "anyOf": [

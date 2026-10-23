@@ -1676,6 +1676,26 @@ components:
     Psychology:
       type: object
       properties:
+        assessment_version:
+          type: string
+          nullable: true
+          enum: ['1.0', null]
+        assessment_type:
+          type: string
+          nullable: true
+          enum: [self_report_reflection, null]
+        scenario_answers:
+          type: object
+          additionalProperties:
+            type: string
+            nullable: true
+            enum: [A, B, C, D, E, null]
+        other_responses:
+          type: object
+          additionalProperties:
+            type: string
+        consent_to_personalization:
+          type: boolean
         mbti:
           type: string
           nullable: true
@@ -1825,6 +1845,22 @@ components:
           type: boolean
           enum:
           - true
+        profile_revision:
+          type: integer
+          minimum: 1
+          nullable: true
+        psychology:
+          $ref: '#/components/schemas/Psychology'
+        current_occupation:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 500
+        interests:
+          type: array
+          nullable: true
+          items:
+            type: string
       additionalProperties: false
       required:
       - profile_id

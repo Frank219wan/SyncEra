@@ -1,17 +1,18 @@
 import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence, MarketRadarPackage } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
+import { validateSyntheticCvFile } from './cv-upload';
 import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
-  toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
+  toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta, validateRecommendationPayload,
+  syntheticTextToNormalizeRequest,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
   mapMarketRadar,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
-const configuredBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const apiRoot = configuredBase.endsWith('/api/v1') ? configuredBase : `${configuredBase}/api/v1`;
+const apiRoot = '/api/v1';
 
 interface SuccessEnvelope<T> { data: T; meta: ApiMeta }
 interface ErrorEnvelope {
@@ -30,19 +31,20 @@ export class ApiError extends Error {
   ) { super(message); }
 }
 
-async function request<T>(path: string, options: { body?: unknown; method?: string } = {}): Promise<SuccessEnvelope<T>> {
+async function request<T>(path: string, options: { body?: unknown; form?: FormData; method?: string; headers?: Record<string,string>; timeoutMs?: number } = {}): Promise<SuccessEnvelope<T>> {
   const requestId = `web_${crypto.randomUUID()}`;
   let response: Response;
   try {
     response = await fetch(`${apiRoot}${path}`, {
-      method: options.method ?? (options.body === undefined ? 'GET' : 'POST'),
+      method: options.method ?? (options.body === undefined && !options.form ? 'GET' : 'POST'),
       headers: {
         Accept: 'application/json',
         ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
         'X-Request-ID': requestId,
+        ...options.headers,
       },
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-      signal: AbortSignal.timeout(20000),
+      body: options.form ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
+      signal: AbortSignal.timeout(options.timeoutMs ?? 20000),
     });
   } catch (error) {
     const message = error instanceof DOMException && error.name === 'TimeoutError'
@@ -99,7 +101,27 @@ export const api = {
   normalize: async (profile: Profile): Promise<Profile> => {
     if (isDemo) return structuredClone(profile);
     const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: profileToNormalizeRequest(profile) });
-    return mergeNormalizedProfile(response.data.profile, profile);
+    return {...mergeNormalizedProfile(response.data.profile, profile), uploadedFromCv: false};
+  },
+
+  uploadSyntheticCv: async (file: File, profile: Profile): Promise<Profile> => {
+    if (isDemo) throw new ApiError(0, 'UPLOAD_REQUIRES_PREVIEW', 'PDF and DOCX upload requires the protected real API Preview.');
+    const issue = await validateSyntheticCvFile(file);
+    if (issue || !/\.(pdf|docx)$/i.test(file.name)) {
+      throw new ApiError(400, 'CV_INVALID_FILE', 'Choose a valid text-based PDF or DOCX under 3 MiB.');
+    }
+    const form = new FormData();
+    form.append('file', file, file.name);
+    form.append('synthetic_input', 'true');
+    form.append('study_constraints', JSON.stringify(profileToNormalizeRequest(profile).study_constraints));
+    const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/upload', { form, timeoutMs: 58_000 });
+    return {...mergeNormalizedProfile(response.data.profile, profile), uploadedFromCv: true};
+  },
+
+  normalizeSyntheticText: async (profile: Profile, text: string): Promise<Profile> => {
+    if (isDemo) return {...structuredClone(profile), experience: text};
+    const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: syntheticTextToNormalizeRequest(profile, text) });
+    return mergeNormalizedProfile(response.data.profile, {...profile, experience: text});
   },
 
   confirm: async (profile: Profile): Promise<Profile> => {
@@ -175,9 +197,10 @@ export const api = {
     return { tasks: response.data.tasks, meta: toServiceMeta(response.meta) };
   },
 
-  recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>}> => {
+  recommendDetailed: async (profile: Profile, scenario: Scenario, _selectedRole: string, snapshotId: string): Promise<{results: Recommendation[]; meta: ReturnType<typeof toServiceMeta>; analysis?: ApiCareerAnalysis}> => {
     if (isDemo) return {results: demoRecommendations(profile, scenario), meta: demoMeta(snapshotId)};
-    const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[] }>('/recommendations', {
+    const response = await request<{ profile_id: string; ai_scenario: Scenario; recommendations: ApiRecommendation[]; ai_analysis?: ApiCareerAnalysis }>('/recommendations', {
+      headers: {'X-Recommendation-Analysis':'v1'},
       body: {
         profile_id: profile.id,
         region: regionCode(profile.region),
@@ -186,8 +209,17 @@ export const api = {
         snapshot_id: snapshotId,
       },
     });
-    if (!Array.isArray(response.data.recommendations)) throw new ApiError(502, 'INVALID_RESPONSE', 'Missing recommendations in service response.');
-    return {results: mapRecommendations(response.data.recommendations), meta: toServiceMeta(response.meta)};
+    let verified: ApiRecommendation[];
+    try {
+      verified = validateRecommendationPayload(response.data, response.meta, {
+        profileId: profile.id, scenario, snapshotId, topK: 5,
+      });
+    } catch {
+      throw new ApiError(502, 'INVALID_RECOMMENDATIONS',
+        'The service returned recommendations that do not match this profile or snapshot.',
+        false, [], response.meta?.request_id ?? '');
+    }
+    return {results: mapRecommendations(verified), meta: toServiceMeta(response.meta), analysis: response.data.ai_analysis};
   },
 
   recommend: async (profile: Profile, scenario: Scenario, selectedRole: string, snapshotId: string): Promise<Recommendation[]> =>
