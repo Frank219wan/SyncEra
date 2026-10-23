@@ -56,6 +56,20 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   const detail=await envelope<{role_id:string;required_skills:unknown[];evidence_ids:string[]}>(`/roles/${contractRoleId}`);
   assert.equal(detail.data.role_id,contractRoleId);
   assert.ok(detail.data.required_skills.length>0);
+  const recommendedRole=recommended.data.recommendations.find(row=>row.role_id===contractRoleId);
+  const gap=recommendedRole?.skill_gaps[0]?.skill_id;
+  assert.ok(gap,'the fictional profile should have a skill gap for its leading role');
+  const skillMap=await envelope<{skill_id:string;nodes:unknown[];next_actions:string[]}>('/learning/skill-map',{
+    profile_id:ready.id,role_id:contractRoleId,skill_id:gap,language:'en',budget_amount:100,currency:'MYR',
+  });
+  assert.equal(skillMap.data.skill_id,gap);
+  assert.ok(skillMap.data.nodes.length>0);
+  const roadmap=await envelope<{role_id:string;total_estimated_hours:number}>('/learning/roadmap',{
+    profile_id:ready.id,role_id:contractRoleId,selected_skill_ids:[gap],
+    study_constraints:profileToNormalizeRequest(input).study_constraints,
+  });
+  assert.equal(roadmap.data.role_id,contractRoleId);
+  assert.ok(roadmap.data.total_estimated_hours>0);
   const taskData=await envelope<{role_id:string;tasks:TaskImpact[]}>(`/roles/${contractRoleId}/tasks${trends.meta.snapshot_id?`?snapshot_id=${encodeURIComponent(trends.meta.snapshot_id)}`:''}`);
   assert.equal(taskData.data.role_id,contractRoleId);
   assert.ok(taskData.data.tasks.length>0);

@@ -30,7 +30,7 @@ The Backend Confirm contract already accepts optional psychology, occupation and
 | `npm test` | PASS: 64 tests | Local unit/contract/proxy tests |
 | `npm run build` (`tsc -b` + Vite production build) | PASS | Local frontend |
 | `pytest backend/tests -q` | PASS: 123 passed, 2 skipped | Local backend, includes DOSM gate, recommendations and persistence tests |
-| `tests/cross-stack.test.ts` against loopback FastAPI | PASS: 2 tests | Local SQLite + deterministic adapter; fictional PDF/DOCX upload, readback, edit/clear, stale 409, score invariance |
+| `tests/cross-stack.test.ts` against loopback FastAPI | PASS: 2 tests | Local SQLite + deterministic adapter; fictional PDF/DOCX upload, readback, edit/clear, stale 409, score invariance, role detail/evidence, skill map and roadmap |
 | Existing integration Frontend `/api/v1/health` | PASS: authenticated 200; anonymous 302 | Existing Vercel deployment only; checked 2026-10-23 |
 | Existing integration Backend `/api/v1/health` | PASS: authenticated 200; anonymous 302 | Existing Vercel deployment only; checked 2026-10-23 |
 | Fix-branch Frontend and Backend Preview, Neon readback, full cloud E2E | BLOCKED / NOT VERIFIED | PR #25 Vercel checks for both projects failed with the free-tier daily deployment limit (`api-deployments-free-per-day`, retry in 24 hours). Neither new branch deployment nor Neon E2E was verified. |
