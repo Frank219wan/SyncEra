@@ -4,14 +4,16 @@ The local individual radar uses a prepared snapshot built from the two DOSM Q2 2
 
 ## Local view and API
 
-The prepared snapshot is available behind the explicitly configured endpoint
+The prepared snapshot is available behind the endpoint
 `GET /api/v1/market/radar`; the data file is
-`backend/data/dosm_market_q2_2026.json`. The checked-in local tasks and
-deployment defaults leave it disabled pending source review. For a local
-review session, set `DOSM_MARKET_RADAR_ENABLED=1` on the backend and
-`VITE_DOSM_MARKET_RADAR_ENABLED=true` on the frontend, then open
+`backend/data/dosm_market_q2_2026.json`. The checked-in VS Code development
+tasks enable this view for local review. Direct/manual local runs need
+`DOSM_MARKET_RADAR_ENABLED=1` on the backend and
+`VITE_DOSM_MARKET_RADAR_ENABLED=true` on the frontend. Then open
 `http://127.0.0.1:5174/individual/radar`. The frontend flag selects the DOSM
-view; it never changes the recommendation Snapshot ID.
+view; it never changes the recommendation Snapshot ID. Vercel and other
+deployment defaults remain disabled pending source review. The workbook data
+is a prepared quarterly snapshot and does not refresh automatically.
 
 The current snapshot defaults to Q2 2026 and supports the JMI quarterly series from Q3 2019 through Q2 2026. The quarter selector shows occupation groups, industries, or employment context for the selected quarter. Comparisons are calculated by SyncEra against the preceding quarter and the same quarter one year earlier. A missing source value remains unavailable; it is not changed to zero.
 
