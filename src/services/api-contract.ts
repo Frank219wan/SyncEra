@@ -94,7 +94,8 @@ export interface ApiRecommendation {
   match_score: number | null;
   score_breakdown?: Record<string, number | null>;
   strengths?: string[];
-  skill_gaps?: Array<{ skill_id: string; name: string; current_level: number | null; target_level: number; importance: string }>;
+  // FastAPI's response_model_exclude_none omits an unknown current_level.
+  skill_gaps?: Array<{ skill_id: string; name: string; current_level?: number | null; target_level: number; importance: string }>;
   reason?: string;
   evidence_ids?: string[];
   scenario_assumptions?: string[];
@@ -160,7 +161,7 @@ export function validateRecommendationPayload(
       if (!record(gap) || !id(gap.skill_id, 'skill_') || gaps.has(gap.skill_id) ||
           (raw.strengths as string[]).includes(gap.skill_id) || !text(gap.name) ||
           !Number.isInteger(gap.target_level) || (gap.target_level as number) < 0 || (gap.target_level as number) > 5 ||
-          (gap.current_level !== null && (!Number.isInteger(gap.current_level) ||
+          (gap.current_level !== null && gap.current_level !== undefined && (!Number.isInteger(gap.current_level) ||
             (gap.current_level as number) < 0 || (gap.current_level as number) >= (gap.target_level as number))) ||
           !['high', 'medium', 'low'].includes(String(gap.importance))) {
         throw new TypeError('Recommendation skill gap is invalid.');
@@ -384,7 +385,7 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
     skillGaps: item.skill_gaps?.map(gap => ({
       skillId: fromContractSkillId(gap.skill_id),
       name: gap.name,
-      currentLevel: gap.current_level,
+      currentLevel: gap.current_level ?? null,
       targetLevel: gap.target_level,
       importance: gap.importance,
     })),
