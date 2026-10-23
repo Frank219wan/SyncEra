@@ -1031,7 +1031,7 @@ paths:
     post:
       tags:
       - Organization
-      summary: B1 HR or B2 university/career-centre group analysis
+      summary: B2 university/career-centre deterministic analysis
       operationId: post_organizations_mode_analyze
       responses:
         '200':
@@ -1046,14 +1046,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
         '409':
-          description: Snapshot conflict
+          description: Stale organization workspace revision
           content:
             application/json:
               schema:
@@ -1064,37 +1058,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-        '429':
-          description: Rate limited
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-        '502':
-          description: Model invalid output
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
         '503':
-          description: External source unavailable
+          description: Organization MVP is not enabled
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
-        '504':
-          description: Model timeout
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorEnvelope'
-      description: Only fictional/aggregate cohorts permitted for hackathon demo. HR and campus result
-        subsets are distinct while all use shared role/skill IDs.
+      description: Only reviewed fictional student records are permitted. The current implementation
+        supports career_centre (B2) only; hr remains reserved and returns 503. Scores are deterministic
+        guidance, not employability probabilities.
       parameters:
       - name: mode
         in: path
         required: true
-        description: hr=B1 or career_centre=B2
+        description: career_centre=B2. hr is reserved but disabled in this release.
         schema:
           type: string
           enum:
@@ -1107,22 +1084,41 @@ paths:
             schema:
               $ref: '#/components/schemas/OrgRequest'
             example:
-              region: MY
-              ai_scenario: moderate
+              schema_version: organization-v0.1
               synthetic_input: true
-              organization_name: Demo Finance Organization
-              groups:
-              - cohort_id: cohort_finance
-                kind: employee_department
-                label: Finance
-                size: 20
-                current_role_ids:
-                - role_accountant
-                skill_distribution:
-                - skill_id: skill_excel
-                  count: 18
-              optional_goals:
-              - Explore AI-assisted finance reporting
+              workspace_id: null
+              workspace_revision: null
+              reviewed_by_user: true
+              region: MY
+              locale: en
+              ai_scenario: moderate
+              snapshot_id: null
+              payload:
+                institution_label: Synthetic Career Centre
+                selected_member_ids:
+                - student_001
+                members:
+                - member_id: student_001
+                  programme: Information Systems
+                  year_or_cohort: Year 2
+                  current_courses:
+                  - Database Fundamentals
+                  skills:
+                  - skill_id: skill_sql
+                    level: 3
+                    source: confirmed
+                    confidence: 1
+                  interests:
+                  - analytics
+                  goal_tags:
+                  - digital_transformation
+                  work_style:
+                    collaboration: balanced
+                    pace: structured
+                    structure: guided
+                  target_role_id: role_data_analyst
+                  weekly_learning_hours: 6
+                  reviewed: true
   /admin/trends/refresh:
     post:
       tags:
@@ -2356,158 +2352,439 @@ components:
       - skill_status
       - bamboo_segments
       - new_segment_added
-    SkillDistribution:
+    OrgSkillInput:
       type: object
       properties:
         skill_id:
           type: string
-        count:
+          pattern: ^skill_[A-Za-z0-9_]+$
+        level:
           type: integer
+          nullable: true
           minimum: 0
+          maximum: 5
+        source:
+          type: string
+          enum:
+          - declared
+          - confirmed
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
       additionalProperties: false
       required:
       - skill_id
-      - count
-    OrgGroup:
+      - source
+      - confidence
+    OrgWorkStyle:
       type: object
       properties:
-        cohort_id:
+        collaboration:
           type: string
-        kind:
+          nullable: true
+          maxLength: 80
+        pace:
           type: string
-          enum:
-          - employee_department
-          - student_cohort
-        label:
+          nullable: true
+          maxLength: 80
+        structure:
           type: string
-        size:
-          type: integer
-          minimum: 1
-        current_role_ids:
-          type: array
-          items:
-            type: string
-        programmes:
-          type: array
-          items:
-            type: string
+          nullable: true
+          maxLength: 80
+      additionalProperties: false
+    CareerCentreMember:
+      type: object
+      properties:
+        member_id:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,80}$
+        programme:
+          type: string
+          minLength: 1
+          maxLength: 160
+        year_or_cohort:
+          type: string
+          nullable: true
+          maxLength: 80
         current_courses:
           type: array
+          maxItems: 30
           items:
             type: string
-        skill_distribution:
+        skills:
           type: array
+          maxItems: 50
           items:
-            $ref: '#/components/schemas/SkillDistribution'
+            $ref: '#/components/schemas/OrgSkillInput'
+        interests:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+        goal_tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+        work_style:
+          $ref: '#/components/schemas/OrgWorkStyle'
+        target_role_id:
+          type: string
+          nullable: true
+          pattern: ^role_[A-Za-z0-9_]+$
+        weekly_learning_hours:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+          maximum: 40
+          default: 5
+        reviewed:
+          type: boolean
+          enum:
+          - true
       additionalProperties: false
       required:
-      - cohort_id
-      - kind
+      - member_id
+      - programme
+      - reviewed
+    CareerCentrePayload:
+      type: object
+      properties:
+        institution_label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        selected_member_ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: string
+        members:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/CareerCentreMember'
+      additionalProperties: false
+      required:
+      - institution_label
+      - selected_member_ids
+      - members
+    HRDepartmentInput:
+      type: object
+      properties:
+        department_id:
+          type: string
+          pattern: ^[A-Za-z0-9_-]{1,80}$
+        label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        headcount:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        target_skill_ids:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - department_id
       - label
-      - size
-      - skill_distribution
+      - headcount
+    HRPayload:
+      type: object
+      properties:
+        organization_label:
+          type: string
+          minLength: 1
+          maxLength: 160
+        sector:
+          type: string
+          nullable: true
+          maxLength: 160
+        departments:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/HRDepartmentInput'
+      additionalProperties: false
+      required:
+      - organization_label
     OrgRequest:
       type: object
       properties:
+        schema_version:
+          type: string
+          enum:
+          - organization-v0.1
+        synthetic_input:
+          type: boolean
+          enum:
+          - true
+        workspace_id:
+          type: string
+          nullable: true
+          pattern: ^org_[A-Za-z0-9_]+$
+        workspace_revision:
+          type: integer
+          nullable: true
+          minimum: 1
+        reviewed_by_user:
+          type: boolean
+          enum:
+          - true
         region:
           type: string
+          enum:
+          - MY
+        locale:
+          type: string
+          enum:
+          - en
+          - zh-CN
+          - ms
+          default: en
         ai_scenario:
           type: string
           enum:
           - moderate
           - fast
-        synthetic_input:
-          type: boolean
-          enum:
-          - true
-        organization_name:
+        snapshot_id:
           type: string
-        groups:
+          nullable: true
+          pattern: ^snap_[A-Za-z0-9_]+$
+        payload:
+          oneOf:
+          - $ref: '#/components/schemas/CareerCentrePayload'
+          - $ref: '#/components/schemas/HRPayload'
+      additionalProperties: false
+      required:
+      - schema_version
+      - synthetic_input
+      - reviewed_by_user
+      - region
+      - ai_scenario
+      - payload
+    OrganizationScoreBreakdown:
+      type: object
+      properties:
+        skill_compatibility:
+          type: number
+          minimum: 0
+          maximum: 100
+        interest_alignment:
+          type: number
+          minimum: 0
+          maximum: 100
+        goal_alignment:
+          type: number
+          minimum: 0
+          maximum: 100
+        work_style_alignment:
+          type: number
+          minimum: 0
+          maximum: 100
+        scenario_outlook:
+          type: number
+          minimum: 0
+          maximum: 100
+        transition_feasibility:
+          type: number
+          minimum: 0
+          maximum: 100
+      additionalProperties: false
+      required:
+      - skill_compatibility
+      - interest_alignment
+      - goal_alignment
+      - work_style_alignment
+      - scenario_outlook
+      - transition_feasibility
+    OrganizationRoleRecommendation:
+      type: object
+      properties:
+        rank:
+          type: integer
+          minimum: 1
+        role_id:
+          type: string
+        role_name:
+          type: string
+        match_score:
+          type: number
+          minimum: 0
+          maximum: 100
+        score_breakdown:
+          $ref: '#/components/schemas/OrganizationScoreBreakdown'
+        strengths:
           type: array
           items:
-            $ref: '#/components/schemas/OrgGroup'
-        optional_goals:
+            type: string
+        skill_gaps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SkillGap'
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        tag_sources:
+          type: array
+          items:
+            type: string
+            enum:
+            - MASCO
+            - curated
+            - ai_generated
+      additionalProperties: false
+      required:
+      - rank
+      - role_id
+      - role_name
+      - match_score
+      - score_breakdown
+      - strengths
+      - skill_gaps
+      - evidence_ids
+      - tag_sources
+    StudentActionPlan:
+      type: object
+      properties:
+        next_semester_courses:
+          type: array
+          items:
+            type: string
+        self_study_topics:
+          type: array
+          items:
+            type: string
+        project_or_internship:
+          type: string
+        human_review_status:
+          type: string
+          enum:
+          - required
+      additionalProperties: false
+      required:
+      - next_semester_courses
+      - self_study_topics
+      - project_or_internship
+      - human_review_status
+    StudentOrganizationResult:
+      type: object
+      properties:
+        member_id:
+          type: string
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationRoleRecommendation'
+        selected_role_id:
+          type: string
+        action_plan:
+          $ref: '#/components/schemas/StudentActionPlan'
+        missing_inputs:
+          type: array
+          items:
+            type: string
+            enum:
+            - interests
+            - goal_tags
+            - work_style
+            - skill_levels
+        result_confidence:
+          type: string
+          enum:
+          - low
+          - medium
+          - high
+      additionalProperties: false
+      required:
+      - member_id
+      - recommendations
+      - selected_role_id
+      - action_plan
+      - missing_inputs
+      - result_confidence
+    OrganizationGapCount:
+      type: object
+      properties:
+        skill_id:
+          type: string
+        name:
+          type: string
+        affected_members:
+          type: integer
+          minimum: 0
+        member_ids:
           type: array
           items:
             type: string
       additionalProperties: false
       required:
-      - region
-      - ai_scenario
-      - synthetic_input
-      - organization_name
-      - groups
-    OrgGroupRecommendation:
+      - skill_id
+      - name
+      - affected_members
+      - member_ids
+    OrganizationWorkshop:
       type: object
       properties:
-        cohort_id:
+        title:
           type: string
-        task_impacts:
-          type: array
-          items:
-            $ref: '#/components/schemas/TaskImpact'
-        recommended_role_paths:
-          type: array
-          items:
-            type: string
-        priority_skill_gaps:
-          type: array
-          items:
-            $ref: '#/components/schemas/SkillGap'
-        training_path:
-          type: array
-          items:
-            type: string
+        target_gap:
+          type: string
+        affected_members:
+          type: integer
+          minimum: 0
         evidence_ids:
           type: array
           items:
             type: string
       additionalProperties: false
       required:
-      - cohort_id
-      - task_impacts
-      - recommended_role_paths
-      - priority_skill_gaps
-      - training_path
+      - title
+      - target_gap
+      - affected_members
       - evidence_ids
-    OrgData:
+    OrganizationCurriculumSupplement:
       type: object
       properties:
-        pipeline:
+        course_name:
           type: string
-          enum:
-          - B1
-          - B2
-        group_recommendations:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrgGroupRecommendation'
-        student_pathways:
+        suggested_module:
+          type: string
+        reason:
+          type: string
+        evidence_ids:
           type: array
           items:
             type: string
-        cohort_skill_gaps:
+      additionalProperties: false
+      required:
+      - course_name
+      - suggested_module
+      - reason
+      - evidence_ids
+    CareerCentreCohortResult:
+      type: object
+      properties:
+        included_member_ids:
           type: array
           items:
-            $ref: '#/components/schemas/SkillGap'
+            type: string
+        skill_gap_counts:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationGapCount'
         proposed_workshops:
           type: array
           items:
-            type: object
-            properties:
-              title:
-                type: string
-              target_gap:
-                type: string
-              evidence_ids:
-                type: array
-                items:
-                  type: string
-            additionalProperties: false
-            required:
-            - title
-            - target_gap
-            - evidence_ids
+            $ref: '#/components/schemas/OrganizationWorkshop'
         tutoring_focus:
           type: array
           items:
@@ -2515,27 +2792,66 @@ components:
         curriculum_supplements:
           type: array
           items:
-            type: object
-            properties:
-              course_name:
-                type: string
-              suggested_module:
-                type: string
-              reason:
-                type: string
-              evidence_ids:
-                type: array
-                items:
-                  type: string
-            additionalProperties: false
-            required:
-            - course_name
-            - suggested_module
-            - reason
-            - evidence_ids
+            $ref: '#/components/schemas/OrganizationCurriculumSupplement'
+        human_review_status:
+          type: string
+          enum:
+          - required
       additionalProperties: false
       required:
-      - pipeline
+      - included_member_ids
+      - skill_gap_counts
+      - proposed_workshops
+      - tutoring_focus
+      - curriculum_supplements
+      - human_review_status
+    OrgData:
+      type: object
+      properties:
+        workspace_id:
+          type: string
+        workspace_revision:
+          type: integer
+          minimum: 1
+        analysis_id:
+          type: string
+        mode:
+          type: string
+          enum:
+          - career_centre
+        snapshot_id:
+          type: string
+        ai_scenario:
+          type: string
+          enum:
+          - moderate
+          - fast
+        scoring_policy:
+          type: string
+          enum:
+          - organization-b2-v0.1
+        student_results:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentOrganizationResult'
+        cohort_result:
+          $ref: '#/components/schemas/CareerCentreCohortResult'
+        warnings:
+          type: array
+          items:
+            type: string
+      additionalProperties: false
+      required:
+      - workspace_id
+      - workspace_revision
+      - analysis_id
+      - mode
+      - snapshot_id
+      - ai_scenario
+      - scoring_policy
+      - student_results
+      - cohort_result
+      - warnings
     RefreshRequest:
       type: object
       properties:

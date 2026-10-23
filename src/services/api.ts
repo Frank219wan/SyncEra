@@ -1,4 +1,4 @@
-import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, Evidence, MarketRadarPackage } from '../types';
+import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, OrganizationAnalysis, Evidence, Locale, MarketRadarPackage } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import { validateSyntheticCvFile } from './cv-upload';
@@ -7,8 +7,8 @@ import {
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta, validateRecommendationPayload,
   syntheticTextToNormalizeRequest,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
-  mapMarketRadar,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData, type ApiOrganizationAnalysis,
+  mapMarketRadar, mapOrganizationAnalysis, organizationToAnalyzeRequest,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -265,10 +265,13 @@ export const api = {
 
   adopt: async (plan: Plan): Promise<Plan> => ({ ...plan, adopted: true }),
 
-  // No organization-analysis endpoint is available in the connected API yet.
-  organization: async (org: Organization, _actor: 'hr' | 'tvet'): Promise<Organization> => {
-    if (!isDemo) throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'Organization analysis is not connected yet. Your inputs remain saved locally; no AI analysis was generated.');
-    return { ...structuredClone(org), analyzedRevision: org.revision };
+  organization: async (org: Organization, actor: 'hr' | 'tvet', scenario: Scenario, locale: Locale, selectedOnly = false): Promise<{analysis:OrganizationAnalysis|null;meta:ReturnType<typeof toServiceMeta>}> => {
+    if (actor === 'hr') throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'B1 HR analysis is not connected yet. Your inputs remain saved locally.');
+    if (isDemo) return {analysis:null,meta:demoMeta()};
+    const body=organizationToAnalyzeRequest(org,scenario,locale,selectedOnly);
+    if (!body.payload.selected_member_ids.length) throw new ApiError(422,'VALIDATION_ERROR','Review at least one complete synthetic student before analysis.');
+    const response=await request<ApiOrganizationAnalysis>('/organizations/career_centre/analyze',{body});
+    return {analysis:mapOrganizationAnalysis(response.data),meta:toServiceMeta(response.meta)};
   },
 
   task: async (profileId: string, plan: Plan, taskId: string, evidence: string): Promise<void> => {

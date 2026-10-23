@@ -1,4 +1,4 @@
-import type { Constraints, MarketRadarPackage, Plan, Profile, Recommendation, Role, ServiceMeta, Skill, Task } from '../types.ts';
+import type { Constraints, Locale, MarketRadarPackage, Organization, OrganizationAnalysis, Plan, Profile, Recommendation, Role, Scenario, ServiceMeta, Skill, Task } from '../types.ts';
 
 export interface ApiMeta {
   request_id?: string;
@@ -223,6 +223,31 @@ export interface ApiRoadmap {
   warnings: string[];
 }
 
+export interface ApiOrganizationAnalysis {
+  workspace_id:string; workspace_revision:number; analysis_id:string; mode:'career_centre';
+  snapshot_id:string; ai_scenario:Scenario; scoring_policy:'organization-b2-v0.1';
+  student_results:Array<{
+    member_id:string; selected_role_id:string; result_confidence:'low'|'medium'|'high';
+    missing_inputs:Array<'interests'|'goal_tags'|'work_style'|'skill_levels'>;
+    recommendations:Array<{
+      rank:number;role_id:string;role_name:string;match_score:number;
+      score_breakdown:{skill_compatibility:number;interest_alignment:number;goal_alignment:number;work_style_alignment:number;scenario_outlook:number;transition_feasibility:number};
+      strengths:string[];skill_gaps:Array<{skill_id:string;name:string;current_level?:number|null;target_level:number;importance:'high'|'medium'|'low'}>;
+      evidence_ids:string[];tag_sources:Array<'MASCO'|'curated'|'ai_generated'>;
+    }>;
+    action_plan:{next_semester_courses:string[];self_study_topics:string[];project_or_internship:string;human_review_status:'required'};
+  }>;
+  cohort_result:{
+    included_member_ids:string[];
+    skill_gap_counts:Array<{skill_id:string;name:string;affected_members:number;member_ids:string[]}>;
+    proposed_workshops:Array<{title:string;target_gap:string;affected_members:number;evidence_ids:string[]}>;
+    tutoring_focus:string[];
+    curriculum_supplements:Array<{course_name:string;suggested_module:string;reason:string;evidence_ids:string[]}>;
+    human_review_status:'required';
+  };
+  warnings:string[];
+}
+
 const levelToNumber: Record<string, number | null> = { unknown: null, beginner: 1, intermediate: 3, advanced: 5 };
 const contractSkillIds = new Set(['sql', 'excel', 'python', 'validation', 'communication']);
 
@@ -231,6 +256,70 @@ export const fromContractSkillId = (id: string) => id.replace(/^skill_/, '');
 export const toContractRoleId = (id: string) => id.startsWith('role_') ? id : `role_${id.replace(/-/g, '_')}`;
 export const fromContractRoleId = (id: string) => id.replace(/^role_/, '').replace(/_/g, '-');
 export const toContractLevel = (level: string) => levelToNumber[level] ?? null;
+
+function splitOrganizationValues(value:string) {
+  return [...new Set(value.split(/[,;，；、\n]/).map(item=>item.trim()).filter(Boolean))];
+}
+
+export function organizationToAnalyzeRequest(org:Organization,scenario:Scenario,locale:Locale,selectedOnly:boolean) {
+  const selectedIds=selectedOnly
+    ? org.selected
+    : org.people.filter(person=>person.reviewed&&person.known&&person.skills.length&&person.target&&person.courses.trim()).map(person=>person.id);
+  const included=new Set(selectedIds);
+  return {
+    schema_version:'organization-v0.1' as const,
+    synthetic_input:true as const,
+    workspace_id:org.workspaceId??null,
+    workspace_revision:org.workspaceRevision??null,
+    reviewed_by_user:true as const,
+    region:'MY' as const,
+    locale:locale==='zh'?'zh-CN':locale,
+    ai_scenario:scenario,
+    snapshot_id:null,
+    payload:{
+      institution_label:org.name,
+      selected_member_ids:selectedIds,
+      members:org.people.filter(person=>included.has(person.id)).map(person=>({
+        member_id:person.id,
+        programme:person.department,
+        year_or_cohort:person.year||null,
+        current_courses:splitOrganizationValues(person.courses),
+        skills:person.skills.map(skill=>({skill_id:toContractSkillId(skill),level:person.skillLevels?.[skill]??null,source:'confirmed' as const,confidence:1})),
+        interests:splitOrganizationValues(person.interests),
+        goal_tags:person.goalTags??[],
+        work_style:{collaboration:person.workStyle?.collaboration||null,pace:person.workStyle?.pace||null,structure:person.workStyle?.structure||null},
+        target_role_id:person.target?toContractRoleId(person.target):null,
+        weekly_learning_hours:person.hours,
+        reviewed:true as const,
+      })),
+    },
+  };
+}
+
+export function mapOrganizationAnalysis(data:ApiOrganizationAnalysis):OrganizationAnalysis {
+  return {
+    workspaceId:data.workspace_id,workspaceRevision:data.workspace_revision,analysisId:data.analysis_id,mode:data.mode,
+    snapshotId:data.snapshot_id,scenario:data.ai_scenario,scoringPolicy:data.scoring_policy,warnings:data.warnings,
+    studentResults:data.student_results.map(student=>({
+      memberId:student.member_id,selectedRoleId:fromContractRoleId(student.selected_role_id),resultConfidence:student.result_confidence,missingInputs:student.missing_inputs,
+      recommendations:student.recommendations.map(item=>({
+        rank:item.rank,roleId:fromContractRoleId(item.role_id),roleName:item.role_name,matchScore:item.match_score,
+        scoreBreakdown:{skillCompatibility:item.score_breakdown.skill_compatibility,interestAlignment:item.score_breakdown.interest_alignment,goalAlignment:item.score_breakdown.goal_alignment,workStyleAlignment:item.score_breakdown.work_style_alignment,scenarioOutlook:item.score_breakdown.scenario_outlook,transitionFeasibility:item.score_breakdown.transition_feasibility},
+        strengths:item.strengths.map(fromContractSkillId),skillGaps:item.skill_gaps.map(gap=>({skillId:fromContractSkillId(gap.skill_id),name:gap.name,currentLevel:gap.current_level??null,targetLevel:gap.target_level,importance:gap.importance})),
+        evidenceIds:item.evidence_ids,tagSources:item.tag_sources,
+      })),
+      actionPlan:{nextSemesterCourses:student.action_plan.next_semester_courses,selfStudyTopics:student.action_plan.self_study_topics,projectOrInternship:student.action_plan.project_or_internship,humanReviewStatus:student.action_plan.human_review_status},
+    })),
+    cohortResult:{
+      includedMemberIds:data.cohort_result.included_member_ids,
+      skillGapCounts:data.cohort_result.skill_gap_counts.map(gap=>({skillId:fromContractSkillId(gap.skill_id),name:gap.name,affectedMembers:gap.affected_members,memberIds:gap.member_ids})),
+      proposedWorkshops:data.cohort_result.proposed_workshops.map(item=>({title:item.title,targetGap:fromContractSkillId(item.target_gap),affectedMembers:item.affected_members,evidenceIds:item.evidence_ids})),
+      tutoringFocus:data.cohort_result.tutoring_focus,
+      curriculumSupplements:data.cohort_result.curriculum_supplements.map(item=>({courseName:item.course_name,suggestedModule:item.suggested_module,reason:item.reason,evidenceIds:item.evidence_ids})),
+      humanReviewStatus:data.cohort_result.human_review_status,
+    },
+  };
+}
 export function fromContractLevel(level: number | null) {
   if (level === null || level === 0) return 'unknown';
   if (level <= 2) return 'beginner';

@@ -1,11 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import {emptyProfile,roles} from '../src/data.ts';
+import {emptyProfile,roles,tvetSample} from '../src/data.ts';
 import {handleProxy} from '../server/proxy.ts';
 import {
   applyBubbleSizes,mapRecommendations,mapTrendRoles,mergeNormalizedProfile,
-  profileToConfirmRequest,profileToNormalizeRequest,validateRecommendationPayload,
+  mapOrganizationAnalysis,organizationToAnalyzeRequest,profileToConfirmRequest,
+  profileToNormalizeRequest,validateRecommendationPayload,type ApiOrganizationAnalysis,
 } from '../src/services/api-contract.ts';
 
 const base=(process.env.CROSS_STACK_API_URL??'http://127.0.0.1:8000').replace(/\/$/,'');
@@ -216,4 +217,49 @@ test('protected frontend proxy uploads fictional PDF/DOCX to live backend before
     assert.deepEqual(clearedResult.data.profile.psychology?.other_responses,{});
     assert.deepEqual(clearedResult.data.profile.psychology?.scenario_answers,cleared.psychology.scenario_answers);
   }
+});
+
+test('protected frontend proxy runs the reviewed fictional B2 cohort with revision CAS', async () => {
+  const backendOrigin = 'https://syncera-backend-git-integration-postgres-pre-test-frank219wan.vercel.app';
+  const frontendOrigin = 'https://syncera-frontend-git-integration-postgres-test-frank219wan.vercel.app';
+  const environment = {
+    VERCEL_ENV: 'preview', BACKEND_PREVIEW_ORIGIN: backendOrigin,
+    BACKEND_PROTECTION_BYPASS_SECRET: 'test-secret-never-deployed',
+  };
+  const call = async (body:unknown) => handleProxy(new Request(
+    `${frontendOrigin}/api/proxy?proxy_path=organizations%2Fcareer_centre%2Fanalyze`, {
+      method:'POST', headers:{Origin:frontendOrigin,'Content-Type':'application/json'},
+      body:JSON.stringify(body),
+    }), environment, async (_url,init)=>fetch(`${base}/api/v1/organizations/career_centre/analyze`,init));
+
+  const initialBody=organizationToAnalyzeRequest(structuredClone(tvetSample),'moderate','en',false);
+  const initialResponse=await call(initialBody);
+  const initialPayload=await initialResponse.json();
+  assert.equal(initialResponse.status,200,JSON.stringify(initialPayload));
+  const initial=mapOrganizationAnalysis(initialPayload.data as ApiOrganizationAnalysis);
+  assert.equal(initial.scenario,'moderate');
+  assert.equal(initial.workspaceRevision,1);
+  assert.equal(initial.studentResults.length,tvetSample.people.length);
+  assert.ok(initial.studentResults.every(student=>student.recommendations.length>0));
+  assert.ok(initial.cohortResult.includedMemberIds.length>0);
+
+  const cohortIds=tvetSample.people.slice(0,2).map(person=>person.id);
+  const persisted={...structuredClone(tvetSample),selected:cohortIds,workspaceId:initial.workspaceId,workspaceRevision:initial.workspaceRevision};
+  const fastBody=organizationToAnalyzeRequest(persisted,'fast','en',true);
+  const fastResponse=await call(fastBody);
+  const fastPayload=await fastResponse.json();
+  assert.equal(fastResponse.status,200,JSON.stringify(fastPayload));
+  const fast=mapOrganizationAnalysis(fastPayload.data as ApiOrganizationAnalysis);
+  assert.equal(fast.scenario,'fast');
+  assert.equal(fast.workspaceRevision,2);
+  assert.deepEqual(fast.cohortResult.includedMemberIds,cohortIds);
+  assert.notDeepEqual(
+    fast.studentResults[0].recommendations.map(item=>item.matchScore),
+    initial.studentResults[0].recommendations.map(item=>item.matchScore),
+  );
+
+  const staleResponse=await call(fastBody);
+  const stalePayload=await staleResponse.json();
+  assert.equal(staleResponse.status,409,JSON.stringify(stalePayload));
+  assert.equal(stalePayload.error.code,'REVISION_CONFLICT');
 });

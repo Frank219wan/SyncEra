@@ -19,7 +19,7 @@ const GET_ROUTES: Array<[RegExp, ReadonlySet<string>]> = [
 ];
 const POST_ROUTES = new Set([
   'profiles/normalize', 'profiles/upload', 'profiles/confirm', 'recommendations',
-  'learning/skill-map', 'learning/roadmap',
+  'learning/skill-map', 'learning/roadmap', 'organizations/career_centre/analyze',
 ]);
 
 function jsonError(status: number, code: string, message: string): Response {
@@ -169,7 +169,7 @@ export async function handleProxy(
   try { backend = new URL(configuredOrigin); }
   catch { return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.'); }
   if (backend.protocol !== 'https:' || backend.origin !== configuredOrigin ||
-      !/^syncera-backend-git-integration-(?:postgres-pre|career-radar?)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname)) {
+      !/^syncera-backend-git-(?:integration-(?:postgres-pre|career-radar?)|feature-organization-mvp)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname)) {
     return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.');
   }
 
@@ -217,6 +217,9 @@ export async function handleProxy(
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return jsonError(400, 'BAD_JSON', 'JSON object required.');
       if (path === 'profiles/normalize' && (parsed as Record<string, unknown>).synthetic_input !== true) {
         return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional test profiles are accepted.');
+      }
+      if (path === 'organizations/career_centre/analyze' && (parsed as Record<string, unknown>).synthetic_input !== true) {
+        return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional organization records are accepted.');
       }
     }
   }

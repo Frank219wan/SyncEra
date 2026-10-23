@@ -27,6 +27,10 @@ export interface Plan {
 export interface Person {
   id: string; department: string; role: string; skills: string[]; known: boolean; traits: string; aspiration: string;
   hours: number; courses: string; interests: string; notes: string; year: string; target: string;
+  skillLevels?: Record<string, number | null>;
+  goalTags?: string[];
+  workStyle?: { collaboration: string; pace: string; structure: string };
+  reviewed?: boolean;
 }
 export interface Department {
   id: string; name: string; responsibilities: string; currentStatus: string;
@@ -42,6 +46,38 @@ export interface Organization {
   people: Person[]; selected: string[]; revision: number; analyzedRevision: number;
   training: Record<string, string[]>;
   departments?: Department[]; goals?: string[]; planningVersions?: DepartmentPlanVersion[];
+  workspaceId?: string; workspaceRevision?: number;
+  analysis?: OrganizationAnalysis | null; analysisMeta?: ServiceMeta | null;
+}
+export interface OrganizationScoreBreakdown {
+  skillCompatibility: number; interestAlignment: number; goalAlignment: number;
+  workStyleAlignment: number; scenarioOutlook: number; transitionFeasibility: number;
+}
+export interface OrganizationRoleRecommendation {
+  rank: number; roleId: string; roleName: string; matchScore: number;
+  scoreBreakdown: OrganizationScoreBreakdown; strengths: string[];
+  skillGaps: Array<{skillId:string;name:string;currentLevel:number|null;targetLevel:number;importance:'high'|'medium'|'low'}>;
+  evidenceIds: string[]; tagSources: Array<'MASCO'|'curated'|'ai_generated'>;
+}
+export interface OrganizationStudentResult {
+  memberId: string; recommendations: OrganizationRoleRecommendation[]; selectedRoleId: string;
+  actionPlan: {nextSemesterCourses:string[];selfStudyTopics:string[];projectOrInternship:string;humanReviewStatus:'required'};
+  missingInputs: Array<'interests'|'goal_tags'|'work_style'|'skill_levels'>;
+  resultConfidence: 'low'|'medium'|'high';
+}
+export interface OrganizationAnalysis {
+  workspaceId: string; workspaceRevision: number; analysisId: string; mode: 'career_centre';
+  snapshotId: string; scenario: Scenario; scoringPolicy: 'organization-b2-v0.1';
+  studentResults: OrganizationStudentResult[];
+  cohortResult: {
+    includedMemberIds:string[];
+    skillGapCounts:Array<{skillId:string;name:string;affectedMembers:number;memberIds:string[]}>;
+    proposedWorkshops:Array<{title:string;targetGap:string;affectedMembers:number;evidenceIds:string[]}>;
+    tutoringFocus:string[];
+    curriculumSupplements:Array<{courseName:string;suggestedModule:string;reason:string;evidenceIds:string[]}>;
+    humanReviewStatus:'required';
+  };
+  warnings: string[];
 }
 export interface Role {
   id: string; name: Copy; domain: string; description: Copy; skills: string[];

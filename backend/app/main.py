@@ -28,6 +28,17 @@ from .cv_upload import extract_cv_text, upload_limit
 from .upload_guard import UploadBodyLimitMiddleware
 from .career_analysis import CareerAnalyzer, rule_fallback
 from .career_analysis_ledger import PostgresCareerAnalysisLedger
+from .organization_analysis import analyze_career_centre
+from .organization_models import (
+    CareerCentrePayload,
+    OrganizationAnalysisData,
+    OrganizationAnalyzeRequest,
+)
+from .organization_storage import (
+    InMemoryOrganizationRepository,
+    OrganizationRevisionConflict,
+    PostgresOrganizationRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +59,7 @@ class SPAStaticFiles(StaticFiles):
 def documented_errors(*codes):
     return {code:{'model':APIErrorEnvelope} for code in codes}
 
-def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,career_analyzer=None):
+def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,career_analyzer=None,organization_store=None):
     if os.getenv('VERCEL') and os.getenv('ACTIVE_SNAPSHOT_ID') and os.getenv('ACTIVE_SNAPSHOT_ID') not in SNAPSHOTS:
         raise RuntimeError('Hosted Preview permits only bundled synthetic snapshots')
     if (os.getenv('VERCEL') and os.getenv('AI_ADAPTER_MODULE') == 'futureproof_ai.tencent_tokenhub_adapter'
@@ -81,6 +92,19 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
         if market is None and not configured_market: app.state.market.load_dir(approved_dir)
         if resources is None and not configured_resources: app.state.resources.load_dir(approved_dir)
     app.state.market.validate_active()
+    app.state.organization_enabled = not os.getenv('VERCEL') or os.getenv('ENABLE_ORGANIZATION_MVP') == '1'
+    if organization_store is not None:
+        app.state.organization_store = organization_store
+        app.state.organization_enabled = True
+    elif app.state.organization_enabled:
+        if os.getenv('VERCEL'):
+            if not hasattr(app.state.store, 'pool'):
+                raise RuntimeError('Organization MVP on Vercel requires the shared PostgreSQL profile pool')
+            app.state.organization_store = PostgresOrganizationRepository(app.state.store.pool)
+        else:
+            app.state.organization_store = InMemoryOrganizationRepository()
+    else:
+        app.state.organization_store = None
     if os.getenv('VERCEL') and not os.getenv('FRONTEND_ORIGINS'):
         raise RuntimeError('FRONTEND_ORIGINS is required for Vercel Preview')
     origins=[x.strip() for x in os.getenv('FRONTEND_ORIGINS','http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173').split(',') if x.strip()]
@@ -316,10 +340,59 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
 
     @app.post('/api/v1/progress/skills',status_code=503,response_model=APIErrorEnvelope)
     def progress(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 progress is not implemented')
-    @app.post('/api/v1/organizations/{mode}/analyze',status_code=503,response_model=APIErrorEnvelope,responses=documented_errors(400))
-    def organization(mode:str,request:Request,payload:dict):
-        if mode not in ('hr','career_centre'): raise svc.APIError(400,'BAD_REQUEST','Unsupported organization mode')
-        raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 organization analysis is not implemented')
+    @app.post('/api/v1/organizations/{mode}/analyze',response_model=Envelope[OrganizationAnalysisData],responses=documented_errors(400,409,422,503))
+    def organization(mode:str,request:Request,payload:OrganizationAnalyzeRequest):
+        if mode not in ('hr','career_centre'):
+            raise svc.APIError(400,'BAD_REQUEST','Unsupported organization mode')
+        if mode == 'hr':
+            raise svc.APIError(503,'SOURCE_UNAVAILABLE','B1 HR analysis remains disabled in this B2-first MVP')
+        if not app.state.organization_enabled or app.state.organization_store is None:
+            raise svc.APIError(503,'SOURCE_UNAVAILABLE','Organization MVP is not enabled for this deployment')
+        if not isinstance(payload.payload,CareerCentrePayload):
+            raise svc.APIError(422,'VALIDATION_ERROR','career_centre mode requires a CareerCentre payload')
+        snap=svc.require_snapshot(app.state.market,payload.snapshot_id,payload.region)
+        student_results,cohort_result,warnings=analyze_career_centre(payload.payload,snap,payload.ai_scenario)
+        workspace_id=payload.workspace_id or 'org_'+uuid4().hex[:16]
+        workspace_revision=(payload.workspace_revision+1) if payload.workspace_revision is not None else 1
+        analysis_id='organalysis_'+uuid4().hex[:16]
+        result=OrganizationAnalysisData(
+            workspace_id=workspace_id,
+            workspace_revision=workspace_revision,
+            analysis_id=analysis_id,
+            mode='career_centre',
+            snapshot_id=snap.snapshot_id,
+            ai_scenario=payload.ai_scenario,
+            scoring_policy='organization-b2-v0.1',
+            student_results=student_results,
+            cohort_result=cohort_result,
+            warnings=warnings,
+        )
+        data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo'
+        workspace_body=payload.model_dump(mode='json')
+        workspace_body['payload_label']=payload.payload.institution_label
+        try:
+            persisted_revision=app.state.organization_store.save_analysis(
+                workspace_id=workspace_id,
+                expected_revision=payload.workspace_revision,
+                mode=mode,
+                region=payload.region,
+                schema_version=payload.schema_version,
+                workspace_body=workspace_body,
+                analysis_id=analysis_id,
+                snapshot_id=snap.snapshot_id,
+                scenario=payload.ai_scenario,
+                scoring_policy='organization-b2-v0.1',
+                method_version='organization-b2-v0.1',
+                data_label=data_label,
+                is_mock=True,
+                result=result.model_dump(mode='json'),
+                warnings=warnings,
+            )
+        except OrganizationRevisionConflict:
+            raise svc.APIError(409,'REVISION_CONFLICT','Organization workspace revision is stale') from None
+        if persisted_revision != workspace_revision:
+            raise RuntimeError('Organization repository returned an unexpected revision')
+        return success(request,result.model_dump(mode='json'),snap,OrganizationAnalysisData,data_label=data_label,is_mock=True,model_version='rules-only')
     @app.post('/api/v1/admin/trends/refresh',status_code=503,response_model=APIErrorEnvelope)
     def refresh(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 trend refresh is disabled')
 
