@@ -29,6 +29,18 @@ def test_curated_official_seed_validates_and_does_not_invent_earlier_quarter():
     assert window["available_periods"] == ["2023-Q2", "2026-Q2"]
 
 
+def test_official_skill_excerpt_changes_source_extraction_hash():
+    original = CareerImportManifest.model_validate(payload())
+    changed = payload()
+    changed["skill_assertions"][0]["source_excerpt"] = "Revised programming excerpt"
+    revised = CareerImportManifest.model_validate(changed)
+    source_id = changed["skill_assertions"][0]["source_id"]
+    assert extracted_hash(original, source_id) != extracted_hash(revised, source_id)
+    assert extracted_hash(original, original.sources[0].source_id) == extracted_hash(
+        revised, revised.sources[0].source_id
+    )
+
+
 def test_fixed_legacy_scenarios_have_distinct_dated_observations():
     manifest = CareerImportManifest.model_validate(payload())
     common = {"unit_group_code": "2512", "region": "MY"}

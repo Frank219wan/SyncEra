@@ -243,6 +243,17 @@ def extracted_hash(manifest: CareerImportManifest, source_id: str) -> str:
             (row for row in manifest.demand_quarters if row.source_id == source_id),
             key=lambda row: (row.unit_group_code, row.period, row.region),
         )],
+        "official_skill_assertions": [
+            {
+                "role_id": row.role_id,
+                "skill_id": row.skill_id,
+                "source_excerpt": row.source_excerpt,
+            }
+            for row in sorted(
+                (row for row in manifest.skill_assertions if row.source_id == source_id),
+                key=lambda row: (row.role_id, row.skill_id, row.source_excerpt or ""),
+            )
+        ],
     }
     canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

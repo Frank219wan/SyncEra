@@ -11,7 +11,7 @@
 
 ## 一季度一记录，未来如何追加
 
-`dosm_demand_quarters` 主键由 `unit_group_code + period + region + source_id` 组成。新增季度时在 manifest 中增加来源文档及观测记录，例如 `2027-Q1`，保留此前季度，不能覆盖旧来源 ID 的内容。来源记录保存 URL、发布日期（若已知）、采集时间、内容摘要和处理方法版本。不同来源对同一组/季度/区域给出冲突计数时，导入拒绝写入，需人工核对。
+`dosm_demand_quarters` 主键由 `unit_group_code + period + region + source_id` 组成。新增季度时在 manifest 中增加来源文档及观测记录，例如 `2027-Q1`，保留此前季度，不能覆盖旧来源 ID 的内容。来源记录保存 URL、发布日期（若已知）、采集时间、内容摘要和处理方法版本；eMASCO 来源摘要也覆盖其职业—技能映射与引用摘录，变更后不能沿用旧 `source_id`。不同来源对同一组/季度/区域给出冲突观测三元组（岗位数、报告总数、统计序列）时，导入拒绝写入，需人工核对。
 
 每条需求记录带 `measurement_series_id`、`quality_status` 与 `scenario_eligible`。2023-Q2 的“vacancies”与 2026 的“offerings”口径尚未核对，分别存于不同统计序列，不用于直接计算增长率；但它可以被**显式产品锚点**选为 Moderate 的历史参照。2026-Q1 当期报告及 Q2 信息图都给出 20,089；Q2 媒体声明回顾附表却将 17,722 标成 Q1，而 Q1 附表将 17,722 标为 2025-Q4。Q1 标为 `reviewed_conflict`、`scenario_eligible=false`，仅归档并保留审核理由；**这不代表 DOSM 已正式发布更正**。
 
