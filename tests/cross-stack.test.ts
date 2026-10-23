@@ -21,7 +21,9 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   const health=await envelope<{status:string}>('/health');
   assert.equal(health.data.status,'ok');
 
-  const input={...emptyProfile,occupation:'Synthetic analyst',interests:'analytics',skills:[{id:'sql',level:'intermediate',source:'manual' as const,confirmed:true}]};
+  const input={...emptyProfile,occupation:'Synthetic analyst',interests:'analytics',vision:'Build useful tools',goalTags:['Learning'],workStyle:{collaboration:'team',pace:'steady',structure:'balanced'},skills:[{id:'sql',level:'intermediate',source:'manual' as const,confirmed:true}]};
+  assert.equal(Object.hasOwn(profileToNormalizeRequest(input),'vision'),false);
+  assert.equal(Object.hasOwn(profileToConfirmRequest(input),'workStyle'),false);
   const normalized=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>('/profiles/normalize',profileToNormalizeRequest(input));
   const profile=mergeNormalizedProfile(normalized.data.profile,input);
   const confirmed=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>('/profiles/confirm',profileToConfirmRequest(profile));
@@ -48,6 +50,11 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   const cards=mapRecommendations(recommended.data.recommendations);
   assert.ok(cards.length>0);
   assert.ok(cards.every(card=>card.origin==='computed'&&card.matchScore!==null&&card.reason&&card.evidenceIds));
+  assert.deepEqual(cards.map(card=>card.matchScore),recommended.data.recommendations.map(card=>card.match_score));
+  const fast=await envelope<{recommendations:Parameters<typeof mapRecommendations>[0]}>('/recommendations',{
+    profile_id:ready.id,region:'MY',ai_scenario:'fast',top_k:5,snapshot_id:trends.meta.snapshot_id,
+  });
+  assert.deepEqual(mapRecommendations(fast.data.recommendations).map(card=>card.matchScore),fast.data.recommendations.map(card=>card.match_score));
 
   const first=cards[0];
   const contractRoleId=`role_${first.roleId.replace(/-/g,'_')}`;

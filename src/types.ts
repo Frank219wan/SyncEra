@@ -6,6 +6,10 @@ export interface Skill { id: string; level: string; source: 'manual' | 'cv_extra
 export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
+  goalTags?: string[];
+  workStyle?: { collaboration: string; pace: string; structure: string };
+  personalSources?: Partial<Record<'interests' | 'vision' | 'workStyle', 'self_reported' | 'sample' | 'ai_draft'>>;
+  personalConfirmed?: Partial<Record<'interests' | 'vision' | 'workStyle', boolean>>;
   region: string; synthetic: boolean; sample: boolean; revision?: number;
 }
 export interface Constraints { hours: number; budget: number; language: Locale; start: string; deadline: string; baseline: string }

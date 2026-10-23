@@ -3,7 +3,7 @@ import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
-  fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
+  fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, syntheticTextToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta,
   type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
   mapMarketRadar,
@@ -100,6 +100,12 @@ export const api = {
     if (isDemo) return structuredClone(profile);
     const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: profileToNormalizeRequest(profile) });
     return mergeNormalizedProfile(response.data.profile, profile);
+  },
+
+  normalizeSyntheticText: async (profile: Profile, text: string): Promise<Profile> => {
+    if (isDemo) return {...structuredClone(profile), experience: text};
+    const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: syntheticTextToNormalizeRequest(profile, text) });
+    return mergeNormalizedProfile(response.data.profile, {...profile, experience: text});
   },
 
   confirm: async (profile: Profile): Promise<Profile> => {

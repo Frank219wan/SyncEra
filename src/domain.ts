@@ -64,8 +64,8 @@ export function revisePlan(plan: Plan): Plan {
     history:[...plan.history,{version:plan.version,offset:plan.offset,at:new Date().toISOString()}]};
 }
 export function demoRecommendations(profile: Profile, scenario: Scenario) {
-  const unmodified = profile.sample && profile.skills.map(s=>s.id).sort().join(',')==='analytics,communication,sql';
-  return [...roles].sort((a,b)=>b.scores[scenario]-a.scores[scenario]).map((r,i)=>({roleId:r.id,rank:i+1,matchScore:unmodified?r.scores[scenario]:null,origin:'synthetic_fixture' as const}));
+  void profile;
+  return [...roles].sort((a,b)=>b.scores[scenario]-a.scores[scenario]).map((r,i)=>({roleId:r.id,rank:i+1,matchScore:null,origin:'synthetic_fixture' as const}));
 }
 export function defaultConstraints(): Constraints {
   return {hours:5,budget:0,language:'en',start:new Date().toLocaleDateString('en-CA'),deadline:'',baseline:''};
