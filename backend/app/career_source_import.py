@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from .quarterly_market import (
     market_signal_from_report_share, quarter_number, select_historical_reference,
 )
+from .career_import_target import verify_connected_preview, verify_preview_target
 
 
 def _official_url(value: str, provider: str) -> str:
@@ -368,13 +369,28 @@ def apply_manifest(manifest: CareerImportManifest, database_url: str) -> dict[st
     receive new IDs so a past source/snapshot cannot silently change meaning.
     """
 
-    if not database_url.startswith(("postgresql://", "postgres://")):
-        raise ValueError("DATABASE_URL must be a PostgreSQL URL")
+    verify_preview_target(database_url)
     from psycopg import connect  # Optional batch-import dependency, not an API import.
 
     sources = {row.source_id: row for row in manifest.sources}
-    with connect(database_url, connect_timeout=10) as connection:
+    try:
+        connection = connect(database_url, connect_timeout=10, sslrootcert="system")
+    except Exception:
+        from .career_import_target import PreviewTargetError
+        raise PreviewTargetError("Verified Preview database connection failed") from None
+    with connection:
+        verify_connected_preview(connection)
         with connection.cursor() as cursor:
+            # Lock each observed quarter before reading it. PostgreSQL releases
+            # these transaction locks at commit/rollback. Sorted keys prevent
+            # opposite-order batches from deadlocking each other.
+            for key in sorted({(row.unit_group_code, row.period, row.region)
+                               for row in manifest.demand_quarters}):
+                lock_id = int.from_bytes(
+                    hashlib.sha256("\x1f".join(key).encode()).digest()[:8],
+                    byteorder="big", signed=True,
+                )
+                cursor.execute("SELECT pg_advisory_xact_lock(%s)", (lock_id,))
             for row in manifest.sources:
                 digest = extracted_hash(manifest, row.source_id)
                 cursor.execute(
@@ -458,12 +474,15 @@ def apply_manifest(manifest: CareerImportManifest, database_url: str) -> dict[st
 
             for row in manifest.demand_quarters:
                 cursor.execute(
-                    """SELECT DISTINCT job_offerings FROM futureproof.dosm_demand_quarters
+                    """SELECT DISTINCT job_offerings,total_job_offerings,measurement_series_id
+                       FROM futureproof.dosm_demand_quarters
                        WHERE unit_group_code=%s AND period=%s AND region=%s""",
                     (row.unit_group_code, row.period, row.region),
                 )
-                observed = {item[0] for item in cursor.fetchall()}
-                if observed and observed != {row.job_offerings}:
+                observed = {tuple(item) for item in cursor.fetchall()}
+                expected = (row.job_offerings, row.total_job_offerings,
+                            row.measurement_series_id)
+                if observed and observed != {expected}:
                     raise ValueError("conflicting DOSM observations need an explicit reconciliation")
                 cursor.execute(
                     """INSERT INTO futureproof.dosm_demand_quarters

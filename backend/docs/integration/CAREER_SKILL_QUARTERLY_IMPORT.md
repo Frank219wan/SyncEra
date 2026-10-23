@@ -34,10 +34,10 @@
 
 ## 入库顺序
 
-1. 在**独立 Neon Preview** 数据库运行已有 `backend/migrations/20261022_01_career_radar.sql`，再运行 `backend/migrations/20261023_03_career_sources_quarters.sql`。先检查 PR #20、#21 合并状态及 migration 冲突；不要在 Production 上试运行。
+1. 先取得新 HEAD 的全绿 CI、独立 Review 和部署负责人对 Preview 写入的授权。只对**独立 Neon Preview** 核对项目、分支、直连 Endpoint、数据库和现有 schema。`backend/scripts/migrate_career_sources.py` 按顺序运行 `20261022_01_career_radar.sql` 与 `20261023_03_career_sources_quarters.sql`；它会识别完整已有的基础 Career Radar 表并跳过第一份迁移，发现部分基础表或任何已有的来源表时拒绝自动迁移，要求人工核对 PR #20/#21 的对象及兼容性。不得盲目重复执行 SQL。
 2. 安装 `backend/requirements-data.txt`。在仓库根目录运行 `python backend/scripts/import_career_sources.py backend/data/career_sources_q2_2026_seed.json`；默认仅校验并打印摘要，不联网、不写库。
-3. 确认 `DATABASE_URL` 指向 Preview 且已备份，设置 `CAREER_IMPORT_TARGET=preview`，再追加 `--apply-preview`。这是显式 Preview 写入操作；脚本不会自行识别 URL 是否属于 Production，因此操作者必须在控制台核对目标。
-4. 查询 `futureproof.source_documents`、`masco_occupations`、`dosm_demand_quarters`、`scenario_reference_anchors` 和 `role_skill_assertions`。预期 `2512 / MY` 归档三期：`2023-Q2=7779`（Moderate 锚点）、`2026-Q1=20089`（备用）、`2026-Q2=19899`（Fast 锚点）；`2512-01` 无独立招聘数。`career_skill_quarter_versions` 暂无历史行。
+3. 写入时提供单独授权的 `NEON_API_KEY`、直连 `DATABASE_URL` 和 `CAREER_IMPORT_TARGET=preview`。URL 必须使用 `sslmode=verify-full`（可加 `channel_binding=require`）；导入器用系统 CA 验证 TLS。经部署负责人授权后，先运行 `python backend/scripts/migrate_career_sources.py --apply-preview`，再对同一 Manifest 使用导入脚本的 `--apply-preview`。两个入口的底层函数都先解析 URL，并通过 Neon HTTPS 控制面交叉验证代码审阅过的项目 ID、分支 ID、项目/分支名称、读写 Endpoint hostname 和数据库名称；连接后还检查 `current_database()` 与实际协商的 SSL。控制面不可用、元数据不符、非直连、TLS 不合要求或连接失败时一律拒绝写入。仅改变 `CAREER_IMPORT_TARGET` 或其他环境变量不能改写代码中的允许目标。Neon Preview 项目里的 `primary/default` 分支标记不是 Production 判据。请勿打印连接串或 API Key。
+4. 查询 `futureproof.source_documents`、`masco_occupations`、`dosm_demand_quarters`、`scenario_reference_anchors` 和 `role_skill_assertions`。同一职业组、季度、地区的 `job_offerings`、`total_job_offerings`、`measurement_series_id` 必须完整一致；冲突使整个事务回滚。导入器对该键持有事务级 PostgreSQL advisory lock，防止并发导入绕过检查。预期 `2512 / MY` 归档三期：`2023-Q2=7779`（Moderate 锚点）、`2026-Q1=20089`（备用）、`2026-Q2=19899`（Fast 锚点）；`2512-01` 无独立招聘数。`career_skill_quarter_versions` 暂无历史行。
 5. 只在准备好 SQL catalogue repository、后端独立校验、前端来源标签和闭环测试后，才考虑将该岗位投影到在线推荐。当前脚本不激活 `public_open` Snapshot。
 
 ## MiniMax 补齐的插入点

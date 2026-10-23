@@ -14,6 +14,7 @@ from app.career_source_import import (
     CareerImportManifest, apply_manifest, reference_windows,
     select_fixed_scenario, select_market_observation,
 )
+from app.career_import_target import PreviewTargetError
 
 
 def main() -> None:
@@ -64,7 +65,10 @@ def main() -> None:
         url = os.getenv("DATABASE_URL", "")
         if not url:
             parser.error("DATABASE_URL is required for database writes")
-        summary["written"] = apply_manifest(manifest, url)
+        try:
+            summary["written"] = apply_manifest(manifest, url)
+        except PreviewTargetError as exc:
+            parser.error(str(exc))
     else:
         summary["written"] = False
     print(json.dumps(summary, ensure_ascii=False, indent=2))
