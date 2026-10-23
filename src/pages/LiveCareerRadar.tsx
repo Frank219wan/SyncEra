@@ -5,6 +5,7 @@ import {useApp} from '../store';
 import type {MarketEmploymentSector,MarketRadarPackage,MarketRadarSignal} from '../types';
 import {latestMarketPeriod} from '../marketPeriod';
 import './LiveCareerRadar.css';
+import {barWidth,sortMarketSignals} from './radarCompare';
 
 type RadarTab='occupations'|'industries'|'employment';
 
@@ -63,24 +64,40 @@ function ChangeValue({value,label}:{value:number|null;label:string}){
 function MarketBubbles({items,selectedId,onSelect}:{items:MarketRadarSignal[];selectedId:string;onSelect:(id:string)=>void}){
   const {t}=useApp();
   const max=Math.max(1,...items.map(item=>item.postings??0));
-  return <div className="market-bubble-cloud" aria-label={t('Online job offerings by category','按类别统计的线上招聘广告','Iklan kerja dalam talian mengikut kategori')}>
-    {items.map(item=>{
+  return <div className="market-bubble-explorer">
+    <div className="market-bubble-guide"><p>{t('Each bubble is a category. Size follows the number of online job ads; color shows year-over-year direction. Select one for details.','每个气泡代表一个类别。大小对应线上招聘广告数量，颜色表示同比变化方向。选择气泡查看详情。','Setiap gelembung ialah satu kategori. Saiz menunjukkan jumlah iklan kerja dalam talian; warna menunjukkan arah perubahan tahunan. Pilih satu untuk butiran.')}</p><div className="market-bubble-legend" aria-label={t('Year-over-year color legend','同比颜色图例','Petunjuk warna perubahan tahunan')}><span className="market-bubble-legend--rising">{t('Rising','上升','Meningkat')}</span><span className="market-bubble-legend--declining">{t('Declining','下降','Menurun')}</span><span className="market-bubble-legend--stable">{t('Stable','持平','Stabil')}</span><span className="market-bubble-legend--neutral">{t('Unavailable','暂无数据','Tiada data')}</span></div></div>
+    <div className="market-bubble-cloud" aria-label={t('Online job offerings by category','按类别统计的线上招聘广告','Iklan kerja dalam talian mengikut kategori')}>
+    {items.map((item,index)=>{
       const trend=direction(item.yoyChangePercent);
       const diameter=Math.round(90+96*Math.sqrt((item.postings??0)/max));
       return <button
-        className={`market-bubble market-bubble--${trend}${item.id===selectedId?' is-selected':''}`}
+        className={`market-bubble market-bubble--${trend}${diameter<110?' is-compact':''}${item.id===selectedId?' is-selected':''}`}
         type="button"
         key={item.id}
         aria-pressed={item.id===selectedId}
+        title={item.name}
         aria-label={`${item.name}: ${formatCount(item.postings)} ${t('online job offerings','线上招聘广告','iklan kerja dalam talian')}, ${formatPercent(item.yoyChangePercent)} ${t('year over year','同比','tahun ke tahun')}`}
         onClick={()=>onSelect(item.id)}
-        style={{'--market-bubble-size':`${diameter}px`} as CSSProperties}
+        style={{'--market-bubble-size':`${diameter}px`,'--market-bubble-order':index%8} as CSSProperties}
       >
         <span className="market-bubble__name">{bubbleLabel(item.name)}</span>
         <strong>{formatCompact(item.postings)}</strong>
         <small>{item.yoyChangePercent===null?t('No YoY comparison','暂无同比数据','Tiada perbandingan tahunan'):`${formatPercent(item.yoyChangePercent)} ${t('YoY','同比','YoY')}`}</small>
       </button>;
     })}
+    </div>
+  </div>;
+}
+
+function CategoryComparison({items,selectedId,onSelect,descending}:{items:MarketRadarSignal[];selectedId:string;onSelect:(id:string)=>void;descending:boolean}){
+  const {t}=useApp();
+  const max=Math.max(0,...items.map(item=>item.postings??0));
+  return <div className="market-comparison" role="group" aria-label={t('Compare online job offerings','比较线上招聘广告','Banding iklan kerja dalam talian')}>
+    {sortMarketSignals(items,descending).map(item=><button type="button" key={item.id} className={`market-comparison-row${selectedId===item.id?' is-selected':''}`} aria-pressed={selectedId===item.id} onClick={()=>onSelect(item.id)}>
+      <span className="market-comparison-name">{item.name}</span>
+      <span className="market-comparison-track" aria-hidden="true"><span style={{width:`${barWidth(item.postings,max)}%`}}/></span>
+      <span className="market-comparison-value"><strong>{item.postings===null?t('Unavailable','暂无数据','Tiada data'):formatCount(item.postings)}</strong>{item.marketSharePercent!==null&&<small>{item.marketSharePercent.toFixed(1)}% {t('share','占比','bahagian')}</small>}</span>
+    </button>)}
   </div>;
 }
 
@@ -124,7 +141,7 @@ function SignalDetail({item,period}:{item:MarketRadarSignal;period:string}){
   return <aside className="market-signal-detail">
     <div><span className="market-eyebrow">{t('Selected category','所选类别','Kategori dipilih')}</span><h3>{item.name}</h3></div>
     {item.postings===null?<p className="market-detail-empty">{t('DOSM reports no comparable value for this category and period.','DOSM 未报告此类别和时期的可比数值。','DOSM tidak melaporkan nilai setanding bagi kategori dan tempoh ini.')}</p>:<>
-      <div className="market-detail-primary"><strong>{formatCount(item.postings)}</strong><span>{t('online job offerings','线上招聘广告','iklan kerja dalam talian')} · {period}</span></div>
+      <div className="market-detail-primary"><strong>{formatCount(item.postings)}</strong><span>{t('online job offerings · DOSM JMI','线上招聘广告 · DOSM JMI','iklan kerja dalam talian · DOSM JMI')} · {period}</span><small>{t('Market share','市场占比','Bahagian pasaran')}: {item.marketSharePercent===null?t('Unavailable','暂无数据','Tiada data'):`${item.marketSharePercent.toFixed(1)}%`}</small></div>
       <div className="market-detail-comparisons">
         <div><span>{t('Quarter over quarter','环比','Suku ke suku')}</span><strong>{formatPercent(item.qoqChangePercent)}</strong><small>{item.previousPostings===null?t('No previous quarter value','无上一季度数值','Tiada nilai suku sebelumnya'):`${formatCount(item.previousPostings)} · ${t('prior quarter','上一季度','suku sebelumnya')}`}</small></div>
         <div><span>{t('Year over year','同比','Tahun ke tahun')}</span><strong>{formatPercent(item.yoyChangePercent)}</strong><small>{item.yearAgoPostings===null?t('No same-quarter value','无去年同期数值','Tiada nilai suku sama tahun lalu'):`${formatCount(item.yearAgoPostings)} · ${quarter} ${Number(year)-1}`}</small></div>
@@ -170,6 +187,8 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
   const {t}=useApp();
   const [tab,setTab]=useState<RadarTab>('occupations');
   const [selectedId,setSelectedId]=useState('');
+  const [view,setView]=useState<'compare'|'bubbles'>('bubbles');
+  const [descending,setDescending]=useState(true);
   const items=tab==='industries'?data.industries:data.occupationGroups;
   const selected=items.find(item=>item.id===selectedId)??items[0];
   const selectedPeriod=data.period;
@@ -196,16 +215,16 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
     <nav className="market-radar-tabs" aria-label={t('Radar views','雷达视图','Paparan radar')} role="tablist">{tabs.map(([id,label])=><button type="button" role="tab" aria-selected={tab===id} className={tab===id?'is-active':''} key={id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
     <section className="market-radar-surface surface">
       {tab==='employment'?<EmploymentView data={data}/>:<>
-        <div className="market-section-intro"><div><h2>{tab==='occupations'?t('Online job ads by major occupation group','按主要职业大类统计的线上招聘广告','Iklan kerja mengikut kumpulan utama pekerjaan'):t('Online job ads by economic activity','按经济活动统计的线上招聘广告','Iklan kerja mengikut aktiviti ekonomi')}</h2><p>{tab==='occupations'?t('Each bubble is a DOSM major occupation group. Larger circles represent more ads.','每个气泡代表 DOSM 的一个主要职业大类；气泡越大，广告数量越多。','Setiap gelembung mewakili kumpulan pekerjaan utama DOSM. Lebih besar, lebih banyak iklan.'):t('Each bubble is an industry category. Unclassified ads remain visible when reported.','每个气泡代表一个行业类别；已分类为“未分类”的广告仍会显示。','Setiap gelembung mewakili kategori industri. Iklan tidak dikelaskan dikekalkan.')}</p></div><span className="market-unit-tag">{t('Bubble size = ad count','气泡大小 = 广告数','Saiz gelembung = bilangan iklan')}</span></div>
-        <SignalHighlights items={items} tab={tab} selectedId={selected?.id??''} onSelect={setSelectedId}/>
-        <MarketBubbles items={items} selectedId={selected?.id??''} onSelect={setSelectedId}/>
+        <div className="market-section-intro"><div><h2>{tab==='occupations'?t('Online job ads by major occupation group','按主要职业大类统计的线上招聘广告','Iklan kerja mengikut kumpulan utama pekerjaan'):t('Online job ads by economic activity','按经济活动统计的线上招聘广告','Iklan kerja mengikut aktiviti ekonomi')}</h2><p>{tab==='occupations'?t('Compare observed ad counts for DOSM major occupation groups.','比较 DOSM 主要职业大类的实际广告数量。','Banding bilangan iklan bagi kumpulan pekerjaan utama DOSM.'):t('Compare observed ad counts by industry; unclassified ads remain visible.','比较各行业的实际广告数量；未分类广告仍会显示。','Banding bilangan iklan mengikut industri; iklan tidak dikelaskan kekal dipaparkan.')}</p></div><span className="market-unit-tag">{t('DOSM JMI · online job advertisements','DOSM JMI · 线上招聘广告','DOSM JMI · iklan kerja dalam talian')}</span></div>
+        <div className="market-view-controls"><div className="market-view-toggle" role="group" aria-label={t('Visualization view','可视化视图','Paparan visual')}><button type="button" aria-pressed={view==='bubbles'} onClick={()=>setView('bubbles')}>{t('Bubble explorer','气泡探索','Teroka gelembung')}</button><button type="button" aria-pressed={view==='compare'} onClick={()=>setView('compare')}>{t('Comparison view','对比视图','Paparan perbandingan')}</button></div>{view==='compare'&&<label>{t('Sort by ad count','按广告数量排序','Susun mengikut bilangan iklan')}<select value={descending?'desc':'asc'} onChange={event=>setDescending(event.target.value==='desc')}><option value="desc">{t('Highest first','从高到低','Tertinggi dahulu')}</option><option value="asc">{t('Lowest first','从低到高','Terendah dahulu')}</option></select></label>}</div>
+        {view==='compare'?<CategoryComparison items={items} selectedId={selected?.id??''} onSelect={setSelectedId} descending={descending}/>:<><MarketBubbles items={items} selectedId={selected?.id??''} onSelect={setSelectedId}/><SignalHighlights items={items} tab={tab} selectedId={selected?.id??''} onSelect={setSelectedId}/></>}
         {selected&&<SignalDetail item={selected} period={selectedPeriod}/>}
       </>}
     </section>
     <MatchPreparation readiness={data.matchingReadiness}/>
     <section className="market-source-notes surface">
       <div className="market-section-intro"><div><h2>{t('Sources and reading notes','来源与阅读说明','Sumber dan nota bacaan')}</h2><p>{data.attribution}</p></div></div>
-      <ul className="market-note-list">{data.notes.map(note=><li key={note}>{note}</li>)}</ul>
+      <p className="market-source-period">{t('Selected period','所选季度','Suku dipilih')}: {data.period} · {t('Latest available','最新可用','Terkini tersedia')}: {data.periods.at(-1)??data.period}</p><p className="market-source-warning">{t('JMI online ads and QES employment are separate measures. Missing comparisons are unavailable, not zero.','JMI 线上广告与 QES 就业统计是不同指标。缺失的对比数据表示不可用，并非零。','Iklan JMI dan pekerjaan QES ialah ukuran berbeza. Perbandingan yang tiada bukan sifar.')}</p><details className="market-methodology"><summary>{t('Methodology and limitations','方法与局限','Kaedah dan batasan')}</summary><ul className="market-note-list">{data.notes.map(note=><li key={note}>{note}</li>)}</ul></details>
       <div className="market-source-links">{data.sources.map(source=><a href={source.url} key={source.id} target="_blank" rel="noreferrer"><strong>{source.title}</strong><span>{source.file} · {t('released','发布于','diterbitkan')} {source.publishedOn}</span></a>)}<a href={data.termsUrl} target="_blank" rel="noreferrer"><strong>{t('DOSM terms of use','DOSM 使用条款','Syarat penggunaan DOSM')}</strong><span>{t('Attribution and reuse terms','署名与再使用条款','Terma atribusi dan penggunaan semula')}</span></a></div>
     </section>
   </>;
