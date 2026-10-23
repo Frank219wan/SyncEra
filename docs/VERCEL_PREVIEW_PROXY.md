@@ -12,13 +12,13 @@ In the **Frontend** project, set these variables for **Preview only**. Mark the 
 - `BACKEND_PREVIEW_ORIGIN` (the HTTPS branch Preview origin for the Backend project)
 - `BACKEND_PROTECTION_BYPASS_SECRET` (the **Backend** project's Protection Bypass for Automation secret)
 
-The origin is validated against the `syncera-backend-git-integration-postgres-pre-…-frank219wan.vercel.app` Preview alias. Do not set the bypass secret in the Backend URL, browser, `VITE_*` variables, GitHub, or logs. The Function refuses to run outside `VERCEL_ENV=preview`; Vercel supplies that variable.
+The origin is validated against the Backend project's `integration/postgres-preview-backend` or `integration/career-radar-dosm-pr15` branch Preview alias. The latter must be a successfully deployed, contract-compatible Backend Preview before switching the Frontend origin. Do not set the bypass secret in the Backend URL, browser, `VITE_*` variables, GitHub, or logs. The Function refuses to run outside `VERCEL_ENV=preview`; Vercel supplies that variable. Preview variables can be branch-scoped in Vercel: a variable assigned only to `integration/postgres-preview-backend` is unavailable to the `integration/career-radar-dosm-pr15` deployment, even when both are Preview environments.
 
 Both the **Frontend Preview** and **Backend Preview** must have Vercel Authentication enabled, with no Deployment Protection exception for the Preview aliases or `/api` path. The Backend bypass secret grants broad access to that project's deployments; use a dedicated secret and rotate it if disclosed. A shareable link or Frontend bypass token also grants access to the proxy, so distribute those only to trusted testers.
 
 Configure a **Frontend project Vercel Firewall/WAF rate-limit rule** for `/api/v1/*` (for example 60 requests per IP per minute, with a stricter 10 POST requests per IP per minute rule). The Function also enforces a 64 KiB JSON body cap, a 1 MiB response cap, a 15 s upstream timeout, a same-origin check for browser POSTs, strict path/method/query allowlists, synthetic-only normalization, and a per-instance rate backstop. The backstop is not a distributed rate limiter, so the WAF rule is an operational requirement for abuse protection.
 
-The proxy intentionally does **not** expose upload, profile readback, organization, progress, or admin routes. Keep the Backend Neon configuration, revision checks, and existing API contract unchanged. Do not enable the paid MiniMax adapter for this Preview.
+The proxy exposes a guarded synthetic PDF/DOCX upload route with a 3 MiB multipart cap. It intentionally does **not** expose profile readback, organization, progress, or admin routes. Hosted upload also requires `ENABLE_SYNTHETIC_UPLOAD=1` on the Backend Preview; keep it disabled unless fictional-file testing is intended and protection is verified. Keep the Backend Neon configuration, revision checks, and existing API contract unchanged. Do not enable the paid MiniMax adapter for this Preview.
 
 ## Redeploy and verify
 

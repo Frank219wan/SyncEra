@@ -4,8 +4,29 @@ import { emptyProfile } from '../src/data.ts';
 import {
   applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRoadmap, mapTrendRoles,
   mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
-  targetWeeks, toContractLevel, toContractRoleId, toContractSkillId,
+  targetWeeks, toContractLevel, toContractRoleId, toContractSkillId, validateRecommendationPayload,
 } from '../src/services/api-contract.ts';
+
+test('real recommendations require matching profile, snapshot, ranking, scores and provenance', () => {
+  const expected = {profileId:'profile_synthetic_1',scenario:'moderate' as const,snapshotId:'snap_my_1',topK:5};
+  const meta = {request_id:'req_synthetic_1',snapshot_id:'snap_my_1',model_version:'tech-v1',data_label:'synthetic_demo',is_mock:true};
+  const first = {
+    rank:1,role_id:'role_data_analyst',role_name:'Data Analyst',match_score:69.5,
+    score_breakdown:{skill_compatibility:80,interests_preferences:60,scenario_outlook:70,transition_feasibility:50},
+    strengths:['skill_sql'],skill_gaps:[{skill_id:'skill_python',name:'Python',current_level:1,target_level:3,importance:'high'}],
+    reason:'Deterministic synthetic match.',evidence_ids:['ev_demo_001'],scenario_assumptions:['moderate assumption'],
+    uncertainty:'Synthetic data.',
+  };
+  const payload = {profile_id:expected.profileId,ai_scenario:expected.scenario,recommendations:[first]};
+  assert.deepEqual(validateRecommendationPayload(payload,meta,expected),[first]);
+  assert.throws(()=>validateRecommendationPayload({...payload,profile_id:'profile_other'},meta,expected));
+  assert.throws(()=>validateRecommendationPayload(payload,{...meta,snapshot_id:'snap_other'},expected));
+  assert.throws(()=>validateRecommendationPayload(payload,{...meta,is_mock:false},expected));
+  assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,rank:2}]},meta,expected));
+  assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,match_score:95}]},meta,expected));
+  assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,evidence_ids:['bad/url']}]},meta,expected));
+  assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,skill_gaps:[{...first.skill_gaps[0],current_level:3}]}]},meta,expected));
+});
 
 test('contract IDs round-trip without leaking display names into keys', () => {
   assert.equal(toContractRoleId('data-analyst'), 'role_data_analyst');

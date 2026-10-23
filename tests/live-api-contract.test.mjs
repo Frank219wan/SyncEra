@@ -56,6 +56,23 @@ test('live API completes the Individual contract from profile to roadmap', async
     }),
   });
   assert.equal(confirmed.data.profile.reviewed_by_user, true);
+  assert.equal(confirmed.data.profile.profile_id, profile.profile_id);
+  assert.equal(confirmed.data.profile_revision, profile.revision + 1);
+
+  const staleResponse = await fetch(`${baseUrl}/profiles/confirm`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      profile_id: profile.profile_id,
+      skills: [{ skill_id: 'skill_sql', level: 3, source: 'confirmed', confidence: 1 }],
+      reviewed_by_user: true,
+      profile_revision: profile.revision,
+    }),
+  });
+  assert.equal(staleResponse.status, 409);
+  const stale = await staleResponse.json();
+  assert.equal(stale.error.code, 'SNAPSHOT_CONFLICT');
+  assert.ok(stale.meta.request_id);
 
   const trends = await request('/trends/roles?region=MY&field_id=field_data');
   assert.ok(trends.meta.snapshot_id);
@@ -84,6 +101,9 @@ test('live API completes the Individual contract from profile to roadmap', async
   assert.ok(Math.abs(recommendation.match_score - expectedScore) <= 0.01);
   assert.ok(recommendation.evidence_ids.length > 0);
   assert.ok(recommendation.skill_gaps.some(gap => gap.skill_id === 'skill_python'));
+
+  const role = await request(`/roles/${recommendation.role_id}`);
+  assert.equal(role.data.role_id, recommendation.role_id);
 
   const evidence = await request(`/evidence/${recommendation.evidence_ids[0]}`);
   assert.equal(evidence.data.evidence.evidence_id, recommendation.evidence_ids[0]);
