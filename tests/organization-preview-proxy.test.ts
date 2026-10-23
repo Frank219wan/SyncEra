@@ -21,6 +21,8 @@ test('Organization integration branch may use only its protected Backend Preview
 test('Organization origin allowlist still rejects main and arbitrary hosts',async()=>{
   for(const backendOrigin of [
     'https://syncera-backend-git-main-test-frank219wan.vercel.app',
+    // No B1 branch alias has been verified in Vercel yet; fail closed.
+    'https://syncera-backend-git-feature-organization-b1-hr-test-frank219wan.vercel.app',
     'https://attacker.example',
   ]){
     let forwarded=false;

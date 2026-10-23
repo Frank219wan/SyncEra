@@ -290,3 +290,14 @@ def test_b1_workspace_revision_cas(tmp_path):
     stale = client.post("/api/v1/organizations/hr/analyze", json=update)
     assert stale.status_code == 409
     assert stale.json()["error"]["code"] == "REVISION_CONFLICT"
+
+
+def test_b1_and_b2_cannot_reuse_the_same_workspace_id(tmp_path):
+    client = make_client(tmp_path)
+    b2 = analyze(client, request_body())["data"]
+    b1_request = hr_request_body()
+    b1_request["workspace_id"] = b2["workspace_id"]
+    b1_request["workspace_revision"] = b2["workspace_revision"]
+    response = client.post("/api/v1/organizations/hr/analyze", json=b1_request)
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "REVISION_CONFLICT"

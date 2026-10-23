@@ -1,8 +1,12 @@
 import {useState,useEffect,useRef} from 'react';
 import {Link,useNavigate,useSearchParams} from 'react-router-dom';
-import {CircleUserRound} from 'lucide-react';
 import {PsychologyAssessmentForm} from '../components/PsychologyAssessment';
 import {StartNewProfileButton} from '../components/StartNewProfile';
+import {ProfileHero} from '../components/visual/profile/ProfileHero';
+import {ProfileBento} from '../components/visual/profile/ProfileBento';
+import {ProfileSkills,type ProfileSkillCard} from '../components/visual/profile/ProfileSkills';
+import {ProfileVision} from '../components/visual/profile/ProfileVision';
+import {ProfilePreferences} from '../components/visual/profile/ProfilePreferences';
 import {useApp} from '../store';
 import {sampleProfile,skillNames} from '../data';
 import {api,isDemo} from '../services/api';
@@ -12,6 +16,7 @@ import {editPersonalField,parseGoalTags,unconfirmedPersonalProfile,canConfirmPer
 import {PersonalProfileReview,WorkStyleInputs,workStyleSummary} from './PersonalProfile';
 import {PageHeader,Stepper,ButtonLink,Field,DemoNotice,SkillChip,ErrorState,icons} from '../components';
 import './intake-wizard.css';
+import './profile-overview-visual.css';
 const {ArrowRight,ArrowLeft,Check,GraduationCap,Building2,Compass,Leaf,BookOpen,X}=icons;
 const stages=[['student','Student','在校学生','Pelajar'],['graduate','Recent graduate','应届毕业生','Graduan baharu'],['professional','Working professional','在职人士','Profesional bekerja'],['returning','Returning to work','重返职场','Kembali bekerja']] as const;
 const goals=[['explore','Explore possibilities','探索职业方向','Teroka peluang'],['first-job','Find my first role','寻找第一份工作','Cari kerjaya pertama'],['switch','Change my career','转换职业方向','Tukar kerjaya'],['upskill','Grow in my field','提升现有职业','Tingkatkan kemahiran']] as const;
@@ -24,25 +29,29 @@ function QuestionProgress({index}:{index:number}){
   </div>;
 }
 export function Intake(){
-  const {state,t,copy}=useApp();const p=state.profile;const hasProfile=Boolean(p.occupation||p.education||p.experience||p.skills.length||p.interests||p.vision||p.goalTags?.length||p.preferences||Object.values(p.workStyle??{}).some(Boolean));const value=(text:string)=>text.trim()||t('Not provided yet','尚未填写','Belum diisi');
+  const {state,t,copy}=useApp();const p=state.profile;const hasProfile=Boolean(p.occupation||p.education||p.experience||p.skills.length||p.interests||p.vision||p.goalTags?.length||p.preferences||Object.values(p.workStyle??{}).some(Boolean));
   const stage=stages.find(item=>item[0]===p.stage),goal=goals.find(item=>item[0]===p.goal);
-  return <><PageHeader title={t('My profile','我的画像','Profil saya')} description={t('Review the information you have saved.','查看已保存的资料。','Semak maklumat tersimpan.')} action={<div className="profile-header-action"><DemoNotice/><div className="profile-avatar" role="img" aria-label={t('Default profile avatar','默认个人头像','Avatar profil lalai')}><CircleUserRound size={40} strokeWidth={1.4}/></div></div>}/>
-    <section className="surface form-panel profile-overview"><div className="section-heading profile-overview-heading"><h2>{t('Profile overview','画像概览','Gambaran profil')}</h2>{hasProfile&&<Link className="button" to="/individual/intake/profile?edit=1">{t('Edit profile','编辑画像','Edit profil')}<ArrowRight size={16}/></Link>}</div>
-      {!hasProfile?<div className="empty-inline"><p>{t('Your profile is still empty. Add your background, skills and interests when you’re ready.','画像尚为空白；准备好后可补充背景、技能和兴趣。','Profil anda masih kosong. Tambah latar belakang, kemahiran dan minat apabila sedia.')}</p><Link className="button" to="/individual/intake/start">{t('Create my profile','创建我的画像','Cipta profil saya')}<ArrowRight size={16}/></Link></div>
-      :<><div className="department-detail profile-overview-details"><dl>
-        <div className="profile-overview-row"><dt>{t('Current stage','当前阶段','Tahap semasa')}</dt><dd>{stage?t(stage[1],stage[2],stage[3]):value('')}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Career goal','职业目标','Matlamat kerjaya')}</dt><dd>{goal?t(goal[1],goal[2],goal[3]):value('')}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Current role / study','当前职业／专业','Jawatan / pengajian')}</dt><dd>{value(p.occupation)}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Education','教育背景','Pendidikan')}</dt><dd>{value(p.education)}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Experience','经历','Pengalaman')}</dt><dd>{value(p.experience)}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Skills','技能','Kemahiran')}</dt><dd>{p.skills.length?p.skills.map(s=>`${copy(skillNames[s.id]||[s.id,s.id,s.id])} · ${s.level}${s.confirmed?'':' · '+t('unconfirmed','待确认','belum disahkan')}`).join(', '):value('')}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Interests','兴趣','Minat')}</dt><dd>{value(p.interests)}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Future vision','未来愿景','Visi masa depan')}</dt><dd>{value(p.vision)}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Goal tags','目标标签','Tag matlamat')}</dt><dd>{value((p.goalTags??[]).join(' · '))}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Work style','工作方式','Gaya kerja')}</dt><dd>{value(workStyleSummary(p,t))}</dd></div>
-        <div className="profile-overview-row"><dt>{t('Region','地区','Wilayah')}</dt><dd>{value(p.region)}</dd></div>
-      </dl></div><p className="fine-print">{t('After an edit, refresh your matches. Career vision and work style are saved here but not scored by API v1.0 yet.','修改后请重新计算推荐。职业愿景与工作方式保存在此，但 API v1.0 尚未将其计入评分。','Selepas suntingan, kira semula padanan. Visi dan gaya kerja disimpan tetapi belum dinilai oleh API v1.0.')}</p></>}
-    </section><div className="form-actions standalone"><Link className="button secondary" to="/individual">{t('My growth','我的成长','Pertumbuhan saya')}<ArrowRight size={16}/></Link><StartNewProfileButton/></div></>;
+  const missing=t('Not provided yet','尚未填写','Belum diisi');
+  const personalMeta=(field:'interests'|'vision'|'workStyle',filled:boolean)=>{
+    const source=p.personalSources?.[field];
+    const sourceText=!filled?t('Source: none','来源：未提供','Sumber: tiada'):source==='ai_draft'?t('Source: AI-extracted draft','来源：AI 提取草稿','Sumber: draf diekstrak AI'):source==='sample'?t('Source: synthetic example','来源：虚构示例','Sumber: contoh sintetik'):source==='self_reported'?t('Source: your own input','来源：本人填写','Sumber: input anda'):t('Source: saved profile','来源：已保存画像','Sumber: profil tersimpan');
+    const status=!filled?missing:p.personalConfirmed?.[field]===true?t('Confirmed by you','已由你确认','Disahkan oleh anda'):t('Awaiting your confirmation','待你确认','Menunggu pengesahan');
+    return {source:sourceText,status};
+  };
+  const skillLevel=(level:string)=>level==='beginner'?t('Beginner','入门','Pemula'):level==='intermediate'?t('Intermediate','中等','Pertengahan'):level==='advanced'?t('Advanced','熟练','Mahir'):level||missing;
+  const skillCards:ProfileSkillCard[]=p.skills.map(skill=>({id:skill.id,name:copy(skillNames[skill.id]||[skill.id,skill.id,skill.id]),level:skillLevel(skill.level),source:skill.source==='manual'?t('Self-reported','自行填写','Dilaporkan sendiri'):skill.source==='inferred'?t('Inferred · please verify','推断信息 · 请核实','Inferens · sila sahkan'):t('Extracted from CV','从简历提取','Diekstrak daripada CV'),status:skill.confirmed?t('Confirmed','已确认','Disahkan'):t('Unconfirmed','待确认','Belum disahkan'),confirmed:skill.confirmed,catalogueNote:skill.backendSupported===false?t('Not in the service skill catalogue','不在服务技能目录中','Tiada dalam katalog kemahiran perkhidmatan'):undefined}));
+  const workStyle=workStyleSummary(p,t);
+  return <><PageHeader title={t('My profile','我的画像','Profil saya')} description={t('A clear view of the experiences, interests and intentions you have chosen to share.','查看你主动保存的经历、兴趣与成长方向。','Lihat pengalaman, minat dan arah pertumbuhan yang anda pilih untuk dikongsi.')} action={<DemoNotice/>}/>
+    {!hasProfile?<section className="surface form-panel profile-overview"><div className="section-heading profile-overview-heading"><h2>{t('Profile overview','画像概览','Gambaran profil')}</h2></div><div className="empty-inline"><p>{t('Your profile is still empty. Add your background, skills and interests when you’re ready.','画像尚为空白；准备好后可补充背景、技能和兴趣。','Profil anda masih kosong. Tambah latar belakang, kemahiran dan minat apabila sedia.')}</p><Link className="button" to="/individual/intake/start">{t('Create my profile','创建我的画像','Cipta profil saya')}<ArrowRight size={16}/></Link></div></section>
+    :<div className="profile-bento-page">
+      <ProfileHero role={p.occupation} education={p.education} stage={stage?t(stage[1],stage[2],stage[3]):''} region={p.region} careerGoal={goal?t(goal[1],goal[2],goal[3]):''} missingLabel={missing} careerGoalLabel={t('Career direction','职业方向','Arah kerjaya')} editLabel={t('Edit profile','编辑画像','Edit profil')}/>
+      <ProfileBento experience={p.experience} interests={p.interests} emptyLabel={missing} experienceLabel={t('Experience','经历','Pengalaman')} interestsLabel={t('Interests','兴趣','Minat')} interestsMeta={personalMeta('interests',Boolean(p.interests.trim()))}/>
+      <ProfileSkills skills={skillCards} title={t('My skills','我的技能','Kemahiran saya')} emptyLabel={missing}/>
+      <ProfileVision vision={p.vision} title={t('Future vision','未来愿景','Visi masa depan')} emptyLabel={t('Add your own vision when you are ready.','准备好后，可以写下属于你的职业愿景。','Tambahkan visi anda apabila bersedia.')} editLabel={t('Edit profile','编辑画像','Edit profil')} meta={personalMeta('vision',Boolean(p.vision.trim()))}/>
+      <ProfilePreferences title={t('Additional preferences','更多偏好','Keutamaan tambahan')} summaryLabel={t('items saved','项已保存','item disimpan')} goalTagsLabel={t('Goal tags','目标标签','Tag matlamat')} goalTags={p.goalTags??[]} workStyleLabel={t('Work style','工作方式','Gaya kerja')} workStyle={workStyle} emptyLabel={missing} editLabel={t('Edit profile','编辑画像','Edit profil')} meta={personalMeta('workStyle',Boolean(workStyle))}/>
+      <p className="profile-bento-footnote">{t('After an edit, refresh your matches. Career vision and work style are saved here but not scored by API v1.0 yet.','修改后请重新计算推荐。职业愿景与工作方式保存在此，但 API v1.0 尚未将其计入评分。','Selepas suntingan, kira semula padanan. Visi dan gaya kerja disimpan tetapi belum dinilai oleh API v1.0.')}</p>
+    </div>}
+    <div className="form-actions standalone profile-bento-actions"><Link className="button secondary" to="/individual">{t('My growth','我的成长','Pertumbuhan saya')}<ArrowRight size={16}/></Link><StartNewProfileButton/></div></>;
 }
 export function IntakeStart(){
   const {state,setState,t}=useApp();

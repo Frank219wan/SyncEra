@@ -42,11 +42,15 @@ $env:TEST_DATABASE_URL = '<isolated Neon Preview pooled TLS URL>'
 python -m pytest tests/test_postgres_integration.py tests/test_organization_postgres.py -q
 ```
 
-Then apply the idempotent migrations using the official entry point:
+Use the reviewed direct (non-pooler) Neon Preview endpoint for migrations. Recheck
+the project, branch, endpoint and database in the Neon control plane. Run the
+read-only preflight first; only the deployment owner may authorize the apply:
 
 ```powershell
-$env:DATABASE_URL = '<same isolated Neon Preview pooled TLS URL>'
-python -m scripts.migrate_postgres
+$env:DATABASE_URL = '<reviewed Neon Preview direct TLS URL>'
+python -m scripts.migrate_postgres --preflight
+# After separate deployment-owner approval:
+python -m scripts.migrate_postgres --apply-preview
 ```
 
 Confirm that these tables exist:

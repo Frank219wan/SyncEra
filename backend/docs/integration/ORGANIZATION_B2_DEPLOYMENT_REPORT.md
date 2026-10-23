@@ -55,12 +55,16 @@ Migration `backend/migrations/20261023_04_organization_mvp.sql` creates:
 
 `PostgresOrganizationRepository` shares the existing serverless-safe profile connection pool. Revision updates use a conditional SQL update; two callers using the same revision cannot both succeed. Vercel startup fails if Organization is enabled without PostgreSQL or without its schema. There is no hosted SQLite fallback.
 
-The official migration entry point now includes the Organization migration:
+The official migration entry point now includes the Organization migration.
+Use only the reviewed direct (non-pooler) Preview endpoint. Recheck the Neon
+project and branch identity before an authorized write:
 
 ```powershell
 cd backend
-$env:DATABASE_URL = '<isolated Neon Preview pooled TLS URL>'
-python -m scripts.migrate_postgres
+$env:DATABASE_URL = '<reviewed Neon Preview direct TLS URL>'
+python -m scripts.migrate_postgres --preflight
+# After separate deployment-owner approval:
+python -m scripts.migrate_postgres --apply-preview
 ```
 
 Do not paste the actual URL into chat, source control, frontend variables or command history intended for sharing.

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 360" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <filter id="wash" x="-20%" y="-30%" width="140%" height="170%">
+      <feTurbulence type="fractalNoise" baseFrequency=".015 .028" numOctaves="3" seed="7" result="flow"/>
+      <feDisplacementMap in="SourceGraphic" in2="flow" scale="27" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="19"/>
+    </filter>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="2" seed="11" stitchTiles="stitch"/></filter>
+    <radialGradient id="fade"><stop stop-color="#8fb39a" stop-opacity=".72"/><stop offset=".57" stop-color="#a9c8a6" stop-opacity=".42"/><stop offset="1" stop-color="#b5d2b2" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g filter="url(#wash)">
+    <ellipse cx="360" cy="196" rx="330" ry="155" fill="url(#fade)"/>
+    <path d="M48 129C169 55 294 64 382 94c115 39 214-9 315 56 59 39 44 102-26 139-72 39-171-23-287 11C246 338 91 286 48 129Z" fill="#92b69a" opacity=".46"/>
+    <ellipse cx="825" cy="123" rx="254" ry="119" fill="#729a83" opacity=".31"/>
+    <ellipse cx="916" cy="266" rx="300" ry="102" fill="#bad3b5" opacity=".39"/>
+  </g>
+  <rect width="1100" height="360" filter="url(#grain)" opacity=".045"/>
+</svg>
