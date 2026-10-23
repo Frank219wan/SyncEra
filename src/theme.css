@@ -1,4 +1,6 @@
 /* Shared navigation typography and an explicit, persisted day/night palette. */
+:root{--accent-blue:#456b7d;--accent-lavender:#786a90;--accent-terracotta:#a45f4a;--accent-gold:#8d7035;--space-1:8px;--space-2:16px;--space-3:24px;--space-4:40px;--type-label:13px;--type-body:15px;--type-hero:clamp(30px,3.3vw,48px)}
+html[data-theme="dark"]{--accent-blue:#a5ccdf;--accent-lavender:#c4b4da;--accent-terracotta:#e4ac98;--accent-gold:#e0c283}
 .sidebar{font-family:"Noto Serif SC","Noto Serif",serif;font-size:15px}
 .sidebar .workspace-switch{font-size:14px;line-height:1.5}
 .sidebar .nav-link{font-size:15px;line-height:1.45;min-height:46px}
