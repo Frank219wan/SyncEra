@@ -1,6 +1,6 @@
 import {useEffect,useRef,type ReactNode} from 'react';
 import {Link,NavLink,useLocation} from 'react-router-dom';
-import {ArrowRight,ArrowLeft,Check,ChevronRight,Compass,GraduationCap,LayoutDashboard,Leaf,Map,Network,Search,Settings2,Sprout,Users,X,Info,AlertCircle,Building2,BookOpen,Globe2,BarChart3} from 'lucide-react';
+import {ArrowRight,ArrowLeft,Check,ChevronRight,Compass,GraduationCap,LayoutDashboard,Leaf,Map,Network,Search,Settings2,Sprout,Users,X,Info,AlertCircle,Building2,BookOpen,Globe2,BarChart3,Sun,Moon} from 'lucide-react';
 import {useApp} from './store';
 import {skillNames} from './data';
 import {isDemo} from './services/api';
@@ -10,10 +10,18 @@ export function LocaleSwitcher() {
   const {state,setState,t}=useApp();
   return <label className="locale"><Globe2 size={16}/><span className="sr-only">{t('Language','语言','Bahasa')}</span><select value={state.locale} onChange={e=>setState(s=>({...s,locale:e.target.value as typeof s.locale}))}><option value="en">English</option><option value="zh">简体中文</option><option value="ms">Bahasa Melayu</option></select></label>;
 }
+export function ThemeSwitcher() {
+  const {theme,setTheme,t}=useApp();
+  const dark=theme==='dark';
+  const label=dark?t('Switch to day mode','切换到白天模式','Tukar ke mod siang'):t('Switch to night mode','切换到夜间模式','Tukar ke mod malam');
+  return <button type="button" className="theme-switch" aria-label={label} title={label} aria-pressed={dark} onClick={()=>setTheme(dark?'light':'dark')}>
+    {dark?<Sun size={19} aria-hidden="true"/>:<Moon size={19} aria-hidden="true"/>}
+  </button>;
+}
 export function Brand(){
   const {t}=useApp();
   const backHome=t('Back to home','返回首页','Kembali ke utama');
-  return <Link to="/" className="brand sidebar-brand" aria-label={`Skillogy · ${backHome}`}><span className="brand-symbol"><img src="/images/skillogy-logo.jpg" alt=""/></span><span>Skillogy</span><span className="brand-return-hint" aria-hidden="true">{backHome} <ArrowRight size={13}/></span></Link>;
+  return <Link to="/" className="brand sidebar-brand" aria-label={`Skillogy · ${backHome}`}><span className="brand-symbol"><img src="/images/skillogy-logo-transparent.png" alt=""/></span><span>Skillogy</span><span className="brand-return-hint" aria-hidden="true">{backHome} <ArrowRight size={13}/></span></Link>;
 }
 export function Shell({children}:{children:ReactNode}) {
   const {t}=useApp(); const {pathname}=useLocation();
@@ -62,7 +70,7 @@ export function Shell({children}:{children:ReactNode}) {
     </aside>
     <div className="main-area"><header className="topbar"><nav className="breadcrumb" aria-label={t('Breadcrumb','当前位置','Jejak navigasi')}>
       {breadcrumbs.map((crumb,index)=><span className="breadcrumb-part" key={`${index}-${crumb.label}`}>{index>0&&<ChevronRight size={13} aria-hidden="true"/>}{crumb.to?<Link to={crumb.to}>{crumb.label}</Link>:<span aria-current="page">{crumb.label}</span>}</span>)}
-    </nav><LocaleSwitcher/></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div>
+    </nav><div className="topbar-actions"><ThemeSwitcher/><LocaleSwitcher/></div></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div>
   </div>;
 }
 export function PageHeader({title,description,action,back}:{title:ReactNode;description?:string;action?:ReactNode;back?:string}){
