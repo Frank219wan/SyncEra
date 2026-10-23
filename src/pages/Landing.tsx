@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState, type CSSProperties} from 'react';
 import {Link} from 'react-router-dom';
-import {LocaleSwitcher} from '../components';
+import {LocaleSwitcher,ThemeSwitcher} from '../components';
 import {ArrowUpRight, Pause, Play} from 'lucide-react';
 import {useApp} from '../store';
 import {careerContours} from './careerContours';
@@ -281,7 +281,7 @@ export function Home() {
   const {root, paused, setPaused, playIntro} = useHomepageMotion();
   return <div ref={root} className={`landing cinematic-home ${playIntro?'intro-active':''} ${paused?'motion-paused':''}`}>
     <BotanicalBackground paused={paused}/>
-    <header className="landing-header"><div className="landing-tools"><button className="motion-toggle" onClick={()=>setPaused(v=>!v)} aria-pressed={paused} aria-label={paused?t('Resume ambient animation','继续环境动画','Sambung animasi'):t('Pause ambient animation','暂停环境动画','Jeda animasi')}>{paused?<Play size={15}/>:<Pause size={15}/>}</button><LocaleSwitcher/></div></header>
+    <header className="landing-header"><div className="landing-tools"><button className="motion-toggle" onClick={()=>setPaused(v=>!v)} aria-pressed={paused} aria-label={paused?t('Resume ambient animation','继续环境动画','Sambung animasi'):t('Pause ambient animation','暂停环境动画','Jeda animasi')}>{paused?<Play size={15}/>:<Pause size={15}/>}</button><ThemeSwitcher/><LocaleSwitcher/></div></header>
     <main className="landing-main">
       <div className="landing-copy">
         <FloatingBrandEmblem/>
