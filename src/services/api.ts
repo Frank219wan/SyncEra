@@ -6,6 +6,7 @@ import {
   applyBubbleSizes, mapRecommendations, mapRoadmap, mapTrendRoles, mergeNormalizedProfile,
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta, validateRecommendationPayload,
+  syntheticTextToNormalizeRequest,
   type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData,
   mapMarketRadar,
 } from './api-contract';
@@ -115,6 +116,12 @@ export const api = {
     form.append('study_constraints', JSON.stringify(profileToNormalizeRequest(profile).study_constraints));
     const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/upload', { form, timeoutMs: 58_000 });
     return {...mergeNormalizedProfile(response.data.profile, profile), uploadedFromCv: true};
+  },
+
+  normalizeSyntheticText: async (profile: Profile, text: string): Promise<Profile> => {
+    if (isDemo) return {...structuredClone(profile), experience: text};
+    const response = await request<{ profile: ApiNormalizedProfile }>('/profiles/normalize', { body: syntheticTextToNormalizeRequest(profile, text) });
+    return mergeNormalizedProfile(response.data.profile, {...profile, experience: text});
   },
 
   confirm: async (profile: Profile): Promise<Profile> => {

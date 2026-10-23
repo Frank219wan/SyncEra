@@ -76,6 +76,25 @@ export interface ApiRoleData {
   required_skills: Array<{ skill_id: string; name: string; target_level: number; importance: string }>;
   evidence_ids: string[];
   sdg_links: Array<{ sdg: number; rationale: string }>;
+  // Reserved for a future agreed contract. Current v1.0 responses omit this field.
+  alignment_tags?: unknown;
+}
+
+export interface VerifiedRoleAlignmentTag {
+  kind: 'interest' | 'goal' | 'work_style';
+  label: string;
+  source: 'MASCO' | 'curated' | 'ai_generated';
+}
+
+export function verifiedRoleAlignmentTags(role: ApiRoleData): VerifiedRoleAlignmentTag[] {
+  if(!Array.isArray(role.alignment_tags))return [];
+  return role.alignment_tags.filter((item:unknown):item is VerifiedRoleAlignmentTag=>{
+    if(!item||typeof item!=='object')return false;
+    const tag=item as Record<string,unknown>;
+    return ['interest','goal','work_style'].includes(String(tag.kind))
+      && typeof tag.label==='string' && Boolean(tag.label.trim())
+      && ['MASCO','curated','ai_generated'].includes(String(tag.source));
+  });
 }
 
 export interface ApiTaskImpact {
@@ -341,6 +360,10 @@ export function profileToNormalizeRequest(profile: Profile) {
   };
 }
 
+export function syntheticTextToNormalizeRequest(profile: Profile, text: string) {
+  return {...profileToNormalizeRequest(profile), input_type: 'synthetic_cv_text' as const, text: text.trim(), form: null};
+}
+
 export function profileToConfirmRequest(profile: Profile) {
   return {
     profile_id: profile.id,
@@ -360,7 +383,8 @@ export function mergeNormalizedProfile(profile: ApiNormalizedProfile, fallback: 
     id: profile.profile_id,
     occupation: profile.current_occupation ?? fallback.occupation,
     interests: profile.interests?.join(', ') || fallback.interests,
-    mbti: profile.psychology?.mbti ?? fallback.mbti,
+    // MBTI remains self-reported context; normalization never infers it from a CV.
+    mbti: fallback.mbti,
     psychology: profile.psychology?.assessment_version ? {assessment_version:'1.0',assessment_type:'self_report_reflection',scenario_answers:profile.psychology.scenario_answers??{},other_responses:profile.psychology.other_responses??{},consent_to_personalization:profile.psychology.consent_to_personalization??false} : fallback.psychology,
     revision: profile.revision,
     skills: [...profile.skills.map(skill => ({

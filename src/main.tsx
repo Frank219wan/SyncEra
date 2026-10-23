@@ -17,7 +17,6 @@ import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
 import {About} from './pages/About';
 import {Intake,IntakeStart,ProfileInput,ProfileReview,Analyzing} from './pages/Intake';
-import {ProfileEdit} from './pages/ProfileEdit';
 import {Recommendations,RoleDetail} from './pages/Careers';
 import {Radar} from './pages/RadarExperience';
 import {ConnectedRadar} from './pages/ConnectedCareers';
@@ -26,7 +25,11 @@ import {resolveRadarMode} from './services/radar-mode';
 import {MindMap,RoadmapDraft,LearningJourney,LearningJourneyOverview} from './pages/Learning';
 import {OrganizationPages,HRDepartmentDetails} from './pages/Organization';
 import {RouteLoadingScreen} from './LoadingScreen';
-function ProfileRoute(){const [params]=useSearchParams();const {state}=useApp();return params.get('edit')==='1'?<ProfileEdit/>:!state.profile.stage||!state.profile.goal?<Navigate to="/individual/intake/start" replace/>:<ProfileInput/>;}
+function ProfileRoute(){
+  const [params]=useSearchParams();const {state}=useApp();
+  if(params.get('edit')!=='1'&&(!state.profile.stage||!state.profile.goal))return <Navigate to="/individual/intake/start" replace/>;
+  return <ProfileInput/>;
+}
 function RadarRoute(){const mode=resolveRadarMode(isDemo,import.meta.env.VITE_DOSM_MARKET_RADAR_ENABLED);return mode==='demo'?<Radar/>:<ConnectedRadar mode={mode}/>;}
 function RecommendationsRoute(){
   const {state,t}=useApp();

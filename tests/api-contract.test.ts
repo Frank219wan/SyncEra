@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { emptyProfile } from '../src/data.ts';
 import {
   applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRecommendations, mapRoadmap, mapTrendRoles,
-  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest,
-  targetWeeks, toContractLevel, toContractRoleId, toContractSkillId, validateRecommendationPayload,
+  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest, syntheticTextToNormalizeRequest,
+  targetWeeks, toContractLevel, toContractRoleId, toContractSkillId, validateRecommendationPayload, verifiedRoleAlignmentTags,
 } from '../src/services/api-contract.ts';
 
 test('real recommendations require matching profile, snapshot, ranking, scores and provenance', () => {
@@ -41,6 +41,14 @@ test('contract IDs round-trip without leaking display names into keys', () => {
   assert.equal(fromContractSkillId('skill_python'), 'python');
 });
 
+test('synthetic pasted CV text uses the existing normalize contract without a file upload', () => {
+  const request = syntheticTextToNormalizeRequest(emptyProfile, '  Fictional graduate with SQL and Python projects.  ');
+  assert.equal(request.input_type, 'synthetic_cv_text');
+  assert.equal(request.synthetic_input, true);
+  assert.equal(request.text, 'Fictional graduate with SQL and Python projects.');
+  assert.equal(request.form, null);
+});
+
 test('skill levels preserve unknown as null', () => {
   assert.equal(toContractLevel('unknown'), null);
   assert.equal(toContractLevel('intermediate'), 3);
@@ -54,7 +62,9 @@ test('profile requests preserve structured occupation, interests, skills, and re
     occupation: 'Synthetic analyst',
     education: 'Synthetic degree',
     interests: 'analytics',
-    vision: 'learn',
+    vision: 'learn', goalTags:['continuous learning'],
+    workStyle:{collaboration:'team',pace:'steady',structure:'balanced'},
+    personalConfirmed:{interests:true,vision:true,workStyle:true},
     revision: 4,
     skills: [{ id: 'sql', level: 'intermediate', source: 'manual' as const, confirmed: true }],
   };
@@ -72,6 +82,14 @@ test('profile requests preserve structured occupation, interests, skills, and re
   assert.deepEqual(confirm.skills[0], { skill_id: 'skill_sql', level: 3, source: 'confirmed', confidence: 1 });
   assert.equal(confirm.current_occupation, 'Synthetic analyst');
   assert.deepEqual(confirm.interests, ['analytics']);
+  assert.equal(JSON.stringify(normalize).includes('goalTags'),false);
+  assert.equal(JSON.stringify(normalize).includes('workStyle'),false);
+  assert.equal(Object.hasOwn(confirm,'vision'),false);
+  assert.equal(Object.hasOwn(confirm,'personalConfirmed'),false);
+});
+
+test('empty optional interests stay an empty v1 form list',()=>{
+  assert.deepEqual(profileToNormalizeRequest(emptyProfile).form.interests,[]);
 });
 
 test('profile requests do not invent backend IDs for frontend-only demo skills', () => {
@@ -132,6 +150,27 @@ test('normalized service profile maps back to editable UI fields', () => {
   assert.equal(mapped.skills[0].level, 'unknown');
   assert.equal(mapped.skills[0].confirmed, false);
   assert.equal(mapped.revision, 2);
+});
+
+test('normalization cannot assign MBTI or erase local vision and work-style self reports',()=>{
+  const local={...emptyProfile,vision:'Learn sustainably',goalTags:['Learning'],workStyle:{collaboration:'team',pace:'',structure:''},personalSources:{vision:'self_reported' as const,workStyle:'self_reported' as const}};
+  const merged=mergeNormalizedProfile({profile_id:'profile_1',pipeline:'A',current_occupation:'Analyst',interests:[],psychology:{mbti:'INTJ'},reviewed_by_user:false,revision:1,skills:[]},local);
+  assert.equal(merged.mbti,'');
+  assert.equal(merged.vision,'Learn sustainably');
+  assert.deepEqual(merged.goalTags,['Learning']);
+  assert.equal(merged.workStyle?.collaboration,'team');
+});
+
+test('role alignment tags require an explicit recognized provenance',()=>{
+  const base={role_id:'role_1',name:'Role',field_id:'field_data',summary:'',required_skills:[],evidence_ids:[],sdg_links:[]};
+  assert.deepEqual(verifiedRoleAlignmentTags(base),[]);
+  const tags=verifiedRoleAlignmentTags({...base,alignment_tags:[
+    {kind:'interest',label:'Technology',source:'MASCO'},
+    {kind:'goal',label:'Impact',source:'curated'},
+    {kind:'work_style',label:'Teamwork',source:'ai_generated'},
+    {kind:'goal',label:'Unverified',source:'unknown'},
+  ]});
+  assert.equal(tags.length,3);
 });
 
 test('newly extracted skills remain unconfirmed until the user reviews them',()=>{

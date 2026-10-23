@@ -3,6 +3,7 @@ import {Info,RadioTower,TrendingDown,TrendingUp} from 'lucide-react';
 import {PageHeader} from '../components';
 import {useApp} from '../store';
 import type {MarketEmploymentSector,MarketRadarPackage,MarketRadarSignal} from '../types';
+import {latestMarketPeriod} from '../marketPeriod';
 import './LiveCareerRadar.css';
 
 type RadarTab='occupations'|'industries'|'employment';
@@ -112,7 +113,7 @@ function MatchPreparation({readiness}:{readiness:MarketRadarPackage['matchingRea
   return <section className="market-match-prep surface" aria-label={t('CV to position matching preparation','简历与职位匹配准备','Persediaan padanan CV dan jawatan')}>
     <div><span className="market-eyebrow">{t('Next radar step','雷达下一步','Langkah radar seterusnya')}</span><h2>{t('Prepare CV-to-position matching','准备简历与职位匹配','Sediakan padanan CV dengan jawatan')}</h2>
       <p>{ready?t('The selected data package includes named positions and sourced skill requirements.','所选数据包包含具体职位名称及有来源依据的技能要求。','Pakej data terpilih merangkumi jawatan khusus dan keperluan kemahiran bersumber.'):t('The CV side can use normalized, user-confirmed skills. This DOSM file has broad occupation groups and ad counts, but no job titles or required named skills, so an evidence-based LLM match needs a detailed position-and-skills source first.','简历侧可使用已标准化并由用户确认的技能。此 DOSM 文件只有宽泛职业大类和广告数量，没有职位名称或具体技能要求，因此需要先接入详细职位与技能来源，才能进行有依据的 LLM 匹配。','Bahagian CV boleh menggunakan kemahiran yang dinormalkan dan disahkan pengguna. Fail DOSM ini hanya mengandungi kumpulan pekerjaan luas dan jumlah iklan, tanpa tajuk jawatan atau kemahiran khusus yang diperlukan. Sumber jawatan dan kemahiran terperinci diperlukan sebelum padanan LLM berasaskan bukti.')}</p>
-    </div><div className="market-match-status"><span className={readiness.candidateSkillsSource?'is-ready':''}>{t('CV skill input','Input kemahiran CV','输入 CV 技能')}: {t('confirmed profile skills','已确认的个人技能','kemahiran profil disahkan')}</span><span className={ready?'is-ready':'is-pending'}>{t('Position skill evidence','职位技能依据','Bukti kemahiran jawatan')}: {ready?t('available','可用','tersedia'):t('needed','待补充','diperlukan')}</span><small>{t('Only confirmed skill IDs and levels should be sent to the matching adapter; do not send the raw CV by default.','匹配适配器只应接收已确认的技能 ID 和等级；默认不要发送原始简历。','Hanya ID dan tahap kemahiran yang disahkan patut dihantar kepada penyesuai padanan; jangan hantar CV mentah secara lalai.')}</small></div>
+    </div><div className="market-match-status"><span className={readiness.candidateSkillsSource?'is-ready':''}>{t('CV skill input','输入 CV 技能','Input kemahiran CV')}: {t('confirmed profile skills','已确认的个人技能','kemahiran profil disahkan')}</span><span className={ready?'is-ready':'is-pending'}>{t('Position skill evidence','职位技能依据','Bukti kemahiran jawatan')}: {ready?t('available','可用','tersedia'):t('needed','待补充','diperlukan')}</span><small>{t('Only confirmed skill IDs and levels should be sent to the matching adapter; do not send the raw CV by default.','匹配适配器只应接收已确认的技能 ID 和等级；默认不要发送原始简历。','Hanya ID dan tahap kemahiran yang disahkan patut dihantar kepada penyesuai padanan; jangan hantar CV mentah secara lalai.')}</small></div>
   </section>;
 }
 
@@ -172,6 +173,7 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
   const items=tab==='industries'?data.industries:data.occupationGroups;
   const selected=items.find(item=>item.id===selectedId)??items[0];
   const selectedPeriod=data.period;
+  const latestPeriod=latestMarketPeriod(data.periods,data.period);
   const tabs:[RadarTab,string][]=[
     ['occupations',t('Occupation groups','职业大类','Kumpulan pekerjaan')],
     ['industries',t('Industries','行业','Industri')],
@@ -183,7 +185,7 @@ export function LiveCareerRadar({data,onPeriodChange}:{data:MarketRadarPackage;o
   return <>
     <PageHeader title={t('Malaysia Career Radar — DOSM JMI & QES','马来西亚职业雷达 — DOSM JMI 与 QES','Radar Kerjaya Malaysia — DOSM JMI & QES')} description={t('Explore dated online job advertisements and employment context. This market view is separate from your personal career matches.','探索有报告日期的线上招聘广告及就业背景；此市场信息与个人职业推荐分开。','Teroka iklan kerja bertarikh dan konteks pekerjaan. Paparan pasaran ini berasingan daripada padanan kerjaya peribadi.')} action={<span className="market-source-badge"><RadioTower size={15}/>{t('DOSM source data','DOSM 来源数据','Data sumber DOSM')}</span>}/>
     <section className="market-radar-context surface">
-      <div className="market-context-copy"><span className="market-eyebrow">{t('Latest source snapshot','最新来源快照','Gambaran sumber terkini')}</span><strong>{data.period} <span>· {t('Malaysia','马来西亚','Malaysia')}</span></strong><p>{t('Q2 2026 is the latest period in the files you supplied. Values refresh when a new DOSM release is imported.','你提供的文件截至 2026 年第二季度。导入 DOSM 新发布数据后即可更新。','Suku kedua 2026 ialah tempoh terkini dalam fail yang diberi. Data dikemas kini selepas keluaran DOSM baharu diimport.')}</p></div>
+      <div className="market-context-copy"><span className="market-eyebrow">{t('Selected reporting quarter','当前查看季度','Suku laporan dipilih')}</span><strong>{data.period} <span>· {t('Malaysia','马来西亚','Malaysia')}</span></strong><p>{t(`The latest imported DOSM period is ${latestPeriod}. Values refresh when a new release is imported.`,`当前导入的 DOSM 数据最新截至 ${latestPeriod}。导入新发布数据后即可更新。`,`Tempoh DOSM terkini yang diimport ialah ${latestPeriod}. Data dikemas kini selepas keluaran baharu diimport.`)}</p></div>
       <label className="market-period-select">{t('Quarter','季度','Suku')}<select value={data.period} onChange={event=>onPeriodChange(event.target.value)} aria-label={t('Choose reporting quarter','选择报告季度','Pilih suku laporan')}>{[...data.periods].reverse().map(period=><option key={period} value={period}>{period}</option>)}</select></label>
     </section>
     <div className="market-kpi-grid">

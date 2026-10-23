@@ -23,7 +23,9 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   const health=await envelope<{status:string}>('/health');
   assert.equal(health.data.status,'ok');
 
-  const input={...emptyProfile,occupation:'Synthetic analyst',interests:'analytics',skills:[{id:'sql',level:'intermediate',source:'manual' as const,confirmed:true}]};
+  const input={...emptyProfile,occupation:'Synthetic analyst',interests:'analytics',vision:'Build useful tools',goalTags:['Learning'],workStyle:{collaboration:'team',pace:'steady',structure:'balanced'},skills:[{id:'sql',level:'intermediate',source:'manual' as const,confirmed:true}]};
+  assert.equal(Object.hasOwn(profileToNormalizeRequest(input),'vision'),false);
+  assert.equal(Object.hasOwn(profileToConfirmRequest(input),'workStyle'),false);
   const normalized=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>('/profiles/normalize',profileToNormalizeRequest(input));
   const profile=mergeNormalizedProfile(normalized.data.profile,input);
   const confirmed=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>('/profiles/confirm',profileToConfirmRequest(profile));
@@ -62,6 +64,11 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   assert.deepEqual(validateRecommendationPayload(fast.data,fast.meta,{
     profileId:ready.id,scenario:'fast',snapshotId:trends.meta.snapshot_id!,topK:5,
   }),fast.data.recommendations);
+  assert.deepEqual(cards.map(card=>card.matchScore),recommended.data.recommendations.map(card=>card.match_score));
+  const verifiedFast=validateRecommendationPayload(fast.data,fast.meta,{
+    profileId:ready.id,scenario:'fast',snapshotId:trends.meta.snapshot_id!,topK:5,
+  });
+  assert.deepEqual(mapRecommendations(verifiedFast).map(card=>card.matchScore),fast.data.recommendations.map(card=>card.match_score));
 
   const first=cards[0];
   const contractRoleId=`role_${first.roleId.replace(/-/g,'_')}`;

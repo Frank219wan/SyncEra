@@ -8,6 +8,10 @@ export interface PsychologyAssessment { assessment_version:'1.0'; assessment_typ
 export interface Profile {
   id: string; stage: string; goal: string; occupation: string; education: string; experience: string;
   skills: Skill[]; interests: string; vision: string; preferences: string; mbti: string;
+  goalTags?: string[];
+  workStyle?: { collaboration: string; pace: string; structure: string };
+  personalSources?: Partial<Record<'interests' | 'vision' | 'workStyle', 'self_reported' | 'sample' | 'ai_draft'>>;
+  personalConfirmed?: Partial<Record<'interests' | 'vision' | 'workStyle', boolean>>;
   region: string; synthetic: boolean; sample: boolean; revision?: number;
   psychology?: PsychologyAssessment;
   uploadedFromCv?: boolean;
