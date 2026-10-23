@@ -16,11 +16,17 @@ Base: `integration/career-radar-dosm-pr15` at `42f12a0`. Source: `main` at `b722
 
 The merge does not modify either `vercel.json`; both still contain `git.deploymentEnabled=false`. The Frontend API proxy, Backend PostgreSQL/Neon integration, Revision CAS, Psychology Assessment, career journeys, HR/L&D, TVET, and DOSM Radar remain in the Integration tree. The merge does not enable paid AI or DOSM market flags.
 
+## Draft PR #28 follow-up
+
+- `src/theme.css` now gives the optional Psychology Assessment distinct dark-mode normal, hover, selected, and focused option states. Question text, A–E letters, native radio controls, and the consent checkbox use readable foregrounds and visible focus styling. The existing `src/styles.css` rule still sets the compact 54px minimum height and mobile spacing.
+- `.github/workflows/cross-stack-ci.yml` now runs on pull requests targeting `integration/career-radar-dosm-pr15` as well as the existing `main` and `feature/tech-integration` targets. The workflow still runs frontend tests/build and Backend pytest; no Vercel configuration changed.
+- CSS color-pair contrast calculations range from 6.10:1 to 13.06:1 for the checked dark states, and the light option text is 7.67:1. The theme state reads and writes the `skillogy-theme` local-storage key. Browser-level desktop/mobile visual and reload checks remain open because local browser control is disabled in Work settings.
+
 ## Local verification
 
-- `CI=true corepack pnpm test`: 64 passed.
-- `CI=true corepack pnpm run build`: TypeScript and Vite build passed.
-- Backend Python 3.12 `python -m pytest tests -q`: 123 passed, 2 skipped.
+- After the Draft PR #28 follow-up, `CI=true corepack pnpm test`: 64 passed.
+- After the Draft PR #28 follow-up, `CI=true corepack pnpm run build`: TypeScript and Vite build passed.
+- After the Draft PR #28 follow-up, Backend Python 3.12 `python -m pytest tests -q`: 123 passed, 2 skipped.
 - JSON parse and configuration comparison: both Vercel files remained byte-for-byte unchanged by the merge.
 - Local Demo browser smoke: landing, dark-mode toggle, and Individual home rendered; theme toggle remained selected across navigation. Full merged browser journey and real Preview were not verified.
 

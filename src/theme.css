@@ -87,6 +87,21 @@ html[data-theme="dark"] :is(.segmented button:hover,.filter-tabs button:hover){b
 html[data-theme="dark"] :is(.progress-track,.loading-bar,.gap-bar){background:#405345}
 html[data-theme="dark"] :is(.progress-track span,.gap-bar>i){background:#b1d89b}
 
+/* Keep the compact psychology choices readable against the night palette. */
+html[data-theme="dark"] .psychology-assessment .psychology-question{color:var(--body)}
+html[data-theme="dark"] .psychology-assessment .psychology-question legend,
+html[data-theme="dark"] .psychology-assessment .psychology-prompt{color:var(--ink)}
+html[data-theme="dark"] .psychology-assessment .psychology-option{background:#23372b;border-color:#789679;color:#f0f5e9}
+html[data-theme="dark"] .psychology-assessment .psychology-option:hover{background:#304b38;border-color:#a1c497}
+html[data-theme="dark"] .psychology-assessment .psychology-option.selected{background:#3b5a40;border-color:#c0dda9;color:#fffef1}
+html[data-theme="dark"] .psychology-assessment .psychology-option.selected:hover{background:#48694a}
+html[data-theme="dark"] .psychology-assessment .psychology-option:focus-within{outline:3px solid #d4efbd;outline-offset:2px}
+html[data-theme="dark"] .psychology-assessment .psychology-option-letter{color:#d4efbd}
+html[data-theme="dark"] .psychology-assessment .psychology-option input[type=radio],
+html[data-theme="dark"] .psychology-assessment .psychology-consent input[type=checkbox]{accent-color:#c4e8ab;color-scheme:dark}
+html[data-theme="dark"] .psychology-assessment .psychology-consent{color:var(--body)}
+html[data-theme="dark"] .psychology-assessment .psychology-consent:focus-within{outline:2px solid #d4efbd;outline-offset:4px;border-radius:4px}
+
 /* Data displays retain distinct levels without using pale cells or dark labels. */
 html[data-theme="dark"] :is(.data-table thead,.heatmap-table th){background:#304739;color:var(--ink)}
 html[data-theme="dark"] :is(.data-table td,.data-table th,.heatmap-table td,.heatmap-table th,.profile-overview-row,.department-detail dl){border-color:var(--line);color:var(--body)}

@@ -2,7 +2,7 @@ name: Cross-stack CI
 
 on:
   pull_request:
-    branches: [main, feature/tech-integration]
+    branches: [main, feature/tech-integration, integration/career-radar-dosm-pr15]
   workflow_dispatch:
 
 permissions:
