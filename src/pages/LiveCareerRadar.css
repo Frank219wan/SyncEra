@@ -36,3 +36,36 @@ html[data-theme="dark"] .market-source-links>a{background:var(--surface);border-
 html[data-theme="dark"] .market-match-status>span.is-ready{background:#284b39;color:#e0f2e5}html[data-theme="dark"] .market-match-status>span.is-pending{background:#54472e;color:#f5e3b8}
 html[data-theme="dark"] .market-kpi-change--rising,html[data-theme="dark"] .market-change--rising{color:#a9d6b3!important}html[data-theme="dark"] .market-kpi-change--declining,html[data-theme="dark"] .market-change--declining{color:#f0bd91!important}html[data-theme="dark"] .market-kpi-change--neutral,html[data-theme="dark"] .market-kpi-change--stable{color:var(--muted)!important}
 html[data-theme="dark"] .market-radar-tabs button.is-active{background:var(--soft);color:var(--ink);border-bottom-color:#9fc9b1} html[data-theme="dark"] .market-radar-tabs button:hover{background:var(--soft)}
+
+/* Bubble explorer keeps the original data-driven sizes and trend colors. */
+.market-bubble-explorer{margin:4px 0 24px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(circle at 18% 12%,#e7f1e9 0,transparent 36%),radial-gradient(circle at 84% 86%,#f1ede2 0,transparent 42%),#f8f8f4;padding:16px 18px 4px}
+.market-bubble-guide{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 24px;flex-wrap:wrap}
+.market-bubble-guide p{max-width:490px;margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.market-bubble-legend{display:flex;flex-wrap:wrap;gap:5px 13px;color:var(--muted);font-size:11px}
+.market-bubble-legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.market-bubble-legend span::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--legend-color)}
+.market-bubble-legend--rising{--legend-color:#719b81}.market-bubble-legend--declining{--legend-color:#d58b66}.market-bubble-legend--stable{--legend-color:#d8c58b}.market-bubble-legend--neutral{--legend-color:#9ba8ab}
+.market-bubble-cloud{min-height:355px;gap:12px 18px;padding:24px 8px 28px}
+.market-bubble{position:relative;isolation:isolate;flex:none;border:1px solid var(--bubble-edge);color:var(--bubble-ink);background:radial-gradient(circle at 30% 23%,#ffffffed 0,#ffffff66 21%,transparent 50%),radial-gradient(circle at 70% 76%,var(--bubble-deep),transparent 66%),var(--bubble-base);box-shadow:inset 0 2px 4px #ffffffb8,inset -8px -12px 20px #244d3f12,0 8px 18px #244d3f1b,0 0 0 5px var(--bubble-ring);transition:transform .22s ease,box-shadow .22s ease,border-color .18s ease,filter .18s ease;animation:radar-bubble-enter .32s ease-out both;animation-delay:calc(var(--market-bubble-order)*35ms)}
+.market-bubble::before{content:"";position:absolute;inset:7px;border:1px solid #ffffff91;border-radius:50%;pointer-events:none}
+.market-bubble::after{content:"";position:absolute;z-index:-1;inset:-1px;border-radius:50%;background:radial-gradient(circle at 28% 17%,#ffffff91,transparent 38%);pointer-events:none}
+.market-bubble--rising{--bubble-base:#c7dfd0;--bubble-deep:#82b89d;--bubble-edge:#76a98a;--bubble-ring:#719b812b;--bubble-ink:#204a39}
+.market-bubble--declining{--bubble-base:#f1d9c9;--bubble-deep:#d8a37f;--bubble-edge:#c98b69;--bubble-ring:#d58b6629;--bubble-ink:#68422d}
+.market-bubble--stable{--bubble-base:#eee4bd;--bubble-deep:#cbbb76;--bubble-edge:#bba65e;--bubble-ring:#d8c58b40;--bubble-ink:#5a4c24}
+.market-bubble--neutral{--bubble-base:#e2e9e6;--bubble-deep:#afc3c3;--bubble-edge:#a5b9b5;--bubble-ring:#9ba8ab2b;--bubble-ink:#3d5554}
+.market-bubble:hover{z-index:1;transform:translateY(-5px) scale(1.035);box-shadow:inset 0 2px 4px #ffffffd1,inset -8px -12px 20px #244d3f14,0 15px 28px #244d3f31,0 0 0 7px var(--bubble-ring);filter:saturate(1.08)}
+.market-bubble.is-selected{z-index:2;border:2px solid var(--radar-forest);transform:scale(1.055);box-shadow:inset 0 2px 5px #ffffffe0,inset -8px -12px 20px #244d3f13,0 12px 26px #244d3f32,0 0 0 5px var(--bubble-ring),0 0 0 8px #244d3fa6}
+.market-bubble.is-selected:hover{transform:translateY(-4px) scale(1.075)}
+.market-bubble:focus-visible{z-index:3;outline:3px solid var(--radar-blue);outline-offset:9px}
+.market-bubble__name{font-size:clamp(9px,1vw,12px);line-height:1.2;font-weight:600}.market-bubble>strong{font-size:clamp(14px,1.3vw,19px)}.market-bubble>small{font-size:10px;line-height:1.2;opacity:.9}
+.market-bubble.is-compact .market-bubble__name{font-size:9px;line-height:1.1}
+@keyframes radar-bubble-enter{from{opacity:0;transform:translateY(10px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+html[data-theme="dark"] .market-bubble-explorer{background:radial-gradient(circle at 18% 12%,#28483c 0,transparent 38%),radial-gradient(circle at 84% 86%,#4b4034 0,transparent 45%),var(--surface)}
+html[data-theme="dark"] .market-highlight-card{background:#263a31;border-color:#42584a;color:var(--ink)}
+html[data-theme="dark"] .market-highlight-card:hover,html[data-theme="dark"] .market-highlight-card.is-selected{background:#304a3b;border-color:#87ad92}
+html[data-theme="dark"] .market-highlight-card__eyebrow,html[data-theme="dark"] .market-highlight-card__hint{color:#b5c6b7}
+html[data-theme="dark"] .market-bubble{box-shadow:inset 0 1px 3px #ffffff58,inset -8px -12px 20px #18292331,0 9px 20px #101a183b,0 0 0 5px var(--bubble-ring)}
+html[data-theme="dark"] .market-bubble.is-selected{border-color:#e2efdf;box-shadow:inset 0 1px 3px #ffffff68,inset -8px -12px 20px #18292331,0 14px 26px #101a1899,0 0 0 5px var(--bubble-ring),0 0 0 8px #d5ead3}
+@media(max-width:600px){.market-bubble-explorer{padding:14px 10px 2px}.market-bubble-guide{padding:0 5px}.market-bubble-cloud{gap:12px 13px;padding:28px 5px}.market-bubble{width:calc(var(--market-bubble-size)*.85);height:calc(var(--market-bubble-size)*.85)}.market-bubble__name{font-size:10px}.market-bubble>strong{font-size:15px}.market-bubble>small{font-size:9px}}
+@media(max-width:360px){.market-bubble-cloud{gap:13px 10px}.market-bubble{width:calc(var(--market-bubble-size)*.7);height:calc(var(--market-bubble-size)*.7);padding:5px}.market-bubble__name{font-size:9px}.market-bubble.is-compact .market-bubble__name{font-size:8px}.market-bubble>strong{font-size:13px}.market-bubble>small{font-size:8px}.market-bubble-guide p{font-size:11px}.market-bubble-legend{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.market-bubble{animation:none;transition:none}.market-bubble:hover,.market-bubble.is-selected,.market-bubble.is-selected:hover{transform:none}}
