@@ -27,6 +27,8 @@ This task is **Preview only**. Do not merge the PR, promote to Production, modif
 3. Deploy that exact commit to separate protected Frontend and Backend Preview projects.
 4. Do not deploy an older integration branch and do not treat an old green Preview as evidence for this commit.
 
+Both repository-root and `backend/vercel.json` currently set `git.deploymentEnabled=false`. A Git push or PR is therefore not expected to create a Preview automatically. Use the team's approved manual Preview deployment/redeploy workflow for the exact PR commit, or request repository-owner approval before changing Git deployment settings. Do not enable Production auto-deployment.
+
 ### 2. Create an isolated Neon Preview database
 
 Create or select an isolated Neon Preview branch/database. Do not use the Production database.

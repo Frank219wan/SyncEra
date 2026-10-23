@@ -91,6 +91,8 @@ The bypass secret must never use a `VITE_` prefix. The proxy accepts only explic
 
 ## Deployment order
 
+Both Frontend and Backend `vercel.json` files currently disable Git-triggered deployment. The PR push alone will not prove or necessarily create a Preview; use an approved manual Preview deployment for the exact commit. Do not enable Production auto-deployment as part of this acceptance run.
+
 1. Create or select an isolated Neon Preview branch/database. Do not use Production.
 2. Set `TEST_DATABASE_URL` locally or in protected CI and run the PostgreSQL integration tests.
 3. Run the official migration script against that Preview database.
