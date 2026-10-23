@@ -1,6 +1,6 @@
 # Individual profile, psychology and DOSM radar fix
 
-Date: 2026-10-23. Target: `integration/career-radar-dosm-pr15`. This report distinguishes local checks from the existing integration Preview and from a deployment of this fix branch.
+Date: 2026-10-23. Target: `integration/career-radar-dosm-pr15` (synchronized through `41640d1`, including PR #24 questionnaire layout). This report distinguishes local checks from the existing integration Preview and from a deployment of this fix branch.
 
 ## Root causes and behavior
 
@@ -27,7 +27,7 @@ The Backend Confirm contract already accepts optional psychology, occupation and
 
 | Check | Result | Scope |
 | --- | --- | --- |
-| `npm test` | PASS: 63 tests | Local unit/contract/proxy tests |
+| `npm test` | PASS: 64 tests | Local unit/contract/proxy tests |
 | `npm run build` (`tsc -b` + Vite production build) | PASS | Local frontend |
 | `pytest backend/tests -q` | PASS: 123 passed, 2 skipped | Local backend, includes DOSM gate, recommendations and persistence tests |
 | `tests/cross-stack.test.ts` against loopback FastAPI | PASS: 2 tests | Local SQLite + deterministic adapter; fictional PDF/DOCX upload, readback, edit/clear, stale 409, score invariance |

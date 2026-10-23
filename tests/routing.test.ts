@@ -64,3 +64,16 @@ test('Vercel rewrites page URLs without swallowing API and missing assets',()=>{
     '/individual/missing.png','/organization/missing.css','/missing.js',
   ]) assert.equal(rewrites(path),false,`${path} must not return index.html`);
 });
+
+test('optional psychology choices use compact, accessible styles independent of intake cards',()=>{
+  const component=readFileSync(new URL('../src/components/PsychologyAssessment.tsx',import.meta.url),'utf8');
+  const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
+  assert.match(component,/className=\{\x60psychology-option/);
+  assert.match(component,/className="psychology-consent"/);
+  assert.match(component,/type="radio"/);
+  assert.match(component,/type="checkbox"/);
+  assert.doesNotMatch(component,/className="choice"/);
+  assert.match(css,/\.psychology-option\{[^}]*min-height:54px/);
+  assert.match(css,/\.psychology-option input\[type=radio\]\{[^}]*opacity:1/);
+  assert.match(css,/\.psychology-consent input\[type=checkbox\]\{[^}]*opacity:1/);
+});
