@@ -3,6 +3,10 @@ export type RouteContext = {
   program: 'home' | 'individual' | 'organization' | 'hr' | 'tvet';
 };
 
+export function learningJourneyEntryPath(plan:{id:string;adopted:boolean}|null|undefined){
+  return plan?.adopted?`/individual/roadmap/${plan.id}`:'/individual/learning-journey';
+}
+
 /** Sidebar context comes from the active URL, never from a remembered workspace toggle. */
 export function routeContextFromPath(pathname: string): RouteContext {
   if (pathname === '/') return { workspace: 'home', program: 'home' };
