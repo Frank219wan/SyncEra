@@ -1,7 +1,9 @@
 """No network or real database is used by these Preview write-guard tests."""
 
 import copy
+import sys
 import threading
+import types
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -83,18 +85,16 @@ def test_missing_metadata_or_forged_preview_flag_fails_closed(metadata, monkeypa
 
 
 def test_lower_level_apply_cannot_bypass_guard(monkeypatch):
-    import psycopg
     monkeypatch.delenv("NEON_API_KEY", raising=False)
     monkeypatch.setenv("CAREER_IMPORT_TARGET", "preview")
-    monkeypatch.setattr(psycopg, "connect", lambda *args, **kwargs: pytest.fail("connected"))
+    fake_psycopg(monkeypatch, lambda *args, **kwargs: pytest.fail("connected"))
     manifest = importer.CareerImportManifest.model_validate(payload())
     with pytest.raises(target.PreviewTargetError):
         importer.apply_manifest(manifest, URL)
 
 
 def test_verified_target_connection_failure_is_sanitized(metadata, monkeypatch):
-    import psycopg
-    monkeypatch.setattr(psycopg, "connect", lambda *args, **kwargs: (_ for _ in ()).throw(
+    fake_psycopg(monkeypatch, lambda *args, **kwargs: (_ for _ in ()).throw(
         RuntimeError("postgresql://owner:secret@private.invalid/production")))
     manifest = importer.CareerImportManifest.model_validate(payload())
     with pytest.raises(target.PreviewTargetError) as error:
@@ -103,10 +103,9 @@ def test_verified_target_connection_failure_is_sanitized(metadata, monkeypatch):
 
 
 def test_migration_entrypoint_cannot_bypass_guard(monkeypatch):
-    import psycopg
     from scripts.migrate_career_sources import apply_migrations
     monkeypatch.delenv("NEON_API_KEY", raising=False)
-    monkeypatch.setattr(psycopg, "connect", lambda *args, **kwargs: pytest.fail("connected"))
+    fake_psycopg(monkeypatch, lambda *args, **kwargs: pytest.fail("connected"))
     with pytest.raises(target.PreviewTargetError):
         apply_migrations(URL)
 
@@ -181,10 +180,16 @@ class FakeCursor:
 
 @pytest.fixture
 def fake_database(metadata, monkeypatch):
-    import psycopg
     db = FakeDatabase()
-    monkeypatch.setattr(psycopg, "connect", db.connect)
+    fake_psycopg(monkeypatch, db.connect)
     return db
+
+
+def fake_psycopg(monkeypatch, connect):
+    """The importer intentionally keeps its real database driver optional."""
+    driver = types.ModuleType("psycopg")
+    driver.connect = connect
+    monkeypatch.setitem(sys.modules, "psycopg", driver)
 
 
 def changed_manifest(*, offerings=None, total=None, series=None):
