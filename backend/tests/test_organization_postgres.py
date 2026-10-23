@@ -13,7 +13,6 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_organization_postgres_persistence_and_concurrent_cas(monkeypatch):
-    import psycopg
     from psycopg_pool import ConnectionPool
 
     from app.organization_storage import OrganizationRevisionConflict, PostgresOrganizationRepository

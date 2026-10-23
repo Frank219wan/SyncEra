@@ -20,7 +20,6 @@ CONSTRAINTS = {'weekly_hours': 5, 'budget_amount': 0, 'currency': 'MYR',
 
 @pytest.mark.skipif(not URL, reason='TEST_DATABASE_URL is not configured')
 def test_persistent_http_flow_and_atomic_revision(monkeypatch):
-    import psycopg
     from scripts.preview_test_db import checked_test_url
     safe_url = checked_test_url(URL)
     monkeypatch.setenv('DATABASE_URL', safe_url)
@@ -61,7 +60,8 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
             assert result.status_code == 200, result.text
             assert result.json()['data']['recommendations']
     finally:
-        with psycopg.connect(safe_url) as db:
+        from scripts.migrate_postgres import verified_preview_connection
+        with verified_preview_connection(URL) as (db, _server_ssl):
             db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
         store_a.close()
         store_b.close()
@@ -70,7 +70,6 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
 @pytest.mark.skipif(not URL, reason='TEST_DATABASE_URL is not configured')
 def test_synthetic_cv_psychology_confirm_postgres_readback(monkeypatch):
     import json
-    import psycopg
     from scripts.preview_test_db import checked_test_url
 
     safe_url = checked_test_url(URL)
@@ -135,7 +134,8 @@ def test_synthetic_cv_psychology_confirm_postgres_readback(monkeypatch):
         assert len(extracts) == 1
     finally:
         if profile_id:
-            with psycopg.connect(safe_url) as db:
+            from scripts.migrate_postgres import verified_preview_connection
+            with verified_preview_connection(URL) as (db, _server_ssl):
                 db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
         store_a.close()
         store_b.close()
