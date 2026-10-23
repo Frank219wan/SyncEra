@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyProfile, tvetSample } from '../src/data.ts';
+import { emptyProfile, hrSample, tvetSample } from '../src/data.ts';
 import {
   applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRecommendations, mapRoadmap, mapTrendRoles,
-  mapOrganizationAnalysis, mergeNormalizedProfile, organizationToAnalyzeRequest, profileToConfirmRequest, profileToNormalizeRequest, syntheticTextToNormalizeRequest,
+  hrOrganizationToAnalyzeRequest, mapHRAnalysis, mapOrganizationAnalysis, mergeNormalizedProfile, organizationToAnalyzeRequest, profileToConfirmRequest, profileToNormalizeRequest, syntheticTextToNormalizeRequest,
   targetWeeks, toContractLevel, toContractRoleId, toContractSkillId, validateRecommendationPayload, verifiedRoleAlignmentTags,
 } from '../src/services/api-contract.ts';
 
@@ -23,6 +23,30 @@ test('B2 mapper preserves reviewed student inputs and server analysis modules',(
   assert.equal(analysis.studentResults[0].selectedRoleId,'data-analyst');
   assert.equal(analysis.studentResults[0].recommendations[0].skillGaps[0].skillId,'python');
   assert.equal(analysis.cohortResult.proposedWorkshops[0].targetGap,'python');
+});
+
+test('B1 mapper preserves department-first input and keeps unknown baselines explicit',()=>{
+  const org=structuredClone(hrSample);
+  const request=hrOrganizationToAnalyzeRequest(org,'fast','zh');
+  assert.equal(request.locale,'zh-CN');
+  assert.equal(request.payload.departments.length,org.departments?.length);
+  assert.equal(request.payload.departments[0].responsibilities,org.departments?.[0].responsibilities);
+  assert.deepEqual(request.payload.target_skill_ids,org.needs.map(skill=>`skill_${skill}`));
+  assert.equal(request.payload.employees[0].department_id,org.departments?.find(item=>item.name===org.people[0].department)?.id);
+  assert.equal(JSON.stringify(request).includes('traits'),false);
+  assert.equal(JSON.stringify(request).includes('notes'),false);
+  const analysis=mapHRAnalysis({
+    workspace_id:'org_hr_demo',workspace_revision:1,analysis_id:'organalysis_hr_demo',mode:'hr',snapshot_id:'snap_demo',ai_scenario:'fast',scoring_policy:'organization-b1-v0.1',warnings:['Synthetic'],
+    department_results:[{department_id:'dept-data',label:'Data',reported_headcount:8,employee_profile_count:0,known_baseline_count:0,
+      skill_coverage:[{skill_id:'skill_sql',name:'SQL',coverage_state:'unknown',recorded_profiles:0,profiles_with_skill:0,coverage_percent:null,missing_member_ids:[]}],
+      training_priorities:[{skill_id:'skill_sql',name:'SQL',priority:'review_required',coverage_state:'unknown',affected_profiles:null,affected_member_ids:[],estimated_hours_per_learner:6,estimate_basis:'synthetic_planning_assumption',evidence_ids:['ev_demo_001']}],
+      mobility_suggestions:[],warnings:['Unknown baseline']}],
+    organization_summary:{reported_headcount:8,department_count:1,employee_profile_count:0,known_baseline_count:0,profile_coverage_percent:0,
+      cross_department_skill_priorities:[{skill_id:'skill_sql',name:'SQL',priority:'review_required',coverage_state:'unknown',affected_profiles:null,affected_member_ids:[],estimated_hours_per_learner:6,estimate_basis:'synthetic_planning_assumption',evidence_ids:['ev_demo_001'],affected_department_ids:['dept-data']}],
+      capacity:{planning_horizon_weeks:8,recorded_weekly_learning_hours:null,estimated_capacity_hours:null,estimated_training_hours:null,horizon_status:'not_assessed',budget_myr:1200,budget_status:'not_assessed'},human_review_status:'required'},
+  });
+  assert.equal(analysis.departmentResults[0].skillCoverage[0].coverageState,'unknown');
+  assert.equal(analysis.organizationSummary.crossDepartmentSkillPriorities[0].affectedProfiles,null);
 });
 
 test('real recommendations require matching profile, snapshot, ranking, scores and provenance', () => {

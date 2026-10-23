@@ -1,4 +1,4 @@
-import type { Constraints, Locale, MarketRadarPackage, Organization, OrganizationAnalysis, Plan, Profile, Recommendation, Role, Scenario, ServiceMeta, Skill, Task } from '../types.ts';
+import type { Constraints, HRAnalysis, Locale, MarketRadarPackage, Organization, OrganizationAnalysis, Plan, Profile, Recommendation, Role, Scenario, ServiceMeta, Skill, Task } from '../types.ts';
 
 export interface ApiMeta {
   request_id?: string;
@@ -248,6 +248,25 @@ export interface ApiOrganizationAnalysis {
   warnings:string[];
 }
 
+export interface ApiHRAnalysis {
+  workspace_id:string; workspace_revision:number; analysis_id:string; mode:'hr';
+  snapshot_id:string; ai_scenario:Scenario; scoring_policy:'organization-b1-v0.1';
+  department_results:Array<{
+    department_id:string;label:string;reported_headcount:number;employee_profile_count:number;known_baseline_count:number;
+    skill_coverage:Array<{skill_id:string;name:string;coverage_state:'measured'|'unknown';recorded_profiles:number;profiles_with_skill:number;coverage_percent:number|null;missing_member_ids:string[]}>;
+    training_priorities:Array<{skill_id:string;name:string;priority:'review_required'|'high'|'medium'|'low';coverage_state:'measured'|'unknown';affected_profiles:number|null;affected_member_ids:string[];estimated_hours_per_learner:number;estimate_basis:'synthetic_planning_assumption';evidence_ids:string[]}>;
+    mobility_suggestions:Array<{member_id:string;current_role:string|null;recommended_role_id:string;recommended_role_name:string;match_score:number;skill_compatibility:number;scenario_outlook:number;transition_feasibility:number;skill_gaps:Array<{skill_id:string;name:string;current_level:number|null;target_level:number;importance:'high'|'medium'|'low'}>;evidence_ids:string[];human_review_status:'required'}>;
+    warnings:string[];
+  }>;
+  organization_summary:{
+    reported_headcount:number;department_count:number;employee_profile_count:number;known_baseline_count:number;profile_coverage_percent:number;
+    cross_department_skill_priorities:Array<{skill_id:string;name:string;priority:'review_required'|'high'|'medium'|'low';coverage_state:'measured'|'unknown';affected_profiles:number|null;affected_member_ids:string[];estimated_hours_per_learner:number;estimate_basis:'synthetic_planning_assumption';evidence_ids:string[];affected_department_ids:string[]}>;
+    capacity:{planning_horizon_weeks:number;recorded_weekly_learning_hours:number|null;estimated_capacity_hours:number|null;estimated_training_hours:number|null;horizon_status:'not_assessed'|'feasible'|'stretch';budget_myr:number;budget_status:'not_assessed'};
+    human_review_status:'required';
+  };
+  warnings:string[];
+}
+
 const levelToNumber: Record<string, number | null> = { unknown: null, beginner: 1, intermediate: 3, advanced: 5 };
 const contractSkillIds = new Set(['sql', 'excel', 'python', 'validation', 'communication']);
 
@@ -296,6 +315,50 @@ export function organizationToAnalyzeRequest(org:Organization,scenario:Scenario,
   };
 }
 
+export function hrOrganizationToAnalyzeRequest(org:Organization,scenario:Scenario,locale:Locale) {
+  const departments=org.departments||[];
+  const departmentByName=new Map(departments.map(item=>[item.name.trim().toLowerCase(),item.id]));
+  return {
+    schema_version:'organization-v0.1' as const,
+    synthetic_input:true as const,
+    workspace_id:org.workspaceId??null,
+    workspace_revision:org.workspaceRevision??null,
+    reviewed_by_user:true as const,
+    region:'MY' as const,
+    locale:locale==='zh'?'zh-CN':locale,
+    ai_scenario:scenario,
+    snapshot_id:null,
+    payload:{
+      organization_label:org.name,
+      sector:org.sector||null,
+      organization_goal_tags:org.goals||[],
+      target_skill_ids:org.needs.map(toContractSkillId),
+      training_budget_myr:org.budget,
+      planning_horizon_weeks:org.weeks,
+      departments:departments.map(department=>({
+        department_id:department.id,
+        label:department.name,
+        responsibilities:department.responsibilities,
+        current_status:department.currentStatus,
+        challenges:department.challenges,
+        headcount:department.headcount,
+        goal_tags:department.goals||[],
+        target_skill_ids:org.needs.map(toContractSkillId),
+      })),
+      employees:org.people.map(person=>({
+        member_id:person.id,
+        department_id:departmentByName.get(person.department.trim().toLowerCase())||'',
+        current_role:person.role||null,
+        skills:person.known?person.skills.map(skill=>({skill_id:toContractSkillId(skill),level:person.skillLevels?.[skill]??null,source:'confirmed' as const,confidence:1})):[],
+        baseline_known:person.known,
+        target_role_id:person.target?toContractRoleId(person.target):null,
+        weekly_learning_hours:person.hours,
+        reviewed:true as const,
+      })),
+    },
+  };
+}
+
 export function mapOrganizationAnalysis(data:ApiOrganizationAnalysis):OrganizationAnalysis {
   return {
     workspaceId:data.workspace_id,workspaceRevision:data.workspace_revision,analysisId:data.analysis_id,mode:data.mode,
@@ -317,6 +380,35 @@ export function mapOrganizationAnalysis(data:ApiOrganizationAnalysis):Organizati
       tutoringFocus:data.cohort_result.tutoring_focus,
       curriculumSupplements:data.cohort_result.curriculum_supplements.map(item=>({courseName:item.course_name,suggestedModule:item.suggested_module,reason:item.reason,evidenceIds:item.evidence_ids})),
       humanReviewStatus:data.cohort_result.human_review_status,
+    },
+  };
+}
+
+export function mapHRAnalysis(data:ApiHRAnalysis):HRAnalysis {
+  const mapPriority=(item:ApiHRAnalysis['organization_summary']['cross_department_skill_priorities'][number])=>({
+    skillId:fromContractSkillId(item.skill_id),name:item.name,priority:item.priority,coverageState:item.coverage_state,
+    affectedProfiles:item.affected_profiles,affectedMemberIds:item.affected_member_ids,
+    estimatedHoursPerLearner:item.estimated_hours_per_learner,estimateBasis:item.estimate_basis,evidenceIds:item.evidence_ids,
+    affectedDepartmentIds:item.affected_department_ids,
+  });
+  return {
+    workspaceId:data.workspace_id,workspaceRevision:data.workspace_revision,analysisId:data.analysis_id,mode:data.mode,
+    snapshotId:data.snapshot_id,scenario:data.ai_scenario,scoringPolicy:data.scoring_policy,warnings:data.warnings,
+    departmentResults:data.department_results.map(department=>({
+      departmentId:department.department_id,label:department.label,reportedHeadcount:department.reported_headcount,
+      employeeProfileCount:department.employee_profile_count,knownBaselineCount:department.known_baseline_count,
+      skillCoverage:department.skill_coverage.map(item=>({skillId:fromContractSkillId(item.skill_id),name:item.name,coverageState:item.coverage_state,recordedProfiles:item.recorded_profiles,profilesWithSkill:item.profiles_with_skill,coveragePercent:item.coverage_percent,missingMemberIds:item.missing_member_ids})),
+      trainingPriorities:department.training_priorities.map(item=>({skillId:fromContractSkillId(item.skill_id),name:item.name,priority:item.priority,coverageState:item.coverage_state,affectedProfiles:item.affected_profiles,affectedMemberIds:item.affected_member_ids,estimatedHoursPerLearner:item.estimated_hours_per_learner,estimateBasis:item.estimate_basis,evidenceIds:item.evidence_ids})),
+      mobilitySuggestions:department.mobility_suggestions.map(item=>({memberId:item.member_id,currentRole:item.current_role,recommendedRoleId:fromContractRoleId(item.recommended_role_id),recommendedRoleName:item.recommended_role_name,matchScore:item.match_score,skillCompatibility:item.skill_compatibility,scenarioOutlook:item.scenario_outlook,transitionFeasibility:item.transition_feasibility,skillGaps:item.skill_gaps.map(gap=>({skillId:fromContractSkillId(gap.skill_id),name:gap.name,currentLevel:gap.current_level??null,targetLevel:gap.target_level,importance:gap.importance})),evidenceIds:item.evidence_ids,humanReviewStatus:item.human_review_status})),
+      warnings:department.warnings,
+    })),
+    organizationSummary:{
+      reportedHeadcount:data.organization_summary.reported_headcount,departmentCount:data.organization_summary.department_count,
+      employeeProfileCount:data.organization_summary.employee_profile_count,knownBaselineCount:data.organization_summary.known_baseline_count,
+      profileCoveragePercent:data.organization_summary.profile_coverage_percent,
+      crossDepartmentSkillPriorities:data.organization_summary.cross_department_skill_priorities.map(mapPriority),
+      capacity:{planningHorizonWeeks:data.organization_summary.capacity.planning_horizon_weeks,recordedWeeklyLearningHours:data.organization_summary.capacity.recorded_weekly_learning_hours,estimatedCapacityHours:data.organization_summary.capacity.estimated_capacity_hours,estimatedTrainingHours:data.organization_summary.capacity.estimated_training_hours,horizonStatus:data.organization_summary.capacity.horizon_status,budgetMyr:data.organization_summary.capacity.budget_myr,budgetStatus:data.organization_summary.capacity.budget_status},
+      humanReviewStatus:data.organization_summary.human_review_status,
     },
   };
 }

@@ -19,7 +19,7 @@ const GET_ROUTES: Array<[RegExp, ReadonlySet<string>]> = [
 ];
 const POST_ROUTES = new Set([
   'profiles/normalize', 'profiles/upload', 'profiles/confirm', 'recommendations',
-  'learning/skill-map', 'learning/roadmap', 'organizations/career_centre/analyze',
+  'learning/skill-map', 'learning/roadmap', 'organizations/career_centre/analyze', 'organizations/hr/analyze',
 ]);
 
 function jsonError(status: number, code: string, message: string): Response {
@@ -218,7 +218,7 @@ export async function handleProxy(
       if (path === 'profiles/normalize' && (parsed as Record<string, unknown>).synthetic_input !== true) {
         return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional test profiles are accepted.');
       }
-      if (path === 'organizations/career_centre/analyze' && (parsed as Record<string, unknown>).synthetic_input !== true) {
+      if (path.startsWith('organizations/') && (parsed as Record<string, unknown>).synthetic_input !== true) {
         return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional organization records are accepted.');
       }
     }

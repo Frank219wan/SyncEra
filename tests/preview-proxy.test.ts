@@ -125,7 +125,7 @@ test('POST requires same-origin JSON and fictional input', async () => {
   assert.equal(response.status, 409);
 });
 
-test('fictional B2 organization analysis reaches only the exact allowlisted route',async()=>{
+test('fictional B1 and B2 organization analyses reach only their exact allowlisted routes',async()=>{
   const body=JSON.stringify({schema_version:'organization-v0.1',synthetic_input:true,reviewed_by_user:true});
   const post=(value:string)=>request('organizations/career_centre/analyze',{method:'POST',headers:{Origin:frontend,'Content-Type':'application/json'},body:value});
   const response=await handleProxy(post(body),env,async(url,init)=>{
@@ -136,7 +136,11 @@ test('fictional B2 organization analysis reaches only the exact allowlisted rout
   });
   assert.equal(response.status,200);
   assert.equal((await handleProxy(post(JSON.stringify({synthetic_input:false})),env,neverFetch)).status,422);
-  assert.equal((await handleProxy(request('organizations/hr/analyze',{method:'POST',headers:{Origin:frontend,'Content-Type':'application/json'},body}),env,neverFetch)).status,404);
+  const hr=await handleProxy(request('organizations/hr/analyze',{method:'POST',headers:{Origin:frontend,'Content-Type':'application/json'},body}),env,async(url)=>{
+    assert.equal(url.toString(),`${backend}/api/v1/organizations/hr/analyze`);
+    return Response.json({data:{mode:'hr'},meta:{}});
+  });
+  assert.equal(hr.status,200);
 });
 
 test('recommendation analysis version header is forwarded only for the allowed route', async () => {

@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import {emptyProfile,roles,tvetSample} from '../src/data.ts';
+import {emptyProfile,hrSample,roles,tvetSample} from '../src/data.ts';
 import {handleProxy} from '../server/proxy.ts';
 import {
   applyBubbleSizes,mapRecommendations,mapTrendRoles,mergeNormalizedProfile,
-  mapOrganizationAnalysis,organizationToAnalyzeRequest,profileToConfirmRequest,
-  profileToNormalizeRequest,validateRecommendationPayload,type ApiOrganizationAnalysis,
+  hrOrganizationToAnalyzeRequest,mapHRAnalysis,mapOrganizationAnalysis,organizationToAnalyzeRequest,profileToConfirmRequest,
+  profileToNormalizeRequest,validateRecommendationPayload,type ApiHRAnalysis,type ApiOrganizationAnalysis,
 } from '../src/services/api-contract.ts';
 
 const base=(process.env.CROSS_STACK_API_URL??'http://127.0.0.1:8000').replace(/\/$/,'');
@@ -262,4 +262,34 @@ test('protected frontend proxy runs the reviewed fictional B2 cohort with revisi
   const stalePayload=await staleResponse.json();
   assert.equal(staleResponse.status,409,JSON.stringify(stalePayload));
   assert.equal(stalePayload.error.code,'REVISION_CONFLICT');
+});
+
+test('protected frontend proxy runs department-first B1 without inventing missing baselines',async()=>{
+  const backendOrigin='https://syncera-backend-git-feature-organization-mvp-test-frank219wan.vercel.app';
+  const frontendOrigin='https://syncera-frontend-git-feature-organization-mvp-test-frank219wan.vercel.app';
+  const environment={VERCEL_ENV:'preview',BACKEND_PREVIEW_ORIGIN:backendOrigin,BACKEND_PROTECTION_BYPASS_SECRET:'test-secret-never-deployed'};
+  const call=async(body:unknown)=>handleProxy(new Request(`${frontendOrigin}/api/proxy?proxy_path=organizations%2Fhr%2Fanalyze`,{
+    method:'POST',headers:{Origin:frontendOrigin,'Content-Type':'application/json','X-Forwarded-For':'203.0.113.55'},body:JSON.stringify(body),
+  }),environment,async(_url,init)=>fetch(`${base}/api/v1/organizations/hr/analyze`,init));
+
+  const departmentOnly={...structuredClone(hrSample),people:[]};
+  const firstResponse=await call(hrOrganizationToAnalyzeRequest(departmentOnly,'moderate','en'));
+  const firstPayload=await firstResponse.json();
+  assert.equal(firstResponse.status,200,JSON.stringify(firstPayload));
+  const first=mapHRAnalysis(firstPayload.data as ApiHRAnalysis);
+  assert.equal(first.workspaceRevision,1);
+  assert.equal(first.organizationSummary.employeeProfileCount,0);
+  assert.ok(first.departmentResults.every(department=>department.skillCoverage.every(skill=>skill.coverageState==='unknown'&&skill.coveragePercent===null)));
+  assert.ok(first.departmentResults.every(department=>department.mobilitySuggestions.length===0));
+
+  const withEmployees={...structuredClone(hrSample),workspaceId:first.workspaceId,workspaceRevision:first.workspaceRevision};
+  const secondBody=hrOrganizationToAnalyzeRequest(withEmployees,'fast','en');
+  const secondResponse=await call(secondBody);
+  const secondPayload=await secondResponse.json();
+  assert.equal(secondResponse.status,200,JSON.stringify(secondPayload));
+  const second=mapHRAnalysis(secondPayload.data as ApiHRAnalysis);
+  assert.equal(second.workspaceRevision,2);
+  assert.equal(second.organizationSummary.employeeProfileCount,hrSample.people.length);
+  assert.ok(second.departmentResults.some(department=>department.mobilitySuggestions.length>0));
+  assert.equal((await call(secondBody)).status,409);
 });

@@ -48,6 +48,7 @@ export interface Organization {
   departments?: Department[]; goals?: string[]; planningVersions?: DepartmentPlanVersion[];
   workspaceId?: string; workspaceRevision?: number;
   analysis?: OrganizationAnalysis | null; analysisMeta?: ServiceMeta | null;
+  hrAnalysis?: HRAnalysis | null;
 }
 export interface OrganizationScoreBreakdown {
   skillCompatibility: number; interestAlignment: number; goalAlignment: number;
@@ -78,6 +79,38 @@ export interface OrganizationAnalysis {
     humanReviewStatus:'required';
   };
   warnings: string[];
+}
+export interface HRSkillCoverage {
+  skillId:string; name:string; coverageState:'measured'|'unknown'; recordedProfiles:number;
+  profilesWithSkill:number; coveragePercent:number|null; missingMemberIds:string[];
+}
+export interface HRMobilitySuggestion {
+  memberId:string; currentRole:string|null; recommendedRoleId:string; recommendedRoleName:string;
+  matchScore:number; skillCompatibility:number; scenarioOutlook:number; transitionFeasibility:number;
+  skillGaps:Array<{skillId:string;name:string;currentLevel:number|null;targetLevel:number;importance:'high'|'medium'|'low'}>;
+  evidenceIds:string[]; humanReviewStatus:'required';
+}
+export interface HRTrainingPriority {
+  skillId:string; name:string; priority:'review_required'|'high'|'medium'|'low';
+  coverageState:'measured'|'unknown'; affectedProfiles:number|null; affectedMemberIds:string[];
+  estimatedHoursPerLearner:number; estimateBasis:'synthetic_planning_assumption'; evidenceIds:string[];
+}
+export interface HRDepartmentResult {
+  departmentId:string; label:string; reportedHeadcount:number; employeeProfileCount:number;
+  knownBaselineCount:number; skillCoverage:HRSkillCoverage[]; trainingPriorities:HRTrainingPriority[];
+  mobilitySuggestions:HRMobilitySuggestion[]; warnings:string[];
+}
+export interface HRAnalysis {
+  workspaceId:string; workspaceRevision:number; analysisId:string; mode:'hr'; snapshotId:string;
+  scenario:Scenario; scoringPolicy:'organization-b1-v0.1'; departmentResults:HRDepartmentResult[];
+  organizationSummary:{
+    reportedHeadcount:number; departmentCount:number; employeeProfileCount:number; knownBaselineCount:number;
+    profileCoveragePercent:number; crossDepartmentSkillPriorities:Array<HRTrainingPriority&{affectedDepartmentIds:string[]}>;
+    capacity:{planningHorizonWeeks:number;recordedWeeklyLearningHours:number|null;estimatedCapacityHours:number|null;
+      estimatedTrainingHours:number|null;horizonStatus:'not_assessed'|'feasible'|'stretch';budgetMyr:number;budgetStatus:'not_assessed'};
+    humanReviewStatus:'required';
+  };
+  warnings:string[];
 }
 export interface Role {
   id: string; name: Copy; domain: string; description: Copy; skills: string[];
