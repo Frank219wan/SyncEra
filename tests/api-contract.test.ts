@@ -64,6 +64,8 @@ test('profile requests preserve structured occupation, interests, skills, and re
   assert.equal(confirm.reviewed_by_user, true);
   assert.equal(confirm.profile_revision, 4);
   assert.deepEqual(confirm.skills[0], { skill_id: 'skill_sql', level: 3, source: 'confirmed', confidence: 1 });
+  assert.equal(confirm.current_occupation, 'Synthetic analyst');
+  assert.deepEqual(confirm.interests, ['analytics']);
 });
 
 test('profile requests do not invent backend IDs for frontend-only demo skills', () => {

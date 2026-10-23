@@ -79,6 +79,26 @@ test('Vercel rewrite preserves only approved user query parameters upstream', as
   assert.equal((await handleProxy(request('trends/roles?region=MY&unexpected=1'), env, neverFetch)).status, 400);
 });
 
+test('DOSM market radar permits only GET and a single valid reporting period', async () => {
+  for (const path of ['market/radar', 'market/radar?period=2026-Q2']) {
+    const response = await handleProxy(request(path), env, async (url, init) => {
+      assert.equal(url.toString(), `${backend}/api/v1/${path}`);
+      assert.equal(init?.method, 'GET');
+      assert.equal(new Headers(init?.headers).get('x-vercel-protection-bypass'), env.BACKEND_PROTECTION_BYPASS_SECRET);
+      assert.equal(new Headers(init?.headers).get('cookie'), null);
+      return Response.json({data:{period:'2026-Q2'},meta:{request_id:'req_fictional'}});
+    });
+    assert.equal(response.status, 200);
+    assert.doesNotMatch(await response.text(), /test-secret-never-deployed/);
+  }
+  assert.equal((await handleProxy(request('market/radar?period=2026-Q2&unexpected=1'), env, neverFetch)).status, 400);
+  assert.equal((await handleProxy(request('market/radar?period=2026-Q2&period=2026-Q1'), env, neverFetch)).status, 400);
+  assert.equal((await handleProxy(request('market/radar?period=bad'), env, neverFetch)).status, 400);
+  assert.equal((await handleProxy(request('market/radar', {method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}), env, neverFetch)).status, 404);
+  assert.equal((await handleProxy(request('market/radar'), {...env,VERCEL_ENV:'production'}, neverFetch)).status, 503);
+  assert.equal((await handleProxy(request('market/radar'), {...env,BACKEND_PREVIEW_ORIGIN:'https://evil.example'}, neverFetch)).status, 503);
+});
+
 test('old Vercel rewrite shape reproduces BAD_QUERY for the auto-added path capture', async () => {
   const oldRewrite = new Request(`${frontend}/api/proxy?proxy_path=health&path=health`);
   const response = await handleProxy(oldRewrite, env, neverFetch);

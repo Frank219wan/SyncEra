@@ -56,6 +56,20 @@ test('frontend contract maps a live backend profile, snapshot, recommendation, a
   const detail=await envelope<{role_id:string;required_skills:unknown[];evidence_ids:string[]}>(`/roles/${contractRoleId}`);
   assert.equal(detail.data.role_id,contractRoleId);
   assert.ok(detail.data.required_skills.length>0);
+  const recommendedRole=recommended.data.recommendations.find(row=>row.role_id===contractRoleId);
+  const gap=recommendedRole?.skill_gaps[0]?.skill_id;
+  assert.ok(gap,'the fictional profile should have a skill gap for its leading role');
+  const skillMap=await envelope<{skill_id:string;nodes:unknown[];next_actions:string[]}>('/learning/skill-map',{
+    profile_id:ready.id,role_id:contractRoleId,skill_id:gap,language:'en',budget_amount:100,currency:'MYR',
+  });
+  assert.equal(skillMap.data.skill_id,gap);
+  assert.ok(skillMap.data.nodes.length>0);
+  const roadmap=await envelope<{role_id:string;total_estimated_hours:number}>('/learning/roadmap',{
+    profile_id:ready.id,role_id:contractRoleId,selected_skill_ids:[gap],
+    study_constraints:profileToNormalizeRequest(input).study_constraints,
+  });
+  assert.equal(roadmap.data.role_id,contractRoleId);
+  assert.ok(roadmap.data.total_estimated_hours>0);
   const taskData=await envelope<{role_id:string;tasks:TaskImpact[]}>(`/roles/${contractRoleId}/tasks${trends.meta.snapshot_id?`?snapshot_id=${encodeURIComponent(trends.meta.snapshot_id)}`:''}`);
   assert.equal(taskData.data.role_id,contractRoleId);
   assert.ok(taskData.data.tasks.length>0);
@@ -147,5 +161,40 @@ test('protected frontend proxy uploads fictional PDF/DOCX to live backend before
       profile_id: ready.id, region: 'MY', ai_scenario: 'moderate', top_k: 5,
     });
     assert.ok(mapRecommendations(recommended.data.recommendations).length > 0);
+    const scoreBefore=recommended.data.recommendations.map(item=>[item.role_id,item.match_score]);
+    const edited={...ready,psychology:{
+      ...reviewed.psychology,
+      scenario_answers:{S1:'B' as const,S2:null,S3:null,S4:'C' as const,S5:'E' as const},
+      other_responses:{S5:'Another fictional response'},consent_to_personalization:false,
+    }};
+    const editedResponse=await handleProxy(new Request(`${frontendOrigin}/api/proxy?proxy_path=profiles%2Fconfirm`,{
+      method:'POST',headers:{Origin:frontendOrigin,'Content-Type':'application/json'},
+      body:JSON.stringify(profileToConfirmRequest(edited)),
+    }),environment,async (_url,init)=>fetch(`${base}/api/v1/profiles/confirm`,init));
+    assert.equal(editedResponse.status,200,await editedResponse.clone().text());
+    const editPayload=await editedResponse.json();
+    const updated=mergeNormalizedProfile(editPayload.data.profile,edited);
+    assert.equal(updated.id,ready.id);
+    assert.equal(updated.revision,(ready.revision??0)+1);
+    assert.deepEqual(updated.psychology?.scenario_answers,edited.psychology.scenario_answers);
+    assert.deepEqual(updated.psychology?.other_responses,edited.psychology.other_responses);
+    const readback=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>(`/profiles/${ready.id}`);
+    assert.deepEqual(readback.data.profile.psychology?.scenario_answers,edited.psychology.scenario_answers);
+    assert.equal(readback.data.profile.psychology?.consent_to_personalization,false);
+    const staleEdit=await fetch(`${base}/api/v1/profiles/confirm`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profileToConfirmRequest(edited)),
+    });
+    assert.equal(staleEdit.status,409);
+    const afterEdit=await envelope<{recommendations:Parameters<typeof mapRecommendations>[0]}>('/recommendations',{
+      profile_id:ready.id,region:'MY',ai_scenario:'moderate',top_k:5,
+    });
+    assert.deepEqual(afterEdit.data.recommendations.map(item=>[item.role_id,item.match_score]),scoreBefore);
+    const cleared={...updated,psychology:{...edited.psychology,
+      scenario_answers:{S1:null,S2:null,S3:null,S4:null,S5:null},other_responses:{},consent_to_personalization:false,
+    }};
+    const clearedResult=await envelope<{profile:Parameters<typeof mergeNormalizedProfile>[0]}>('/profiles/confirm',profileToConfirmRequest(cleared));
+    assert.equal(clearedResult.data.profile.profile_id,ready.id);
+    assert.deepEqual(clearedResult.data.profile.psychology?.other_responses,{});
+    assert.deepEqual(clearedResult.data.profile.psychology?.scenario_answers,cleared.psychology.scenario_answers);
   }
 });

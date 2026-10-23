@@ -21,11 +21,12 @@ import {Recommendations,RoleDetail} from './pages/Careers';
 import {Radar} from './pages/RadarExperience';
 import {ConnectedRadar} from './pages/ConnectedCareers';
 import {isDemo} from './services/api';
+import {resolveRadarMode} from './services/radar-mode';
 import {MindMap,RoadmapDraft,LearningJourney,LearningJourneyOverview} from './pages/Learning';
 import {OrganizationPages,HRDepartmentDetails} from './pages/Organization';
 import {RouteLoadingScreen} from './LoadingScreen';
 function ProfileRoute(){const [params]=useSearchParams();const {state}=useApp();return params.get('edit')==='1'?<ProfileEdit/>:!state.profile.stage||!state.profile.goal?<Navigate to="/individual/intake/start" replace/>:<ProfileInput/>;}
-function RadarRoute(){return isDemo?<Radar/>:<ConnectedRadar/>;}
+function RadarRoute(){const mode=resolveRadarMode(isDemo,import.meta.env.VITE_DOSM_MARKET_RADAR_ENABLED);return mode==='demo'?<Radar/>:<ConnectedRadar mode={mode}/>;}
 function RecommendationsRoute(){
   const {state,t}=useApp();
   if(!isDemo&&!state.profile.id&&state.profile.occupation)return <EmptyState title={t('Review your updated profile','请核对更新后的画像','Semak profil yang dikemas kini')} description={t('Your saved edits have not been confirmed by the connected profile service. Review the profile before recalculating matches.','已保存的修改尚未通过连接服务确认；请先核对画像，再重新计算推荐。','Perubahan tersimpan belum disahkan oleh perkhidmatan profil. Semak sebelum mengira semula padanan.')} action={<ButtonLink to="/individual/intake/profile">{t('Review profile','核对画像','Semak profil')}</ButtonLink>}/>;
