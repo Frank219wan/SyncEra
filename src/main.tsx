@@ -12,6 +12,7 @@ import '@fontsource/noto-sans-sc/500.css';
 import '@fontsource/noto-serif-sc/500.css';
 import './styles.css';
 import './theme.css';
+import './individual-home.css';
 import {Provider,useApp} from './store';
 import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
