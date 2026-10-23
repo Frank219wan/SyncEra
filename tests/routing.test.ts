@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import test from 'node:test';
-import {breadcrumbsForPath,routeContextFromPath} from '../src/routing.ts';
+import {breadcrumbsForPath,learningJourneyEntryPath,routeContextFromPath} from '../src/routing.ts';
 
 const zh=(_en:string,translation:string,_ms:string)=>translation;
 
@@ -46,6 +46,12 @@ test('changing routes cannot retain a previous workspace context',()=>{
   const next=routeContextFromPath('/individual/learning-journey');
   assert.equal(first.workspace,'organization');
   assert.equal(next.workspace,'individual');
+});
+
+test('learning navigation opens the botanical active plan without hiding the history fallback',()=>{
+  assert.equal(learningJourneyEntryPath({id:'plan-demo',adopted:true}),'/individual/roadmap/plan-demo');
+  assert.equal(learningJourneyEntryPath({id:'plan-draft',adopted:false}),'/individual/learning-journey');
+  assert.equal(learningJourneyEntryPath(null),'/individual/learning-journey');
 });
 
 test('Vercel rewrites page URLs without swallowing API and missing assets',()=>{

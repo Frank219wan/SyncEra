@@ -4,7 +4,7 @@ import {ArrowRight,ArrowLeft,Check,ChevronRight,Compass,GraduationCap,LayoutDash
 import {useApp} from './store';
 import {skillNames} from './data';
 import {isDemo} from './services/api';
-import {breadcrumbsForPath,routeContextFromPath} from './routing';
+import {breadcrumbsForPath,learningJourneyEntryPath,routeContextFromPath} from './routing';
 export const icons={ArrowRight,ArrowLeft,Check,ChevronRight,Compass,GraduationCap,LayoutDashboard,Leaf,Map,Network,Search,Settings2,Sprout,Users,X,Info,AlertCircle,Building2,BookOpen,Globe2,BarChart3};
 export function LocaleSwitcher() {
   const {state,setState,t}=useApp();
@@ -24,7 +24,7 @@ export function Brand(){
   return <Link to="/" className="brand sidebar-brand" aria-label={`Skillogy · ${backHome}`}><span className="brand-symbol"><img src="/images/skillogy-logo-transparent.png" alt=""/></span><span>Skillogy</span><span className="brand-return-hint" aria-hidden="true">{backHome} <ArrowRight size={13}/></span></Link>;
 }
 export function Shell({children}:{children:ReactNode}) {
-  const {t}=useApp(); const {pathname}=useLocation();
+  const {state,t}=useApp(); const {pathname}=useLocation();
   const context=routeContextFromPath(pathname);const hr=context.program==='hr',tvet=context.program==='tvet',org=context.workspace==='organization';
   const nav=hr?[
     ['/organization/hr/dashboard',LayoutDashboard,t('HR dashboard','HR 工作台','Papan pemuka HR')],
@@ -49,7 +49,7 @@ export function Shell({children}:{children:ReactNode}) {
     ['/individual/radar',Compass,t('Career radar','职业雷达','Radar kerjaya')],
     ['/individual/intake',Users,t('My profile','我的画像','Profil saya')],
     ['/individual/recommendations',Network,t('Career matches','职业推荐','Padanan kerjaya')],
-    ['/individual/learning-journey',Map,t('Learning journey','学习旅程','Perjalanan belajar')],
+    [learningJourneyEntryPath(state.plan),Map,t('Learning journey','学习旅程','Perjalanan belajar')],
     ['/individual/about',Info,t('About','关于','Tentang')],
   ];
   const navItems=context.program==='organization' ? [
@@ -65,7 +65,7 @@ export function Shell({children}:{children:ReactNode}) {
     <aside className="sidebar">
       <Brand/>
       <div className="workspace-switch"><span className="workspace-icon"><Building2 size={17}/></span><span>{org?t('Organization workspace','机构工作区','Ruang kerja organisasi'):t('Individual workspace','个人工作区','Ruang kerja individu')}</span></div>
-      <nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{navItems.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;const detailActive=url==='/organization/hr/dashboard'&&pathname.startsWith('/organization/hr/department/');return <NavLink key={url as string} to={url as string} end={url==='/individual'||url==='/organization'} className={({isActive})=>isActive||detailActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav>
+      <nav aria-label={t('Main navigation','主导航','Navigasi utama')}>{navItems.map(([url,Icon,label])=>{const I=Icon as typeof Leaf;const detailActive=(url==='/organization/hr/dashboard'&&pathname.startsWith('/organization/hr/department/'))||(typeof url==='string'&&url.startsWith('/individual/roadmap/')&&pathname==='/individual/learning-journey');return <NavLink key={url as string} to={url as string} end={url==='/individual'||url==='/organization'} className={({isActive})=>isActive||detailActive?'nav-link active':'nav-link'}><I size={19} strokeWidth={1.6}/><span>{label as string}</span></NavLink>;})}</nav>
       <div className="sidebar-bottom"><div className="growth-note"><div className="growth-note-first"><Leaf size={20}/><span>{t('A little growth,','每天，','Berkembang sedikit,')}</span></div><p>{t('every day.','向上生长一点点','setiap hari.')}</p></div><span className="local-note">{t('Your progress is saved on this device','进度保存在当前设备','Kemajuan disimpan pada peranti ini')}</span></div>
     </aside>
     <div className="main-area"><header className="topbar"><nav className="breadcrumb" aria-label={t('Breadcrumb','当前位置','Jejak navigasi')}>
