@@ -43,12 +43,15 @@ test('Preview GET uses the fixed backend and keeps bypass secret server side', a
 });
 
 test('new Individual integration branch may use only its protected Backend Preview alias', async () => {
-  const integrationBackend = 'https://syncera-backend-git-integration-career-rada-28608c-frank219wan.vercel.app';
+  const integrationBackend = 'https://syncera-backend-git-integration-career-radar-37d9a9-frank219wan.vercel.app';
   const response = await handleProxy(request('health'), { ...env, BACKEND_PREVIEW_ORIGIN: integrationBackend }, async url => {
     assert.equal(url.toString(), `${integrationBackend}/api/v1/health`);
     return Response.json({ data: { status: 'ok' }, meta: {} });
   });
   assert.equal(response.status, 200);
+  const backwardCompatibleAlias = 'https://syncera-backend-git-integration-career-rada-28608c-frank219wan.vercel.app';
+  const oldAliasResponse = await handleProxy(request('health'), { ...env, BACKEND_PREVIEW_ORIGIN: backwardCompatibleAlias }, async () => Response.json({ data: { status: 'ok' }, meta: {} }));
+  assert.equal(oldAliasResponse.status, 200);
   const arbitraryBranch = 'https://syncera-backend-git-main-28608c-frank219wan.vercel.app';
   assert.equal((await handleProxy(request('health'), { ...env, BACKEND_PREVIEW_ORIGIN: arbitraryBranch }, neverFetch)).status, 503);
 });
