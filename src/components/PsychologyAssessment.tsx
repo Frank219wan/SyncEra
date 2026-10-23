@@ -38,7 +38,7 @@ export function PsychologyAssessmentForm({value,onChange}:{value?:PsychologyAsse
       <p className="psychology-prompt"><strong>{items[index].question}</strong></p>
       <div className="psychology-options">
         {items[index].options.map((label,i)=>{
-          const answer=('ABCD'[i]) as PsychologyChoice;
+          const answer=('ABCD'[i]) as NonNullable<PsychologyChoice>;
           return <label className={`psychology-option${choice===answer?' selected':''}`} key={answer}>
             <input type="radio" name={key} value={answer} checked={choice===answer} onChange={()=>update(answer)}/>
             <span className="psychology-option-letter">{answer})</span>
