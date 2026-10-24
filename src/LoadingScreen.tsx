@@ -46,7 +46,7 @@ function Screen({scene}:{scene:LoadingScene}){
   return <div className={`growth-loading growth-loading--${scene}`} role="status" aria-live="polite" aria-label={description}>
     <div className="growth-paper">
       <div className="growth-art" aria-hidden="true">{scene==='home'?<><BambooArt/><IvyArt/></>:scene==='bamboo'?<BambooArt/>:<IvyArt/>}</div>
-      <p className="growth-loading-kicker">FUTUREPROOF AI <span>✦</span> SYNCERA</p>
+      <p className="growth-loading-kicker">SKILLOGY <span>✦</span> GROW WITH PURPOSE</p>
       <h2>{title}</h2>
       <p className="growth-loading-description">{description}</p>
       <div className="pixel-track" aria-hidden="true">{Array.from({length:16},(_,i)=><span key={i} style={{'--pixel-index':i} as CSSProperties}/>)}</div>
