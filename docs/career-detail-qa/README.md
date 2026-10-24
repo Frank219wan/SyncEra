@@ -1,6 +1,6 @@
 # PR #47 — Real API Career Detail acceptance record
 
-Date: 2026-10-25 (Asia/Bangkok). PR: [#47](https://github.com/Frank219wan/SyncEra/pull/47), branch `fix/real-career-detail-demo-parity-20261025`. The application source verified before this report update was `2112b97c29dbb2c1401be84cb9f1462f299103f6` (QA started from `963836a6a08f8048ad8a703ca0b90a176ada0c9a`). **No PR #47 Vercel deployment was made; deployment ID, URL and deployed source SHA are N/A.** The report-only commit SHA and CI outcome must be checked on the final PR head.
+Date: 2026-10-25 (Asia/Bangkok). PR: [#47](https://github.com/Frank219wan/SyncEra/pull/47), branch `fix/real-career-detail-demo-parity-20261025`. Local synthetic QA began at `2112b97c29dbb2c1401be84cb9f1462f299103f6`. Protected cloud QA was performed against the exact deployed PR commit `cd44487eb6de4fc201756f8eafda2c0ca2daf23f`. The target `main` later advanced to `0ab6437eeab5d2f4af338bbf0be96a9a6b370269`; its translation changes are being integrated on this PR. Cloud results below apply to `cd44487`, and any newer PR head requires a fresh Preview verification.
 
 ## Local browser evidence — PASS with a synthetic HTTP adapter
 
@@ -24,43 +24,44 @@ Screenshots, all from the **local synthetic adapter**:
 - [320px Malay dark, evidence and impact](mobile-320-ms-dark-evidence.jpg)
 - [Desktop before](real-before.jpg), [desktop after light](real-after.jpg), [desktop after dark](real-after-dark.jpg) from the initial PR implementation
 
-## Protected Preview preflight — BLOCKED
+## Protected Preview configuration and security — PASS for deployed `cd44487`
 
-The existing frontend project `frank219wan/syncera-frontend` has ID `prj_tiNiv4Jgd6RUl5TqOM0YafawEMPy`, Root Directory `.`, and Vite framework. Its Deployment Protection has **Require Log In** selected for pre-production deployments. The backend project's Deployment Protection has **Require Log In** selected for all deployments. There are no domain exceptions listed in either project's Deployment Protection page. Anonymous requests to the **existing** frontend branch Preview root and same-origin `/api/v1/health`, and to the backend branch Preview `/api/v1/health`, returned HTTP 302 to Vercel SSO. This does not substitute for the same checks on a new PR #47 deployment.
+The existing `frank219wan/syncera-frontend` project is `prj_tiNiv4Jgd6RUl5TqOM0YafawEMPy` (Vite, repository root). For the exact PR branch, the Preview environment has `VITE_API_MODE=real` and an exact HTTPS `BACKEND_PREVIEW_ORIGIN` of `https://syncera-backend-git-feature-organization-b1-hr-frank219wan.vercel.app` with no trailing slash. Both Config values were compared inside a local script without printing their contents. `BACKEND_PROTECTION_BYPASS_SECRET` is a branch-scoped, server-only Vercel Secret; its value was never requested. The accidental broad Preview duplicate was removed by the owner; a subsequent metadata check found zero unscoped copies. The browser build contains no `BACKEND_PROTECTION_BYPASS_SECRET` or `x-vercel-protection-bypass` string. No credential value was copied into Git, logs or this report.
 
-The frontend firewall reports one active custom rule and one draft change. The dashboard's current draft of `preview-api-rate-limit` targets Preview `/api/v1/` POST traffic at 10 requests/60 seconds/IP with a 429 action. The audit log shows a previously published version #4 and a later unpublished modification. The exact **published** rule conditions and action were not independently retrieved; no WAF traffic test or publication was performed. Published-rule precision and behavior remain **NOT VERIFIED**.
+The existing backend branch alias is protected and its Ready source SHA is `03be4abf23cb90954b88cefb736f15d7e1181020`. Authenticated backend `/api/v1/health` and `/openapi.json` returned HTTP 200 with the required contract routes. The frontend and backend projects both show Require Log In for their Preview deployments; anonymous root and health requests were challenged with HTTP 302 to Vercel SSO. No domain exceptions were shown. The frontend's **published active** WAF configuration was read through the active firewall API: `preview-api-rate-limit` is enabled for Preview `POST /api/v1/*`, 10 requests per 60 seconds per IP, with a rate-limit action. A separate draft change remains unpublished and was not applied. The proxy also enforces its own per-instance POST and GET limits; this backstop is not a global limit.
 
-The frontend environment-variable list has the required entries only for other named Preview branches (`feature/organization-b1-hr`, `fix/real-career-matches-ui-20261025` for the two non-secret variables, and `integration/career-radar-dosm-pr15`) or Production. It shows **none scoped to `fix/real-career-detail-demo-parity-20261025`**, and no linked shared variables. Therefore `VITE_API_MODE=real`, `BACKEND_PREVIEW_ORIGIN`, and server-only `BACKEND_PROTECTION_BYPASS_SECRET` are **not available to this branch according to the project settings**. The existing bypass variable is a write-only Secret; its value could not be safely copied or verified by the tester. No values or secrets were viewed, copied, logged, or committed. In accordance with the PR task's fail-closed preflight, the PR branch was **not deployed**. The previously working protected Preview was left unchanged.
+The existing protected PR deployment is `dpl_4cgwZ6vCeZEnYpiKeiHz9dwjS6Hk`, immutable URL `https://syncera-frontend-3zytig8qa-frank219wan.vercel.app/`, branch alias `https://syncera-frontend-git-fix-real-career-detail-34292d-frank219wan.vercel.app/`. Vercel reports Ready, Preview, and exact source SHA `cd44487eb6de4fc201756f8eafda2c0ca2daf23f`. This deployment was already present during the preflight; this QA did not create another deployment. Anonymous root and same-origin health returned an SSO challenge; authenticated same-origin `/api/v1/health` returned HTTP 200 and `data.status=ok`. No Production deployment or setting was changed by this QA.
 
-The existing protected backend branch alias is `https://syncera-backend-git-feature-organization-b1-hr-frank219wan.vercel.app`. Its Ready deployment ID is `CDwYtNHaM1o2AsevvYAUGtsYRjna`, source SHA `03be4abf23cb90954b88cefb736f15d7e1181020`. Authenticated, read-only requests to its `/api/v1/health` returned HTTP 200 with `data.status=ok`; `/openapi.json` returned HTTP 200 and lists the expected health, normalize, confirm, recommendations and roadmap methods. This establishes endpoint availability, **not** PR #47 end-to-end contract compatibility. The existing frontend branch alias's same-origin health also returned HTTP 200 with `data.status=ok`. The frontend proxy's allowlist includes the backend branch alias exactly; the backend deployment-specific hostname is not an allowed `BACKEND_PREVIEW_ORIGIN`.
+## Protected cloud browser and FastAPI acceptance — `cd44487`
 
-| Cloud check | Status and reason |
+Only fictional form data was submitted. The free-text CV/experience field was left empty because the Preview adapter may call paid MiniMax for non-empty text; the form-only adapter path uses structured values and does not call it. The workflow completed Normalize → Confirm → Trends → Recommendations. Read-only Neon Preview verification located exactly one matching profile, `profile_cb93de88393342ca`, at revision 2, `reviewed_by_user=true`, psychology consent true, five scenario answers and two confirmed skills. No cleanup was performed.
+
+| Check | Cloud result |
 | --- | --- |
-| Protected PR #47 deployment, deployment ID/SHA/URL and same-origin `/api/v1/health` | BLOCKED — target branch Preview variables absent; no PR deployment exists |
-| Real FastAPI Career Matches/Detail, Moderate/Fast, skill map and roadmap | BLOCKED — no PR #47 deployment |
-| No stale data or Demo fallback in cloud | NOT VERIFIED — local synthetic failure test only |
-| Existing backend and frontend branch-alias health | PASS — authenticated HTTP 200, `data.status=ok`; independent of PR #47 |
-| Frontend/Backend Authentication | PASS for existing settings and anonymous 302 SSO challenge; new deployment NOT VERIFIED |
-| Published frontend WAF configuration and new-deployment behavior | NOT VERIFIED — one active rule, one draft modification; exact published rule not retrieved |
-| Browser bundle/Network/log secret redaction on PR #47 deployment | NOT VERIFIED — no PR deployment |
-| Neon persistence and paid AI | NOT TESTED; no database or paid AI calls made |
+| Same-origin health | **PASS** — authenticated HTTP 200, `data.status=ok` |
+| Career Matches | **PASS** — server-returned `role_data_analyst` and `role_business_analyst`; polished illustrated rank cards, strengths and gaps; no local Demo role cards |
+| API/UI contract | **PASS** — direct authenticated same-origin POST returned profile ID and snapshot `snap_my_20261021_01`; Moderate scores 45.82/43.02 and Fast scores 47.07/42.51 for those role IDs, matching the UI |
+| Scenario | **PASS** — Moderate → Fast → Moderate; old personal score and gaps disappeared while a new response was pending, then 45.82 → 47.07 → 45.82 displayed |
+| Detail design and tabs | **PASS** — summary, scenario controls, fit/skills, X-Ray, evidence/impact and learning CTA displayed with real service content |
+| X-Ray/evidence | **PASS after transient limit** — backend returned task `task_data_review`; X-Ray showed human-led oversight and uncertainty, and source record `Synthetic role-signal fixture` with explicit synthetic limitation. A rapid early source request returned HTTP 429; a later normal revisit recovered. This is consistent with the proxy's bounded GET rate limit, but that attribution was not proved from logs. |
+| Learning path | **PASS** — Data Analyst draft showed 4 weeks, 20 estimated hours, two checkpoints, service feasibility and no invented course prices; Python skill map retained `role=data-analyst` and showed service-estimated nodes. The draft was not adopted. |
+| Neon persistence | **PASS, read-only verification** — Preview branch profile metadata above; no real person or Production data |
+| Demo fallback | **PASS for the tested path** — actual same-origin API responses and scores matched displayed data; synthetic fixture labels reflect backend data provenance, not frontend Demo Mode |
+| Controlled 500/503/timeout, retry, stale revision | **NOT VERIFIED in cloud** — the local synthetic HTTP adapter covered 503 and retry. No shared Backend fault injection or disruptive rate-limit test was performed. |
+| Unknown catalogue role | **PASS locally, NOT VERIFIED in cloud** — local adapter test kept server name and ID; the current backend did not return such a role. |
 
-## Code and test result
+For 390×844 and 320×700, the authenticated Preview detail page was inspected in English, Simplified Chinese and Malay, each in light and dark mode: **12/12 combinations had `document.documentElement.scrollWidth === clientWidth`**. Representative actual browser screenshots were inspected in this QA session at 390px English light, 320px English light, 320px Chinese dark and 320px Malay dark. These transient Preview captures were not saved as repository files; the linked image files above remain **local adapter screenshots only**. The three tabs were checked in the cloud, and Enter activated a focused tab. The theme and language controls worked at both widths. Some server-supplied source text remains in English with provenance; it was not silently translated or invented.
 
-- `corepack pnpm test`: **144 passed, 0 failed**.
+The available Vercel runtime-log API returned no grouped records for this deployment in the latest 30-minute query. A wider query was rejected by Hobby retention. Therefore a complete historical log audit and direct request-header redaction review are **NOT VERIFIED**. The local public `dist` build had no bypass-secret identifier or bypass-header string; the Secret value was never read.
+
+## Branch integration and test status
+
+After cloud QA, `main` advanced with localization changes. The PR branch encountered three conflicts (`package.json`, `src/pages/ConnectedCareers.tsx`, `src/pages/Learning.tsx`). They were resolved locally by keeping PR #47's real detail design and incorporating `main`'s dynamic translations and both test files. The merged source has **not** been deployed, so cloud PASS results above are restricted to `cd44487`. The final PR head and CI must be rechecked after the merge commit is pushed.
+
+- `corepack pnpm test`: **148 passed, 0 failed** on the locally integrated source.
 - `corepack pnpm exec tsc -b`: **PASS**.
 - `corepack pnpm build`: **PASS**.
 - `VITE_API_MODE=real corepack pnpm build`: **PASS**.
-- GitHub integrated CI at application SHA `2112b97c29dbb2c1401be84cb9f1462f299103f6`: **4/4 PASS** (cross-stack integrated, frontend tests/build, backend tests, Individual live API contract). Check CI again on the final report-only PR head.
+- GitHub CI on deployed `cd44487`: **6 successful checks**. CI for the integrated source: **PENDING** until pushed.
 
-The small QA fixes adjust 320px navigation/breadcrumb wrapping, dark SDG contrast, and preserve an unknown server role's name and ID in the learning-plan header and skill-map links. They do not change the recommendation validator, API contract, backend, scoring, Neon, Production, or deployment protection.
-
-## Remaining acceptance work
-
-An authorized owner must add the following to **syncera-frontend → Settings → Environment Variables** for **Preview branch `fix/real-career-detail-demo-parity-20261025` only**:
-
-1. `VITE_API_MODE` as Config, value `real`.
-2. `BACKEND_PREVIEW_ORIGIN` as Config, value exactly `https://syncera-backend-git-feature-organization-b1-hr-frank219wan.vercel.app` with no trailing slash or path, after confirming this is the approved backend target.
-3. `BACKEND_PROTECTION_BYPASS_SECRET` as server-side Secret, entered directly from the owner's approved Preview credential source; never as `VITE_*`, in GitHub, or in chat. The existing Vercel Secret is write-only and was not copied or rotated.
-
-Preserve the other branch scopes. Once effective branch configuration, published WAF policy, and a new protected Preview deployment authorization are confirmed, deploy the reviewed final PR SHA and verify actual FastAPI requests and responses, scenario changes, skills, X-Ray, evidence, roadmap, stale-result handling, and absence of Demo fallback. Keep PR #47 Draft and do not merge on the basis of this local adapter evidence alone.
+**Review status:** The deployed `cd44487` passes the tested protected Real API happy path, but the integrated PR head needs its own Preview deployment and browser smoke test before cloud acceptance can be assigned to it. Keep PR #47 Draft; do not merge based on the older deployment or local adapter evidence alone.
