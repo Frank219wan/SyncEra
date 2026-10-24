@@ -1,4 +1,7 @@
-# Skillogy / FutureProof AI
+# Skillogy
+
+Skillogy 是面向个人与机构的 AI 辅助职业探索与技能提升平台，通过职业趋势、技能差距与可执行学习路径，支持用户自主规划成长。
+
 
 React + TypeScript + Vite 前端与 FastAPI 后端。默认英语，可切换中文和马来语。支持本地虚构资料演示，以及连接受保护 Preview API 的真实接口模式。
 
