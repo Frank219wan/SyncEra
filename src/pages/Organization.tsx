@@ -76,7 +76,7 @@ function ConnectedHRTrainingSummary({org}:{org:Organization}){
   const {t}=useApp();const summary=org.hrAnalysis!.organizationSummary;return <section className="surface department-detail"><div className="section-heading"><div><h2>{t('Organization training priorities','机构培训优先级','Keutamaan latihan organisasi')}</h2><p className="muted">{t('Server-calculated portfolio; individual checkpoints below remain manually reviewed.','由服务端计算的培训组合；下方个人阶段仍由人工审核。','Portfolio dikira pelayan; tahap individu di bawah kekal semakan manual.')}</p></div><span className="subtle-tag">{summary.capacity.horizonStatus}</span></div>{summary.crossDepartmentSkillPriorities.map(item=><div className="curriculum-row" key={item.skillId}><SkillChip id={item.skillId}/><ArrowRight size={17}/><div><strong>{item.priority}</strong><p>{item.coverageState==='unknown'?t('Baseline review required before estimating learner counts.','估算学习人数前需先核实技能基础。','Semak asas sebelum menganggar bilangan pelajar.'):t(`${item.affectedProfiles||0} recorded profiles may need development.`,`${item.affectedProfiles||0} 份已记录资料可能需要发展。`,`${item.affectedProfiles||0} profil mungkin memerlukan pembangunan.`)}</p></div></div>)}<p className="fine-print">{t('Six hours per learner is a synthetic planning assumption. Budget feasibility is not assessed without verified course prices.','每名学习者 6 小时是合成规划假设；没有已核实课程价格时不评估预算可行性。','Enam jam setiap pelajar ialah andaian sintetik. Bajet tidak dinilai tanpa harga kursus disahkan.')}</p></section>;
 }
 function HRIntake(){
-  const {state,setState,t,copy,toast}=useApp();const nav=useNavigate();
+  const {state,setState,t,copy,toast,hrEditStatus,reserveHrRequest,saveHrWorkspace}=useApp();const nav=useNavigate();
   const analysisInFlight=useRef(false);
   const openedClientWorkspaceId=useRef(state.hr.clientWorkspaceId);
   const [editing,setEditing]=useState(false),[draft,setDraft]=useState<Organization>(()=>structuredClone(state.hr));
@@ -101,7 +101,8 @@ function HRIntake(){
   const update=(patch:Partial<Organization>)=>setDraft(current=>({...current,...patch,revision:current.revision+1}));
   const updatePerson=(i:number,p:Person)=>update({people:org.people.map((item,index)=>index===i?p:item)});
   const addPerson=()=>{const n=org.people.length+1;let id=`EMP-${String(n).padStart(3,'0')}`,i=n;while(org.people.some(p=>p.id===id)){id=`EMP-${String(++i).padStart(3,'0')}`;}update({people:[...org.people,{id,department:org.departments?.[0]?.name||'',skills:[],known:false,role:'',traits:'',aspiration:'',hours:4,courses:'',interests:'',notes:'',year:'',target:''}]});setActive(org.people.length);};
-  function review(){
+  async function review(){
+    if(hrEditStatus!=='active'){setError(t('This tab cannot save the HR workspace until the newer revision is reviewed.','核对较新的工作区版本前，此标签页不能保存 HR 工作区。','Tab ini tidak boleh menyimpan ruang HR sebelum semakan versi terkini.'));return;}
     const errors=validatePeople(org,false);
     if(errors.length){setError(t('Complete the organization name and each department name, responsibility, status and challenge. Goals and target skills are optional. Any employee records must also be valid.','请填写机构名称及各部门名称、职责、状态和挑战。目标与目标技能为选填；已添加的员工资料仍需有效。','Lengkapkan nama organisasi, nama jabatan, tanggungjawab, status dan cabaran. Matlamat dan kemahiran sasaran adalah pilihan. Rekod pekerja juga mesti sah.'));return;}
     if(state.hr.clientWorkspaceId!==openedClientWorkspaceId.current){
@@ -109,15 +110,16 @@ function HRIntake(){
       return;
     }
     setError('');setBusy(true);
-    setState(s=>{
-      const next=saveHrDraft(s.hr,{...org,clientWorkspaceId:org.clientWorkspaceId||crypto.randomUUID()},openedClientWorkspaceId.current);
-      return next===s.hr?s:{...s,hr:next,hrProfileSaved:true};
-    });
-    setBusy(false);setEditing(false);
+    const next=saveHrDraft(state.hr,{...org,clientWorkspaceId:org.clientWorkspaceId||crypto.randomUUID()},openedClientWorkspaceId.current);
+    const saved=next!==state.hr&&await saveHrWorkspace(next);
+    setBusy(false);
+    if(!saved){setError(t('The workspace changed while saving. Your draft is still open; review the latest revision before retrying.','保存期间工作区已变更。草稿仍在；请核对最新版本后重试。','Ruang kerja berubah ketika menyimpan. Draf masih ada; semak versi terkini sebelum cuba lagi.'));return;}
+    setEditing(false);
     toast(t('Team profile saved. Review the department plan again after input changes.','团队资料已保存；输入更新后请重新核对部门规划。','Profil pasukan disimpan. Semak semula perancangan jabatan selepas perubahan.'));
   }
   async function reviewPlan(override?:Organization){
     if(analysisInFlight.current)return;
+    if(hrEditStatus!=='active'){setError(t('This tab cannot analyze the HR workspace until the newer revision is reviewed.','核对较新的工作区版本前，此标签页不能分析 HR 工作区。','Tab ini tidak boleh menganalisis ruang HR sebelum semakan versi terkini.'));return;}
     if(!state.hrProfileSaved){setError(t('Create and save a team profile before reviewing a department plan.','请先创建并保存团队资料，再审核部门规划。','Cipta dan simpan profil pasukan sebelum menyemak pelan jabatan.'));return;}
     const current=override??state.hr;
     if(current.hrRecovery){setRecoveryOpen(true);return;}
@@ -136,15 +138,17 @@ function HRIntake(){
         const result=await runHrAnalysis({...state,hr:current},setState,async (team,scenario,locale)=>{
           const response=await api.organization(team,'hr',scenario,locale);
           return {analysis:response.analysis?.mode==='hr'?response.analysis:null,meta:response.meta};
-        });
+        },undefined,reserveHrRequest);
         if(result.kind==='received' && result.request)setRunComplete(result.request);
         else if(result.kind==='conflict'||result.kind==='unknown')setRecoveryOpen(true);
+        else if(result.kind==='busy')setError(t('The workspace changed or is already being analyzed. Review its current revision before trying again.','工作区已变更或正在分析；请核对当前版本后再试。','Ruang kerja berubah atau sedang dianalisis. Semak versi semasa sebelum cuba lagi.'));
       }
     }catch(e){
       setError((e as Error).message);
     }finally{analysisInFlight.current=false;setBusy(false);}
   }
-  function confirmNewWorkspace(){
+  async function confirmNewWorkspace(){
+    if(hrEditStatus!=='active'){setError(t('Review the latest workspace before creating a separate one.','创建独立工作区前请核对最新版本。','Semak ruang kerja terkini sebelum mencipta yang baharu.'));return;}
     if(analysisInFlight.current || !state.hr.hrRecovery || state.hr.hrRecovery.status==='pending')return;
     if(editing && state.hr.clientWorkspaceId!==openedClientWorkspaceId.current){
       setConfirmNew(false);
@@ -155,8 +159,8 @@ function HRIntake(){
       workspaceRevision:state.hr.workspaceRevision,hrRecovery:state.hr.hrRecovery}:state.hr;
     if(validatePeople(source,false).length){setError(t('Complete the current draft before creating a new workspace.','创建新工作区前请补齐当前草稿。','Lengkapkan draf semasa sebelum mencipta ruang kerja baharu.'));setConfirmNew(false);return;}
     const fresh=createHrWorkspaceFromDraft(source);
+    if(!await saveHrWorkspace(fresh)){setError(t('Could not safely save the new workspace. Your draft remains open.','无法安全保存新工作区，草稿仍在。','Tidak dapat menyimpan ruang kerja baharu dengan selamat. Draf masih ada.'));return;}
     setConfirmNew(false);setRecoveryOpen(false);setEditing(false);setError('');
-    setState(s=>({...s,hr:fresh}));
     void reviewPlan(fresh);
   }
   const recoveryPanel=recovery?<section className="surface department-detail" role="alert">

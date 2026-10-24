@@ -9,7 +9,7 @@ export type HrRunResult={kind:'received'|'unknown'|'conflict'|'busy'; error?:Err
 // two clicks in the same event batch, before React renders the marker.
 const inFlight=new Set<string>();
 
-export async function runHrAnalysis(snapshot:AppState,update:UpdateState,analyze:Analyze,now=()=>new Date()):Promise<HrRunResult> {
+export async function runHrAnalysis(snapshot:AppState,update:UpdateState,analyze:Analyze,now=()=>new Date(),reserve?:(request:HrRequestIdentity)=>Promise<boolean>):Promise<HrRunResult> {
   const org=snapshot.hr;
   const clientId=org.clientWorkspaceId;
   if(!clientId || org.hrRecovery || inFlight.has(clientId))return {kind:'busy'};
@@ -20,6 +20,13 @@ export async function runHrAnalysis(snapshot:AppState,update:UpdateState,analyze
     organizationGoals:[...(org.goals||[])],skills:[...org.needs],departments:structuredClone(org.departments||[]),
     budget:org.budget,weeks:org.weeks};
   inFlight.add(clientId);
+  // Persist the pending marker before the HTTP request. If this tab closes or
+  // the response is lost, refresh restores an unknown outcome instead of
+  // silently retrying an old server revision.
+  if(reserve){
+    try {if(!await reserve(request)){inFlight.delete(clientId);return {kind:'busy'};}}
+    catch {inFlight.delete(clientId);return {kind:'busy'};}
+  }
   update(state=>({...state,hr:beginHrAnalysis(state.hr,request)}));
   try {
     const result=await analyze(org,request.scenario,snapshot.locale);
