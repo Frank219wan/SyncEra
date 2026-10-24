@@ -62,3 +62,15 @@ All commands ran from the Review worktree. Database and provider environment var
 | `git diff --check` | Passed |
 
 The Review worktree used a local copy of the already installed pnpm dependencies because the offline package store lacked one font tarball. No remote service, database migration or paid model was used.
+
+## Integration Lead handoff
+
+- Original PR #37 remote HEAD: `144e3d35ab5c2bdf553a84834e772406efad1b6b`. PR #36 remained at `17b75f16ac64336909c0743aa0262eb52a05ff47` during the initial fetch.
+- QA source commit from the teammate's local clone: `654adf6aa435e992395910a85d40d2d58a351ff4`. Its parent is the earlier PR #37 commit `8e6b1ecc008e9c6d2de240f640e2766da352b286`; this QA commit was not assumed to be on GitHub.
+- The single QA commit cherry-picked without conflict onto the latest PR #37 HEAD as `0451134b6d1433722aff0c0f530428328e76a9d6` in an independent integration worktree.
+- Adopted scope: five new backend tests, stronger assertions in two existing backend tests, two new frontend contract tests, and this QA report. No application code, lockfile, dependencies, or deployment configuration changed.
+- Local results on the integrated branch: frontend `98/98` passed; backend `164 passed, 4 skipped` (database tests intentionally skipped); TypeScript `tsc -b` passed; `VITE_API_MODE=real pnpm build` passed; local HTTP cross-stack `4/4` passed; `git diff --check` passed.
+- Tests ran with a sanitized environment without database or provider credentials. The local HTTP server used the deterministic synthetic adapter, a temporary SQLite profile store, and an in-memory Organization repository. There was no Neon, Vercel, migration, or paid API request.
+- The copied offline `node_modules` had a pnpm virtual-store setting mismatch. The test commands used pnpm's warning-only dependency-state check; the checked-in lockfile and package manifest were unchanged.
+- GitHub integrated CI: pending at this document commit; verify that its result belongs to the final pushed PR #37 SHA before merge.
+- Remaining risk: this offline QA is not protected Preview network-failure acceptance or an actual Backend failure test. The prior protected Preview acceptance remains incomplete.
