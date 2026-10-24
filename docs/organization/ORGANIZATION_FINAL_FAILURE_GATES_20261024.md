@@ -16,12 +16,12 @@
 | BACKEND TESTS | 164 passed, 4 skipped, with `DATABASE_URL` and `TEST_DATABASE_URL` removed from the test environment. |
 | CROSS-STACK | 4/4 passed against a local synthetic-adapter server after adding the test virtual environment's Python to `PATH`. No Neon or paid API was used. |
 | LOCAL BROWSER | Synthetic request interception on `http://127.0.0.1:5185` observed HTTP 409 then HTTP 200, exactly two requests, old token Revision 4 untouched, new Workspace Revision 1 with a distinct client ID, and prior server ID retained for review. The local Vite dependency symlink caused font serve warnings; this check is limited to the CAS recovery UI. |
-| GITHUB CI | Pending verification on the final pushed PR #37 SHA; local checks do not stand in for CI. |
+| GITHUB CI | The `integrated` check passed on PR #37 SHA `1aec1922737a2eceea761b86b1d49c22b14eea98` (run `40077833569`). GitHub also reported an Actions Node 20 deprecation warning and an `ubuntu-latest` migration notice; neither failed the check. The final report-only commit must be checked separately. |
 | FINAL CODE SHA | `b93d792bbe23d68fad1f959f8fb46e739675f01e` (B1 CAS recovery code and tests). |
 | FILES CHANGED | `src/hrAnalysisFlow.ts`, `src/hrState.ts`, `src/pages/Organization.tsx`, `src/types.ts`, `tests/hr-state.test.ts`, and this report. |
 | NEON USED / VERCEL USED / PRODUCTION CHANGED | **NO / NO / NO in this CAS recovery run.** Earlier incidents remain recorded below. |
 | CAS RECOVERY LOCAL ACCEPTED | **YES for the tested local paths; Cloud CAS recovery remains untested.** |
-| READY FOR CONTROLLED PREVIEW DEPLOY | **Pending final GitHub CI and deployment-owner approval.** No deployment was performed here. |
+| READY FOR CONTROLLED PREVIEW DEPLOY | **YES to request deployment-owner approval after final report-commit CI succeeds.** No deployment was performed here. |
 | PROTECTED PREVIEW ACCEPTED / READY TO MERGE #36 / READY TO MERGE #37 | **NO / NO / NO.** |
 
 The fallback creates a separate server Workspace by design. If the earlier request committed, both Workspaces may exist until an independently authorized review and cleanup. A same-Workspace read-only recovery API would need separate access authorization and review; knowing a Workspace ID cannot grant read access. No such API was added. Local browser interception is not a real Backend failure or a protected Preview acceptance test.
