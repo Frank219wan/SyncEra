@@ -1,6 +1,6 @@
 # Organization B1/B2 Protected Preview 验收记录
 
-更新：2026-10-24。**真实 Cloud 主链路先前已 PASS；整体受保护 Preview 验收：BLOCKED，ACCEPTED = NO。** ORG-FE-001／002 的修复已在独立工作区实现、提交并经本地及 CI 测试。同一代码 SHA 的双端 Preview 已部署且同源 Health 200；当前修复版本的 B1/B2 旧分析失效、网络故障、重试和真实 Backend 故障尚未完成浏览器验收。Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
+更新：2026-10-24。**当前修复 SHA 的 B1/B2 主要 Cloud UI 回归已通过；整体受保护 Preview 验收仍为 BLOCKED，ACCEPTED = NO。** ORG-FE-001／002 已经本地测试、独立代码审查及受保护浏览器验证。浏览器网络拦截模拟的超时／500／断网、恢复后重试和独立 Preview-only Backend 故障注入尚未完成。Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
 
 ## 本轮 B2 收尾修复（待最终 Cloud 验收）
 
@@ -13,7 +13,7 @@
 | 队友 Offline QA Patch | 本轮未找到可独立核验的本地 Patch 或 Commit；上述六项为当前工作区新增测试，不能冒称已导入队友的两个失败测试。 |
 | 独立代码审查 | 独立 Reviewer 对最终代码 SHA `d76afe9…` 复核通过，无 P0/P1 阻塞；提出的 CAS token 丢失已修复，首次分析期间禁用示例数据重载。该结论是代码审查，不等于 GitHub 正式 Approval。 |
 
-**本轮双端 Preview Ready、GitHub CI 与同源 Health 已验证。浏览器网络拦截、真实 Backend 故障和完整 Function 日志审计仍不能标记 PASS。**
+**本轮双端 Preview Ready、GitHub CI、同源 Health 和 B1/B2 当前分析失效已验证。浏览器网络拦截、真实 Backend 故障和完整 Function 日志审计仍不能标记 PASS。**
 
 ## 本轮最终代码 SHA 的验收增量
 
@@ -23,9 +23,24 @@
 | 双端受保护 Preview | Frontend `dpl_BiSToeVKKhREM1w3mNGvYtzTYV9K`、Backend `dpl_B9Tsb5MVCaranbQWzuzMFjNReoHj` 均 Ready，均由上述 Git-ref SHA 部署，仅 Preview；Frontend 同源 `GET /api/v1/health` 返回 FastAPI 200 JSON。此前 B1/B2 Cloud 主链路的通过记录属于较早的 `f5a995c…` 版本。 |
 | 本地与 CI QA | 新增 B2 状态测试 6/6 PASS，Frontend 全套 96/96 PASS，TypeScript 与 Real 模式 Build PASS；Backend 159 passed、4 skipped；Cross-stack 4/4 PASS。独立工作区的 `corepack pnpm test` 因复制的 `node_modules` 在非 TTY 下被 pnpm 拒绝清理而未直接完成；按 `package.json` 的同一 Node 测试命令执行通过，GitHub `integrated` Check 成功。 |
 | JS 凭据标记扫描 | 对本轮 Real 模式构建的全部 Frontend JS（1 个文件）扫描：未发现 Bypass Header 名、服务端 Secret 环境变量名、`DATABASE_URL`、Backend 分支 Alias 或 Neon 域名。该扫描只证明检查范围内未发现这些标记，不证明完整日志历史无泄漏。 |
-| 当前 Cloud UI | 浏览器控制在进入本次 UI 回归时返回 `Local browser use is disabled in Work settings`，且禁止自动化操作 ChatGPT 应用设置。未完成本 SHA 的 B1/B2 Revision、Scenario、无分析空状态、超时／500／断网、恢复后重试验证。不能借用旧版本结果。 |
+| 当前 Cloud UI | 浏览器控制恢复后，已在当前代码 SHA 的受保护 Preview 实测 B1/B2 当前分析、Revision 失效、B2 Moderate→Fast 情景失效与重新分析、B2 无分析空状态。下节列出可复核证据。超时／500／断网和恢复后的重试仍未完成。 |
 | Function Logs | Vercel CLI 对 `--since 8h` 和 `1h` 返回超出可用保留窗口；`--since 10m` 可查。UTC 2026-10-24 01:08:06–01:18:06 的新部署日志中，Frontend 和 Backend 各有一次 `GET /api/v1/health` HTTP 200，请求日志可见；该窗口两端 Runtime Log 均为 0 条。只审核了该 10 分钟窗口的结构化元数据，历史与其他请求的 Secret Redaction 为 `NOT VERIFIED`。 |
 | Cloud 故障验证 | Browser Network Interception：`NOT VERIFIED`；Actual Backend Failure：`NOT VERIFIED`。未关闭 Authentication、未使用 Production 故障注入。 |
+
+## 当前修复 SHA 的受保护 Cloud UI 回归（2026-10-24）
+
+| 检查 | 实测结果与边界 |
+| --- | --- |
+| B2 无分析、无 Demo 回退 | 分支 Alias 的 Trends、Gaps、Insights 在 `API data pending` 时均显示 `Current student analysis required`、`No connected snapshot yet` 与 `Analyze again`；未见本地 Career／Gap／Workshop。 |
+| B2 当前分析 | 使用页面内 6 名虚构学生执行 `career_centre` Moderate，Backend HTTP 200、Request `jhc6j-1792805414458-ecfeee50cbfb`；当前 Trends／Gaps 显示服务端 `organization-b2-v0.1` 与合成 Snapshot。Neon 精确回读 Workspace `org_5df2556d896147a3` Revision 1。 |
+| B2 Scenario 失效与恢复 | Moderate→Fast 后，旧 Snapshot、推荐和 Gap 隐藏，显示重新分析入口；再分析 Backend HTTP 200、Request `srcw5-1792805462563-ef8dda7aa932`，同一 Workspace Revision 2、`fast`，页面恢复当前结果。 |
+| B2 Cohort 与 Revision 失效 | 选择 STU-001／STU-002 运行服务端 Cohort，Backend HTTP 200、Request `87lbk-1792805527380-e2bdb0b4a1a0`，同一 Workspace Revision 3；Insights 显示服务端 Skill Gap、Workshop、Curriculum。修改虚构机构资料后，旧 Cohort／Workshop 和 Snapshot 隐藏，显示重新分析入口。 |
+| B1 当前分析与 Revision 失效 | 为避免已清理旧 Workspace ID 的浏览器本地状态干扰，使用同一部署的独立 URL 和新来源载入合成 HR 示例；Backend HTTP 200、Request `4hstv-1792805683926-d6612fe920f9`，Neon Workspace `org_3a9f6c9685154d00` Revision 1；Dashboard 可见服务端 `organization-b1-v0.1`。修改并保存虚构资料后，Dashboard／Heatmap 隐藏旧结果；重新分析 HTTP 200、Request `cbg7z-1792805748142-79a38f9d74bc`，同一 Workspace Revision 2，当前结果恢复。 |
+| 真实 CAS 错误 | 保留已清理旧 Workspace ID 的另一浏览器来源触发 Backend HTTP 409、Request `wk228-1792805585240-e2cf0eefe115`；前端显示 Revision 过期错误与 `Try again`，没有显示 Demo 分析。此检查是 CAS 错误处理，不代表超时、HTTP 500、断网或真实 Backend 停机验收。 |
+| 当前 SSO | 对 Frontend／Backend 分支 Alias 的匿名 `GET /api/v1/health` 均得到 HTTP 302；授权浏览器及 CLI 的同源 Health 为 200。未更改 Authentication。 |
+| 本轮 Neon 精确清理 | 测试前四张 Organization 表均 0 行。经 `verify-full`、客户端 SSL、Preview 目标、`synthetic_input`、Demo 标签、Mode 和 Revision 核验后，仅删除上述两个合成 Workspace 与其 5 条分析；四张 Organization 表复查均回到 0 行。未重复 Migration。 |
+| 本轮日志与凭据 | UTC 01:26:27–01:36:27 可得的请求日志：Backend 六次 Organization 请求为 5×200、1×409；Frontend 同源对应请求可见。双端该窗口 Runtime Log 为 0 条。请求日志字段只有路由、状态、Request ID 等元数据；两个测试浏览器控制台 0 条记录，本轮 JS 标记扫描无 Secret 命中。更早日志及可能的异常 Runtime 内容仍 `NOT VERIFIED`。 |
+| 网络拦截与真实故障 | 当前浏览器控制接口无请求拦截能力；未模拟超时、HTTP 500 或断网，也未设置独立 Preview-only Backend 故障注入。因此 Browser Network Interception 与 Actual Backend Failure 均 `NOT VERIFIED`，恢复后重试同样 `NOT VERIFIED`。 |
 
 ## 版本与安全边界
 
@@ -101,15 +116,15 @@
 
 | 验收项 | 判定 |
 | --- | --- |
-| ORG-FE-001／ORG-FE-002 | 本地与代码审查 PASS；当前修复 SHA 的受保护 Cloud UI NOT VERIFIED |
+| ORG-FE-001／ORG-FE-002 | 本地、代码审查及当前修复 SHA 的受保护 Cloud UI PASS（已测无分析／Revision／Scenario 路径） |
 | FRONTEND QA／BACKEND QA | 96/96 PASS；159 passed、4 skipped；Cross-stack 4/4 PASS |
-| B1 CLOUD REGRESSION／B2 CLOUD REGRESSION | 旧 SHA 主链路 PASS；当前修复 SHA 的目标 UI 回归 NOT VERIFIED |
-| NO DEMO FALLBACK／STALE REVISION／SCENARIO INVALIDATION | 本地状态及界面检查 PASS；当前修复 SHA 的 Cloud UI NOT VERIFIED |
+| B1 CLOUD REGRESSION／B2 CLOUD REGRESSION | 当前修复 SHA 的合成分析、Revision 失效与恢复 PASS；故障注入路径 NOT VERIFIED |
+| NO DEMO FALLBACK／STALE REVISION／SCENARIO INVALIDATION | 当前修复 SHA 的受保护 Cloud UI PASS（无分析、真实 409、B1/B2 Revision、B2 情景） |
 | NETWORK FAILURE／RETRY | Browser Network Interception NOT VERIFIED |
 | ACTUAL BACKEND FAILURE | NOT VERIFIED |
-| FUNCTION LOG AUDIT／SECRET REDACTION | 本轮可得 10 分钟请求元数据检查完成，Runtime Log 0 条；JS 标记扫描通过；完整历史与故障响应日志 NOT VERIFIED |
+| FUNCTION LOG AUDIT／SECRET REDACTION | 本轮可得 10 分钟请求元数据与两个浏览器控制台检查完成，Runtime Log 0 条；JS 标记扫描通过；完整历史与异常 Runtime 日志 NOT VERIFIED |
 | INDEPENDENT REVIEW | 独立代码审查 PASS；GitHub Approval NOT VERIFIED |
-| NEON／SSO／WAF PREVIOUS ACCEPTANCE | 较早 SHA 通过，本轮未重复迁移、WAF 压测或 Neon 写入；新 SHA 的这些项目未重验 |
+| NEON／SSO／WAF PREVIOUS ACCEPTANCE | 本轮精确合成写入、只读回查与清理 PASS；双端匿名 Health 302 PASS。Migration 与 WAF 仅保留较早验收证据，未重复执行／压测 |
 | PRODUCTION UNCHANGED | PASS（本轮未修改 Production、main 或 Production 数据／环境） |
 | PROTECTED PREVIEW ACCEPTED／READY TO MERGE #36／READY TO MERGE #37 | NO／NO／NO |
 
