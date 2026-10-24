@@ -1,4 +1,5 @@
 import type { Constraints, HRAnalysis, Locale, MarketRadarPackage, Organization, OrganizationAnalysis, Plan, Profile, Recommendation, Role, Scenario, ServiceMeta, Skill, Task } from '../types.ts';
+import {roadmapStepTitle} from '../dynamicI18n.ts';
 
 export interface ApiMeta {
   request_id?: string;
@@ -606,12 +607,12 @@ export function mapRecommendations(items: ApiRecommendation[]): Recommendation[]
 export function mapTrendRoles(items: ApiRoleSignal[], knownRoles: Role[]): Role[] {
   return items.map(item => {
     const id = fromContractRoleId(item.role_id);
-    const known = knownRoles.find(role => role.id === id);
+    const known = knownRoles.find(role => role.id === id && role.name[0] === item.name);
     const trend = item.signal_label === 'rising' ? 'rising' : item.signal_label === 'stable' ? 'stable' : item.signal_label === 'emerging' ? 'emerging' : item.signal_label === 'declining' ? 'declining' : 'unknown';
     const signal = item.trend_score ?? 0;
     const domain = item.field_id === 'field_data' ? 'technology' : item.field_id?.replace(/^field_/, '') || 'unclassified';
-    return { id, name: known ? [item.name,known.name[1],known.name[2]] as const : [item.name,item.name,item.name] as const,
-      domain, fieldId:item.field_id, description:[item.name,item.name,item.name] as const,
+    return { id, name: known ? [item.name,known.name[1],known.name[2]] as const : [item.name,`${item.name} (原文资料)`,`${item.name} (teks bahasa asal)`] as const,
+      domain, fieldId:item.field_id, description:[item.name,`${item.name} (原文资料)`,`${item.name} (teks bahasa asal)`] as const,
       skills:[],scores:{moderate:0,fast:0},signal,trend,sdgs:[],
       signalAvailable:item.trend_score!==null,signalLabel:item.signal_label,evidenceIds:item.evidence_ids,
       sourceWindow:item.source_window,observedMetrics:item.observed_metrics };
@@ -643,7 +644,7 @@ export function mapRoadmap(data: ApiRoadmap, roleId: string, constraints: Constr
     return {
       id: step.step_id,
       skill: fromContractSkillId(step.skill_id),
-      title: [step.title, step.title, step.title],
+      title: [step.title,roadmapStepTitle(fromContractSkillId(step.skill_id),step.title,'zh'),roadmapStepTitle(fromContractSkillId(step.skill_id),step.title,'ms')],
       hours: step.estimated_hours,
       done: false,
       week,
