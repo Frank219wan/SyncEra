@@ -27,7 +27,7 @@ The four previously failing lifecycle behaviors are no longer reproduced at the 
 - The remote advanced from `6d09a0b` to `a0822cd` during QA. The QA-only changes were preserved, rebased by clean cherry-pick onto a fresh worktree, and the browser and complete offline regression suites were rerun at the final reviewed SHA.
 - Node.js `v22.22.2`; pnpm `11.25.0`; Python `3.13.7`
 - Browser: local headless `Chrome/155.0.8059.85`
-- Browser origin: `http://127.0.0.1:5179`
+- Browser origin: isolated localhost. The independent run used `5179`; the integration rerun dynamically allocated `50779`.
 - Each browser scenario used one isolated Browser Context and multiple same-origin Pages/Tabs sharing LocalStorage and Web Locks.
 - Real API mode was used only with a local Vite server. The B1 analysis request was intercepted locally and returned controlled synthetic failure data. No external API was called.
 - Backend tests used no `DATABASE_URL`, `TEST_DATABASE_URL` or provider key. PostgreSQL tests were intentionally skipped.
@@ -79,6 +79,10 @@ Only three genuinely additional behavior checks were integrated into the existin
 3. A late first-workspace response cannot bind to a replacement workspace.
 
 No source-string assertion, fixed commit assertion, deployment assertion, or core business code was added.
+
+### Integration harness safety follow-up
+
+Before integration, the manual browser harness was hardened to avoid accepting an unrelated stale local service as evidence. It now allocates separate ephemeral localhost ports for Vite and Chrome DevTools, starts Vite with `--strictPort`, checks that the child process launched by the current run remains alive, and discovers Chrome/Chromium paths across Windows, macOS and Linux with `CHROME_PATH` as an explicit override. The corrected harness was executed successfully against the integrated tree; it is still a manual QA tool and is not reported as a GitHub CI job.
 
 ## Commands and results
 

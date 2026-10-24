@@ -1,19 +1,37 @@
 import assert from 'node:assert/strict';
 import {spawn, spawnSync} from 'node:child_process';
-import {mkdtempSync, rmSync} from 'node:fs';
+import {existsSync, mkdtempSync, rmSync} from 'node:fs';
+import {createServer} from 'node:net';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-const ORIGIN = 'http://127.0.0.1:5179';
-const CDP_PORT = 9337;
+let ORIGIN;
+let CDP_PORT;
 const HR_LOCK = 'futureproof-b1-editor-v1';
 const APP_KEY = 'futureproof-v1';
 const HR_KEY = 'futureproof-b1-cas-v1';
-const chromePath = process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chromePath = process.env.CHROME_PATH || [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser',
+].find(existsSync);
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      const port = typeof address === 'object' && address ? address.port : 0;
+      server.close(error => error ? reject(error) : resolve(port));
+    });
+  });
+}
 
 async function waitFor(check, label, timeoutMs = 10_000) {
   const deadline = Date.now() + timeoutMs;
@@ -357,20 +375,38 @@ async function pendingReloadScenario(cdp) {
 }
 
 async function main() {
+  if (!chromePath) throw new Error('Chrome/Chromium not found; set CHROME_PATH to run browser QA');
+  const [webPort, cdpPort] = await Promise.all([freePort(), freePort()]);
+  ORIGIN = `http://127.0.0.1:${webPort}`;
+  CDP_PORT = cdpPort;
   const profileDir = mkdtempSync(join(tmpdir(), 'syncera-lock-browser-'));
-  const vite = spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', 'pnpm exec vite --host 127.0.0.1 --port 5179'], {
+  const isWindows = process.platform === 'win32';
+  const viteCommand = isWindows ? (process.env.ComSpec || 'cmd.exe') : 'pnpm';
+  const viteArgs = isWindows
+    ? ['/d', '/s', '/c', `pnpm exec vite --host 127.0.0.1 --port ${webPort} --strictPort`]
+    : ['exec', 'vite', '--host', '127.0.0.1', '--port', String(webPort), '--strictPort'];
+  const vite = spawn(viteCommand, viteArgs, {
     cwd: ROOT,
-    env: {...process.env, VITE_API_MODE: 'real', FUTUREPROOF_WEB_PORT: '5179'},
+    env: {...process.env, VITE_API_MODE: 'real', FUTUREPROOF_WEB_PORT: String(webPort)},
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsHide: true,
   });
+  let viteSpawnError;
+  let viteStderr = '';
+  vite.once('error', error => { viteSpawnError = error; });
+  vite.stderr.on('data', chunk => { viteStderr = `${viteStderr}${chunk}`.slice(-4_000); });
   const chrome = spawn(chromePath, [
     '--headless=new', `--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${profileDir}`,
     '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
   ], {stdio: 'ignore', windowsHide: true});
   let cdp;
   try {
-    await waitFor(async () => (await fetch(ORIGIN)).ok, 'local Vite server', 20_000);
+    await waitFor(async () => {
+      if (viteSpawnError) throw viteSpawnError;
+      if (vite.exitCode !== null) throw new Error(`Vite exited ${vite.exitCode}: ${viteStderr}`);
+      return (await fetch(ORIGIN)).ok;
+    }, 'this QA run local Vite server', 20_000);
+    assert.equal(vite.exitCode, null, 'the Vite process started by this QA run must still own the server');
     const version = await waitFor(async () => {
       const response = await fetch(`http://127.0.0.1:${CDP_PORT}/json/version`);
       return response.ok ? response.json() : false;
