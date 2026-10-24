@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {emptyHr,hrSample,tvetSample} from '../src/data.ts';
-import {applyStudentAnalysisResponse,hrAnalysisView,restoreHr,studentAnalysisView} from '../src/hrState.ts';
+import {applyHrAnalysisResponse,applyStudentAnalysisResponse,hrAnalysisView,restoreHr,studentAnalysisView} from '../src/hrState.ts';
 import type {Organization} from '../src/types.ts';
 
 test('a first visit and an untouched legacy fixture start with an empty team profile',()=>{
@@ -53,4 +53,37 @@ test('a committed B2 response preserves its CAS identity without showing results
   assert.equal(studentAnalysisView(after,'fast',false),'needs_analysis');
   const another={...edited,workspaceId:'workspace-2',workspaceRevision:7};
   assert.deepEqual(applyStudentAnalysisResponse(another,'moderate',4,'moderate','workspace-1',analysis!,meta),another);
+});
+
+test('a committed B1 response keeps the same workspace CAS token but hides analysis after local edits',()=>{
+  const original={...structuredClone(hrSample),revision:4,workspaceId:'workspace-hr-1',workspaceRevision:2};
+  const edited={...original,revision:5,name:'Edited synthetic organization'};
+  const analysis={mode:'hr',workspaceId:'workspace-hr-1',workspaceRevision:3,scenario:'moderate'} as Organization['hrAnalysis'];
+  const meta={requestId:'synthetic',snapshotId:'snapshot',generatedAt:null,dataLabel:'synthetic',isMock:true,modelVersion:null};
+  const version={version:1,createdAt:'2026-10-24T00:00:00Z',organizationGoals:[],skills:[],departments:[],budget:0,weeks:8};
+  const after=applyHrAnalysisResponse(edited,'fast',4,'moderate','workspace-hr-1',analysis!,meta,version);
+  assert.equal(after.name,'Edited synthetic organization');
+  assert.equal(after.workspaceId,'workspace-hr-1');
+  assert.equal(after.workspaceRevision,3);
+  assert.equal(after.hrAnalysis,null);
+  assert.equal(after.analysisMeta,null);
+  assert.equal(after.planningVersions?.length,original.planningVersions?.length);
+  assert.equal(hrAnalysisView(after,'fast',false),'needs_analysis');
+});
+
+test('a B1 response from another workspace cannot overwrite the current CAS identity',()=>{
+  const original={...structuredClone(hrSample),revision:4,workspaceId:'workspace-hr-1',workspaceRevision:2};
+  const switched={...original,workspaceId:'workspace-hr-2',workspaceRevision:7};
+  const analysis={mode:'hr',workspaceId:'workspace-hr-1',workspaceRevision:3,scenario:'moderate'} as Organization['hrAnalysis'];
+  const meta={requestId:'synthetic',snapshotId:'snapshot',generatedAt:null,dataLabel:'synthetic',isMock:true,modelVersion:null};
+  const version={version:1,createdAt:'2026-10-24T00:00:00Z',organizationGoals:[],skills:[],departments:[],budget:0,weeks:8};
+  assert.deepEqual(applyHrAnalysisResponse(switched,'moderate',4,'moderate','workspace-hr-1',analysis!,meta,version),switched);
+  const wrongAnalysis={...analysis!,workspaceId:'workspace-hr-2'};
+  assert.deepEqual(applyHrAnalysisResponse(original,'moderate',4,'moderate','workspace-hr-1',wrongAnalysis,meta,version),original);
+  const current=applyHrAnalysisResponse(original,'moderate',4,'moderate','workspace-hr-1',analysis!,meta,version);
+  assert.equal(current.workspaceRevision,3);
+  assert.equal(current.hrAnalysis,analysis);
+  assert.equal(current.analyzedRevision,4);
+  assert.equal(current.planningVersions?.length,(original.planningVersions?.length||0)+1);
+  assert.equal(hrAnalysisView(current,'moderate',false),'connected');
 });

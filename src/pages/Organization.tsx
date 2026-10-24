@@ -4,7 +4,7 @@ import {useApp} from '../store';
 import {hrSample,tvetSample,skillNames,roles,organizationGoals} from '../data';
 import {cohortGaps,gapsFor,validatePeople,parseCsv} from '../domain';
 import {api,ApiError,isDemo} from '../services/api';
-import {applyStudentAnalysisResponse,hrAnalysisView,studentAnalysisView} from '../hrState';
+import {applyHrAnalysisResponse,applyStudentAnalysisResponse,hrAnalysisView,studentAnalysisView} from '../hrState';
 import type {Department,Organization,Person} from '../types';
 import {PageHeader,Stepper,ButtonLink,DemoNotice,Field,SkillChip,Modal,EmptyState,ErrorState,EvidencePanel,icons} from '../components';
 import {TrainingGrowthPanel} from '../components/TrainingIvy';
@@ -76,6 +76,7 @@ function ConnectedHRTrainingSummary({org}:{org:Organization}){
 }
 function HRIntake(){
   const {state,setState,t,copy,toast}=useApp();const nav=useNavigate();
+  const latestState=useRef(state);latestState.current=state;
   const [editing,setEditing]=useState(false),[draft,setDraft]=useState<Organization>(()=>structuredClone(state.hr));
   const org=editing?draft:state.hr;
   const firstTimeTeamProfile=!state.hrProfileSaved;
@@ -89,6 +90,8 @@ function HRIntake(){
     const errors=validatePeople(state.hr,false);
     if(errors.length){setError(t('Complete the organization and department fields before saving a planning version.','请先补齐机构与部门资料，再保存规划版本。','Lengkapkan maklumat organisasi dan jabatan sebelum menyimpan versi perancangan.'));return;}
     const current=state.hr;
+    const requestedScenario=state.scenario;
+    const requestedWorkspaceId=current.workspaceId;
     const version={version:(current.planningVersions?.length||0)+1,createdAt:new Date().toISOString(),organizationGoals:[...(current.goals||[])],skills:[...current.needs],departments:structuredClone(current.departments||[]),budget:current.budget,weeks:current.weeks};
     setError('');setBusy(true);
     try{
@@ -96,10 +99,16 @@ function HRIntake(){
         setState(s=>({...s,hr:{...s.hr,planningVersions:[...(s.hr.planningVersions||[]),version],analyzedRevision:s.hr.revision}}));
         toast(t('Local department plan saved. No AI analysis was generated.','部门规划草案已保存在本地；没有生成 AI 分析。','Draf perancangan jabatan disimpan secara setempat. Tiada analisis AI dijana.'));
       }else{
-        const result=await api.organization(current,'hr',state.scenario,state.locale);
+        const result=await api.organization(current,'hr',requestedScenario,state.locale);
         const analysis=result.analysis?.mode==='hr'?result.analysis:null;
         if(!analysis)throw new Error(t('The HR service returned an unexpected response.','HR 服务返回了不符合预期的结果。','Perkhidmatan HR mengembalikan respons tidak dijangka.'));
-        setState(s=>({...s,hr:{...s.hr,workspaceId:analysis.workspaceId,workspaceRevision:analysis.workspaceRevision,hrAnalysis:analysis,analysisMeta:result.meta,planningVersions:[...(s.hr.planningVersions||[]),version],analyzedRevision:current.revision}}));
+        if(requestedWorkspaceId&&analysis.workspaceId!==requestedWorkspaceId)throw new Error(t('The HR service returned an analysis for another workspace. Review the current team before retrying.','HR 服务返回了其他工作区的分析；重试前请核对当前团队。','Perkhidmatan HR memulangkan analisis ruang kerja lain. Semak pasukan semasa sebelum mencuba lagi.'));
+        const inputsChanged=latestState.current.hr.revision!==current.revision||latestState.current.scenario!==requestedScenario||latestState.current.hr.workspaceId!==requestedWorkspaceId;
+        setState(s=>({...s,hr:applyHrAnalysisResponse(s.hr,s.scenario,current.revision,requestedScenario,requestedWorkspaceId,analysis,result.meta,version)}));
+        if(inputsChanged){
+          setError(t('Team inputs changed while analysis was running. Review the current workspace, revision and scenario before retrying.','分析期间团队资料已变更；重试前请核对当前工作区、版本和情景。','Maklumat pasukan berubah semasa analisis. Semak ruang kerja, versi dan senario semasa sebelum mencuba lagi.'));
+          return;
+        }
         toast(t('Deterministic HR analysis updated. Human review is still required.','确定性 HR 分析已更新，仍需人工审核。','Analisis HR deterministik dikemas kini. Semakan manusia masih diperlukan.'));
       }
       nav('/organization/hr/dashboard');
@@ -110,7 +119,7 @@ function HRIntake(){
   }
   if(!editing)return <><PageHeader title={t('Team profile','团队资料','Profil pasukan')} description={firstTimeTeamProfile?t('Create a profile for your organization and departments.','为机构和部门创建团队资料。','Cipta profil organisasi dan jabatan anda.'):t('Saved organization, department and optional employee information.','已保存的机构、部门和可选员工资料。','Maklumat organisasi, jabatan dan pekerja pilihan yang tersimpan.')} action={<DemoNotice/>}/>
      <div className="form-actions"><button className="button" onClick={()=>{setDraft(structuredClone(state.hr));setEditing(true);}}>{firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button>{!firstTimeTeamProfile&&<button className="button secondary" disabled={busy} onClick={()=>void reviewPlan()}>{busy?t('Analyzing…','分析中…','Menganalisis…'):t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button>}</div>
-    {error&&<ErrorState message={error} retry={()=>setError('')}/>}
+    {error&&<ErrorState message={error} retry={()=>void reviewPlan()}/>}
      {firstTimeTeamProfile&&<div className="surface empty-inline"><p>{t('No team profile has been saved. Create one from your organization and department information, or load the synthetic example in the editor.','尚未保存团队资料。请填写机构与部门信息，或在编辑页主动载入合成示例。','Belum ada profil pasukan disimpan. Isi maklumat organisasi dan jabatan, atau muat contoh sintetik dalam editor.')}</p></div>}
      {!firstTimeTeamProfile&&<>
     {Boolean(org.planningVersions?.length)&&org.analyzedRevision!==org.revision&&<div className="stale-notice"><Info size={18}/><span>{t('Team inputs have changed since the last saved planning view. Review the department plan before relying on it.','团队输入已变化；使用既有部门规划前请重新核对。','Input pasukan berubah sejak paparan perancangan terakhir. Semak semula pelan jabatan.')}</span></div>}

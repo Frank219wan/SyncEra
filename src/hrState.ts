@@ -1,5 +1,5 @@
 import {emptyHr,hrSample} from './data.ts';
-import type {Organization,OrganizationAnalysis,Scenario,ServiceMeta} from './types.ts';
+import type {DepartmentPlanVersion,HRAnalysis,Organization,OrganizationAnalysis,Scenario,ServiceMeta} from './types.ts';
 
 export function hrAnalysisView(org: Organization, scenario: Scenario, demo: boolean): 'demo' | 'connected' | 'needs_analysis' {
   if (demo) return 'demo';
@@ -15,6 +15,18 @@ export function studentAnalysisView(org: Organization, scenario: Scenario, demo:
     && org.analyzedRevision === org.revision
     && org.analysis.scenario === scenario
     ? 'connected' : 'needs_analysis';
+}
+
+export function applyHrAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, analysis: HRAnalysis, meta: ServiceMeta, version: DepartmentPlanVersion): Organization {
+  // A response from another workspace must not replace this workspace's CAS identity.
+  if (org.workspaceId !== requestedWorkspaceId || (requestedWorkspaceId && analysis.workspaceId !== requestedWorkspaceId)) return org;
+  const current=org.revision===requestedRevision && scenario===requestedScenario;
+  // The server may already have committed an analysis when local inputs change.
+  // Retain its CAS token for the same workspace, but hide its stale result.
+  return {...org,workspaceId:analysis.workspaceId,workspaceRevision:analysis.workspaceRevision,
+    hrAnalysis:current?analysis:null,analysisMeta:current?meta:null,
+    analyzedRevision:current?requestedRevision:org.analyzedRevision,
+    planningVersions:current?[...(org.planningVersions||[]),version]:org.planningVersions};
 }
 
 export function applyStudentAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, analysis: OrganizationAnalysis, meta: ServiceMeta): Organization {
