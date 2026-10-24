@@ -109,6 +109,23 @@ test('Vercel share tokens are accepted once but never forwarded to FastAPI', asy
   assert.equal(forward.status,200);
 });
 
+test('ChatGPT referral utm_source is accepted only for chatgpt.com and never forwarded', async () => {
+  const response = await handleProxy(request('health?utm_source=chatgpt.com'), env, async (url) => {
+    assert.equal(url.toString(), backend+'/api/v1/health');
+    assert.equal(new URL(url).searchParams.has('utm_source'), false);
+    return Response.json({data:{status:'ok'},meta:{}});
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await handleProxy(request('health?utm_source=example.com'),env,neverFetch)).status,400);
+  assert.equal((await handleProxy(request('health?utm_source=chatgpt.com&utm_source=chatgpt.com'),env,neverFetch)).status,400);
+  assert.equal((await handleProxy(request('health?utm_source=chatgpt.com&unexpected=1'),env,neverFetch)).status,400);
+  const radar = await handleProxy(request('trends/roles?region=MY&utm_source=chatgpt.com'),env,async(url)=>{
+    assert.equal(url.toString(), backend+'/api/v1/trends/roles?region=MY');
+    return Response.json({data:{items:[]},meta:{}});
+  });
+  assert.equal(radar.status,200);
+});
+
 test('Vercel rewrite preserves only approved user query parameters upstream', async () => {
   const response = await handleProxy(request('trends/roles?region=MY&limit=50'), env, async (url) => {
     assert.equal(url.toString(), `${backend}/api/v1/trends/roles?region=MY&limit=50`);
