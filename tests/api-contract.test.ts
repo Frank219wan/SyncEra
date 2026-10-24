@@ -49,6 +49,26 @@ test('B1 mapper preserves department-first input and keeps unknown baselines exp
   assert.equal(analysis.organizationSummary.crossDepartmentSkillPriorities[0].affectedProfiles,null);
 });
 
+test('B1 request sends only approved employee fields despite local narrative data',()=>{
+  const org=structuredClone(hrSample);
+  org.people[0]={...org.people[0],notes:'Synthetic HR note',traits:'Synthetic trait',aspiration:'Synthetic aspiration'};
+  const request=hrOrganizationToAnalyzeRequest(org,'moderate','en');
+  for(const employee of request.payload.employees){
+    assert.deepEqual(Object.keys(employee).sort(),[
+      'baseline_known','current_role','department_id','member_id','reviewed','skills','target_role_id','weekly_learning_hours',
+    ]);
+  }
+});
+
+test('B1 and B2 organization request payloads stay mode-specific',()=>{
+  const b1=hrOrganizationToAnalyzeRequest(structuredClone(hrSample),'moderate','en');
+  const b2=organizationToAnalyzeRequest(structuredClone(tvetSample),'moderate','en',true);
+  assert.deepEqual(Object.keys(b1.payload).sort(),[
+    'departments','employees','organization_goal_tags','organization_label','planning_horizon_weeks','sector','target_skill_ids','training_budget_myr',
+  ]);
+  assert.deepEqual(Object.keys(b2.payload).sort(),['institution_label','members','selected_member_ids']);
+});
+
 test('real recommendations require matching profile, snapshot, ranking, scores and provenance', () => {
   const expected = {profileId:'profile_synthetic_1',scenario:'moderate' as const,snapshotId:'snap_my_1',topK:5};
   const meta = {request_id:'req_synthetic_1',snapshot_id:'snap_my_1',model_version:'tech-v1',data_label:'synthetic_demo',is_mock:true};

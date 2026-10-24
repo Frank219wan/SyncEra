@@ -1,10 +1,13 @@
 from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi.testclient import TestClient
 
+import app.main as main_module
 from app.main import create_app
 from app.models import Envelope
 from app.organization_models import HRAnalysisData, OrganizationAnalysisData
+from app.organization_storage import InMemoryOrganizationRepository
 from app.storage import ProfileStore
 
 
@@ -155,9 +158,11 @@ def test_b2_response_matches_existing_frontend_modules(tmp_path):
     assert first["action_plan"]["next_semester_courses"]
     assert first["action_plan"]["self_study_topics"]
     assert first["action_plan"]["project_or_internship"]
+    assert all(item["action_plan"]["human_review_status"] == "required" for item in data["student_results"])
     assert data["cohort_result"]["proposed_workshops"]
     assert data["cohort_result"]["tutoring_focus"]
     assert data["cohort_result"]["curriculum_supplements"]
+    assert data["cohort_result"]["human_review_status"] == "required"
 
 
 def test_b2_score_is_reproducible_and_scenario_sensitive(tmp_path):
@@ -180,6 +185,15 @@ def test_b2_score_is_reproducible_and_scenario_sensitive(tmp_path):
         2,
     )
     assert item["match_score"] == expected
+    assert item["match_score"] != round(
+        0.60 * score["skill_compatibility"]
+        + 0.25 * score["scenario_outlook"]
+        + 0.15 * score["transition_feasibility"],
+        2,
+    )
+    for field in ("skill_compatibility", "interest_alignment", "goal_alignment", "work_style_alignment", "transition_feasibility"):
+        assert score[field] == fast_roles[role_id]["score_breakdown"][field]
+    assert item["skill_gaps"] == fast_roles[role_id]["skill_gaps"]
     assert "skill_levels" in moderate["student_results"][1]["missing_inputs"]
 
 
@@ -301,3 +315,73 @@ def test_b1_and_b2_cannot_reuse_the_same_workspace_id(tmp_path):
     response = client.post("/api/v1/organizations/hr/analyze", json=b1_request)
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "REVISION_CONFLICT"
+
+
+def test_organization_openapi_documents_mode_request_and_conflicts(tmp_path):
+    spec = make_client(tmp_path).get("/openapi.json").json()
+    operation = spec["paths"]["/api/v1/organizations/{mode}/analyze"]["post"]
+    assert {"200", "400", "409", "422", "503"} <= set(operation["responses"])
+    assert any(item["name"] == "mode" and item["in"] == "path" for item in operation["parameters"])
+    request_schema = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert request_schema["$ref"].endswith("/OrganizationAnalyzeRequest")
+
+
+def test_b1_forbidden_narrative_fields_are_rejected_before_scoring(tmp_path, monkeypatch):
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("B1 scoring received a forbidden narrative field")
+
+    monkeypatch.setattr(main_module, "analyze_hr", fail_if_called)
+    client = make_client(tmp_path)
+    for field, value in (
+        ("hr_notes", "Synthetic manager opinion"),
+        ("personality", "Introverted"),
+        ("interests", ["finance"]),
+        ("protected_characteristic", "Do not score"),
+    ):
+        body = hr_request_body()
+        body["payload"]["employees"][0][field] = value
+        response = client.post("/api/v1/organizations/hr/analyze", json=body)
+        assert response.status_code == 422, (field, response.text)
+        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_b1_training_estimates_and_budget_remain_unassessed(tmp_path):
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=hr_request_body())
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    priorities = [item for department in data["department_results"] for item in department["training_priorities"]]
+    assert priorities
+    assert all(item["estimated_hours_per_learner"] == 6 for item in priorities)
+    assert all(item["estimate_basis"] == "synthetic_planning_assumption" for item in priorities)
+    assert data["organization_summary"]["capacity"]["budget_status"] == "not_assessed"
+    assert data["organization_summary"]["human_review_status"] == "required"
+
+
+def test_invalid_organization_workspace_id_is_rejected(tmp_path):
+    body = hr_request_body()
+    body["workspace_id"] = "../../not-a-workspace"
+    body["workspace_revision"] = 1
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=body)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_in_memory_organization_cas_allows_one_concurrent_update(tmp_path):
+    app = create_app(
+        store=ProfileStore(str(tmp_path / "profiles.sqlite")),
+        organization_store=InMemoryOrganizationRepository(),
+    )
+    first = TestClient(app).post("/api/v1/organizations/hr/analyze", json=hr_request_body())
+    assert first.status_code == 200, first.text
+    data = first.json()["data"]
+    update = hr_request_body()
+    update["workspace_id"] = data["workspace_id"]
+    update["workspace_revision"] = data["workspace_revision"]
+
+    def submit(_index):
+        response = TestClient(app).post("/api/v1/organizations/hr/analyze", json=update)
+        return response.status_code, response.json().get("error", {}).get("code")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = sorted(pool.map(submit, range(2)))
+    assert outcomes == [(200, None), (409, "REVISION_CONFLICT")]
