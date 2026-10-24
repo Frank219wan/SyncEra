@@ -238,7 +238,9 @@ export async function handleProxy(
   }
 
   const target = new URL(`/api/v1/${path}`, backend);
-  for (const [key, value] of incoming.searchParams) if (key !== 'proxy_path') target.searchParams.set(key, value);
+  for (const [key, value] of incoming.searchParams) {
+    if (key !== 'proxy_path' && key !== '_vercel_share') target.searchParams.set(key, value);
+  }
   const headers = new Headers({
     Accept: 'application/json',
     'x-vercel-protection-bypass': secret,
