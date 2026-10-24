@@ -182,7 +182,7 @@ export function ConnectedRoleDetail(){
   const [recommendationAttempt,setRecommendationAttempt]=useState(0);
   const context=roleDetailContext(roleId,state.profile.id,state.profile.revision??0,state.snapshotId,state.scenario);
   const taskContext=JSON.stringify([roleId,state.snapshotId]);
-  const hasConfirmedContext=Boolean(state.profile.id&&state.snapshotId);
+  const hasConfirmedContext=Boolean(state.profile.id&&state.snapshotId&&state.results?.some(item=>item.origin==='computed'));
 
   useEffect(()=>{
     if(!roleId)return;
