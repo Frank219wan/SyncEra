@@ -47,6 +47,6 @@ jobs:
           exit 1
       - name: Verify frontend routes and API on one origin
         run: |
-          curl --fail --silent http://127.0.0.1:8000/ | grep -q 'FutureProof'
-          curl --fail --silent http://127.0.0.1:8000/individual/recommendations | grep -q 'FutureProof'
+          curl --fail --silent --show-error http://127.0.0.1:8000/ | grep -F 'Skillogy' > /dev/null
+          curl --fail --silent --show-error http://127.0.0.1:8000/individual/recommendations | grep -F 'Skillogy' > /dev/null
           CROSS_STACK_API_URL=http://127.0.0.1:8000 node --experimental-strip-types --test tests/cross-stack.test.ts
