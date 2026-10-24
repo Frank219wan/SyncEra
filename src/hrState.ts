@@ -1,5 +1,5 @@
 import {emptyHr,hrSample} from './data.ts';
-import type {Organization,Scenario} from './types.ts';
+import type {Organization,OrganizationAnalysis,Scenario,ServiceMeta} from './types.ts';
 
 export function hrAnalysisView(org: Organization, scenario: Scenario, demo: boolean): 'demo' | 'connected' | 'needs_analysis' {
   if (demo) return 'demo';
@@ -7,6 +7,25 @@ export function hrAnalysisView(org: Organization, scenario: Scenario, demo: bool
     && org.analyzedRevision === org.revision
     && org.hrAnalysis.scenario === scenario
     ? 'connected' : 'needs_analysis';
+}
+
+export function studentAnalysisView(org: Organization, scenario: Scenario, demo: boolean): 'demo' | 'connected' | 'needs_analysis' {
+  if (demo) return 'demo';
+  return org.analysis?.mode === 'career_centre'
+    && org.analyzedRevision === org.revision
+    && org.analysis.scenario === scenario
+    ? 'connected' : 'needs_analysis';
+}
+
+export function applyStudentAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, analysis: OrganizationAnalysis, meta: ServiceMeta): Organization {
+  // A response for another workspace must never replace the current workspace identity.
+  if (org.workspaceId !== requestedWorkspaceId || (requestedWorkspaceId && analysis.workspaceId !== requestedWorkspaceId)) return org;
+  const current=org.revision===requestedRevision && scenario===requestedScenario;
+  // The server may have committed this request before local inputs changed. Keep its CAS
+  // identity so the next analysis updates that workspace, but never show its stale result.
+  return {...org,workspaceId:analysis.workspaceId,workspaceRevision:analysis.workspaceRevision,
+    analysis:current?analysis:null,analysisMeta:current?meta:null,
+    analyzedRevision:current?requestedRevision:org.analyzedRevision};
 }
 
 export function restoreHr(saved: Partial<Organization> | undefined, savedFlag: unknown): {hr: Organization; hrProfileSaved: boolean} {

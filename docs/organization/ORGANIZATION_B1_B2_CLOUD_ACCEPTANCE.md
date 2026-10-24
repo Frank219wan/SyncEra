@@ -1,6 +1,19 @@
 # Organization B1/B2 Protected Preview 验收记录
 
-更新：2026-10-24。**真实 Cloud 主链路：PASS；整体受保护 Preview 验收：BLOCKED，ACCEPTED = NO。** 受控 Backend 故障、前端重试和旧分析失效尚无真实 Cloud 证据；Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
+更新：2026-10-24。**真实 Cloud 主链路先前已 PASS；整体受保护 Preview 验收：BLOCKED，ACCEPTED = NO。** ORG-FE-001／002 的修复已在独立工作区实现并经本地测试；最终 SHA 的 Cloud 故障、重试和旧分析失效尚待验收。Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
+
+## 本轮 B2 收尾修复（待最终 Cloud 验收）
+
+| 项目 | 结果与边界 |
+| --- | --- |
+| ORG-FE-001 | Real B2 的 Trends、Gaps、Insights 仅在当前 `career_centre` 服务端分析存在时显示结果；否则显示空状态、错误和重新分析入口。局部 `gapsFor`／`cohortGaps` 的可见路径仅留给 Demo。Real 模式本地页面已逐页查看。 |
+| ORG-FE-002 | 分析必须同时匹配当前 `revision`、`scenario`；旧结果、旧 Snapshot 标签和 Demo Workshop 均隐藏。发起请求后修改输入，响应仍可更新同一工作区的 CAS token，但不能显示旧结果；响应属于其他工作区时不能覆盖现有身份。 |
+| 本地 Frontend QA | 新增六项 B2 状态回归：6/6 PASS；全套 96/96 PASS。Real 模式本地构建、TypeScript PASS。 |
+| Backend／Cross-stack | Backend 全套 159 passed、4 skipped；Cross-stack 4/4 PASS。均使用合成输入与确定性适配器，未访问 Neon 或付费 AI。 |
+| 队友 Offline QA Patch | 本轮未找到可独立核验的本地 Patch 或 Commit；上述六项为当前工作区新增测试，不能冒称已导入队友的两个失败测试。 |
+| 独立代码审查 | Reviewer 提出的 CAS token 丢失已修复并复核；另指出首次分析期间显式重置的并发边界，本轮在请求忙碌时禁用重载示例数据。此项需最终复核。 |
+
+**本轮最终 Preview 部署、GitHub CI、浏览器网络拦截、真实 Backend 故障和 Function 日志审计尚不能根据上述本地结果标记 PASS。**
 
 ## 版本与安全边界
 
