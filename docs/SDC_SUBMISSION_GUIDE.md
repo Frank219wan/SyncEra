@@ -27,10 +27,10 @@ Per the team's current submission direction, **no RunPod deliverable, placeholde
 | `submission/` | Existing three PDFs plus [document index](../submission/README.md) |
 | `.replit` | [Root .replit](../.replit), references `scripts/run-replit.sh`, `build-replit.sh`, `run-replit-production.sh` |
 | `.env.example` | Root `.env.example` and `backend/.env.example`, containing sample values, not credentials |
-| `requirements.txt` | `backend/requirements.txt` (actual Python backend dependencies) |
+| `requirements.txt` | [Root compatibility file](../requirements.txt) → `backend/requirements.txt` (actual Python backend dependencies) |
 | `LICENSE` | Apache 2.0 at repository root |
 
-No production paths or package imports were moved to mimic the Python-only example.
+**The GitHub top-level tree will not look identical to the example:** the example is a small Python app, but Skillogy's additional root folders include a React/Vite frontend, a FastAPI backend, server-side proxy and build/deploy scripts. Moving or deleting these would break existing imports, CI, Replit or Vercel without a large migration, so they stay in place. The README, all actual submission PDFs, the `src/`, `tests/`, and `docs/` entries, and a new root `requirements.txt` provide the template-aligned navigation. No production paths or package imports were moved. No RunPod folder is added at the team's request.
 
 ## Before the team submits
 
