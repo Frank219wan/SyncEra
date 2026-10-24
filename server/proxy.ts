@@ -1,4 +1,4 @@
-// Server-only Vercel Preview proxy. Never import this module from src/.
+// Server-only Vercel API proxy. Never import this module from src/.
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_UPLOAD_BODY_BYTES = 3 * 1024 * 1024;
 const MAX_UPLOAD_FILE_BYTES = MAX_UPLOAD_BODY_BYTES - 16 * 1024;
@@ -161,17 +161,21 @@ export async function handleProxy(
   env: NodeJS.ProcessEnv = process.env,
   upstreamFetch: typeof fetch = fetch,
 ): Promise<Response> {
-  // Vercel Authentication on the FRONTEND project is an external, mandatory gate.
-  // Refuse non-Preview deployments even if someone accidentally copies the secret.
-  if (env.VERCEL_ENV !== 'preview') return jsonError(503, 'PREVIEW_ONLY', 'Preview API is unavailable.');
-  const secret = env.BACKEND_PROTECTION_BYPASS_SECRET;
-  const configuredOrigin = env.BACKEND_PREVIEW_ORIGIN;
+  // Production is a separately opted-in, synthetic-only Hackathon release.
+  // Both frontend and backend Production deployments must remain under Vercel Authentication.
+  const preview = env.VERCEL_ENV === 'preview';
+  const productionDemo = env.VERCEL_ENV === 'production' && env.ENABLE_SYNTHETIC_PRODUCTION === '1';
+  if (!preview && !productionDemo) return jsonError(503, 'PREVIEW_ONLY', 'API environment unavailable.');
+  const secret = productionDemo ? env.BACKEND_PRODUCTION_BYPASS_SECRET : env.BACKEND_PROTECTION_BYPASS_SECRET;
+  const configuredOrigin = productionDemo ? env.BACKEND_PRODUCTION_ORIGIN : env.BACKEND_PREVIEW_ORIGIN;
   if (!secret || !configuredOrigin) return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.');
   let backend: URL;
   try { backend = new URL(configuredOrigin); }
   catch { return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.'); }
-  const allowedBackend = backend.hostname === ORGANIZATION_B1_BACKEND_HOST ||
-    /^syncera-backend-git-(?:integration-(?:postgres-pre|career-radar?)|feature-organization-mvp)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname);
+  const allowedBackend = productionDemo
+    ? backend.hostname === 'syncera-backend.vercel.app'
+    : backend.hostname === ORGANIZATION_B1_BACKEND_HOST ||
+      /^syncera-backend-git-(?:integration-(?:postgres-pre|career-radar?)|feature-organization-mvp)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname);
   if (backend.protocol !== 'https:' || backend.origin !== configuredOrigin || !allowedBackend) {
     return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.');
   }
@@ -180,6 +184,8 @@ export async function handleProxy(
   const pathParts = incoming.searchParams.getAll('proxy_path');
   if (pathParts.length !== 1) return jsonError(404, 'NOT_FOUND', 'API route unavailable.');
   const path = pathParts[0];
+  // Keep unreviewed arbitrary PDF/DOCX uploads unavailable on the Production demonstration.
+  if (productionDemo && path === 'profiles/upload') return jsonError(404, 'NOT_FOUND', 'API route unavailable.');
   const method = request.method.toUpperCase();
   if (method !== 'GET' && method !== 'POST') return jsonError(405, 'METHOD_NOT_ALLOWED', 'API method unavailable.');
   const route = method === 'GET' ? GET_ROUTES.find(([pattern]) => pattern.test(path)) : undefined;
