@@ -67,6 +67,22 @@
 .matches-page .matches-evidence-grid p{font-size:11px;line-height:1.8;color:var(--matches-muted);min-height:80px}
 .matches-page .matches-evidence-grid strong{display:block;border-top:1px solid var(--matches-line);margin-top:16px;padding-top:13px;font-size:10px;line-height:1.6;color:#46654e}
 .matches-page .matches-profile-link{display:inline-flex;align-items:center;gap:8px;min-height:44px}
+.matches-page .matches-service-score{display:flex;flex-direction:column;align-items:flex-end;margin-left:auto;font:500 28px/1 "Noto Serif","Noto Serif SC",serif;color:var(--matches-ink)}
+.matches-page .matches-service-score small{margin-top:5px;font:600 9px/1.4 "Noto Sans","Noto Sans SC",sans-serif;color:var(--matches-muted);text-align:right}
+.matches-page .matches-gap-label{margin-top:17px}
+.matches-page .matches-gap-list{display:flex;flex-wrap:wrap;align-content:start;gap:7px;min-height:45px;margin:0 21px;color:var(--matches-muted);font-size:11px}
+.matches-page .matches-gap-link{display:inline-flex;align-items:center;gap:5px;min-height:29px;padding:5px 9px;border:1px solid #ccbfa4;border-radius:7px;background:#f1ead9;color:#594f38;text-decoration:none}
+.matches-page .matches-gap-link:hover,.matches-page .matches-gap-link:focus-visible{background:#e9dec5;text-decoration:underline}
+.matches-page .matches-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}
+.matches-page .matches-breakdown>div{display:flex;justify-content:space-between;gap:8px;padding:7px;background:var(--matches-paper-deep);border-radius:6px}
+.matches-page .matches-breakdown dt{color:var(--matches-muted)}
+.matches-page .matches-breakdown dd{margin:0;font-weight:700;color:var(--matches-ink)}
+.matches-page .matches-analysis-details{margin:25px 0;padding:0;border:1px solid var(--matches-line);border-radius:15px;background:#f4f4ea;color:var(--matches-ink)}
+.matches-page .matches-analysis-details>summary{display:flex;align-items:center;gap:10px;min-height:56px;padding:15px 20px;cursor:pointer;font-size:13px;font-weight:600}
+.matches-page .matches-analysis-details>summary:focus-visible{outline:3px solid #567f5a;outline-offset:3px}
+.matches-page .matches-analysis-body{padding:0 20px 20px;border-top:1px solid var(--matches-line);font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.matches-page .matches-analysis-body h2{font-size:19px}
+.matches-page .matches-analysis-body .skill-row{display:inline-flex;vertical-align:middle}
 html[data-theme="dark"] .matches-page{--matches-ink:#e6f1e3;--matches-muted:#c0d4c0;--matches-line:#526a56;--matches-paper:#22372d;--matches-paper-deep:#1a3028}
 html[data-theme="dark"] .matches-page .matches-hero{background:radial-gradient(circle at 85% 12%,#34523e,transparent 34%),linear-gradient(115deg,#21372b,#1a3028);box-shadow:0 2px 0 #2b4837,0 17px 34px #07150c70}
 html[data-theme="dark"] .matches-page :is(.matches-hero,.matches-card,.matches-evidence-grid article)::before{opacity:.035}
@@ -82,7 +98,12 @@ html[data-theme="dark"] .matches-page .career-link{background:#31503b;color:#e8f
 html[data-theme="dark"] .matches-page .career-link:hover{background:#3d6248}
 html[data-theme="dark"] .matches-page .inline-note,html[data-theme="dark"] .matches-page .selected-role-strip{background:#294132;color:#e5f2df;border-color:#678d69}
 html[data-theme="dark"] .matches-page .selected-role-strip p,html[data-theme="dark"] .matches-page .matches-evidence-grid article>span{color:#c5ddbc}
+html[data-theme="dark"] .matches-page .matches-gap-link{background:#414431;border-color:#8d8966;color:#f0e9d0}
+html[data-theme="dark"] .matches-page .matches-gap-link:hover,html[data-theme="dark"] .matches-page .matches-gap-link:focus-visible{background:#55583e}
+html[data-theme="dark"] .matches-page .matches-analysis-details{background:#253a2d}
 @media(max-width:1100px){.matches-page .matches-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.matches-page .matches-overview>div:nth-child(2){border-right:0}.matches-page .matches-overview>div:nth-child(-n+2){border-bottom:1px solid var(--matches-line)}.matches-page .career-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.matches-page .matches-evidence-grid{grid-template-columns:1fr 1fr}.matches-page .matches-evidence-grid article:last-child{grid-column:1/-1}.matches-page .matches-evidence-grid p{min-height:0}}
 @media(max-width:760px){.matches-page .matches-hero{padding:25px 23px}.matches-page .matches-hero .page-heading{max-width:none}.matches-page .matches-hero-leaf{opacity:.16}.matches-page .career-grid,.matches-page .matches-evidence-grid{grid-template-columns:1fr}.matches-page .matches-evidence-grid article:last-child{grid-column:auto}.matches-page .matches-card .matches-description{min-height:0}.matches-page .matches-card>.skill-row{min-height:0}.matches-page .results-context{align-items:flex-start;flex-wrap:wrap}.matches-page .scenario-control{flex-direction:row;align-items:center}}
 @media(max-width:480px){.matches-page .matches-hero{padding:20px 16px;border-radius:15px}.matches-page .matches-hero h1{font-size:26px}.matches-page .matches-hero .page-heading p{font-size:12px}.matches-page .matches-overview>div{padding:10px;min-height:79px}.matches-page .matches-overview strong{font-size:24px}.matches-page .matches-overview strong.matches-scenario-value{font-size:17px}.matches-page .matches-card-heading{padding:12px 14px 0}.matches-page .matches-art-frame{margin:8px 12px 0;height:106px}.matches-page .matches-card h2{margin:14px 15px 0;font-size:20px}.matches-page .matches-card .matches-description,.matches-page .matches-skill-count,.matches-page .mini-label,.matches-page .matches-card>.skill-row{margin-left:15px;margin-right:15px}.matches-page .why-details{margin-left:15px;margin-right:15px}.matches-page .career-link{padding:14px 15px}.matches-page .matches-evidence-grid article{padding:16px}.matches-page .selected-role-strip{padding:13px}.matches-page .selected-role-strip>div{min-width:0}}
+@media(max-width:480px){.matches-page .matches-gap-list{margin-left:15px;margin-right:15px}.matches-page .matches-service-score{font-size:23px}.matches-page .matches-analysis-details>summary{padding:13px 15px}.matches-page .matches-analysis-body{padding:0 15px 15px}}
+@media(max-width:480px){.matches-page .matches-breakdown{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.matches-page .matches-card{transition:none}.matches-page .matches-card:hover{transform:none}}
