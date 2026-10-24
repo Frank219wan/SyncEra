@@ -1,38 +1,66 @@
-# Skillogy — AI Career Intelligence & Personalized Reskilling
+<div align="center">
 
-> An AI-era career guidance and skills-development platform for individuals, HR/L&D teams, and TVET/university career centres, with explainable choices and practical learning plans.
+# Skillogy
 
-**SDC Hackathon 2026 · Domain 1** · **Product name: Skillogy**
+### AI Career Intelligence & Personalized Reskilling
 
-[Public website](https://syncera-frontend.vercel.app/) · [Source repository](https://github.com/Frank219wan/SyncEra) · [Submission documents](submission/README.md) · [Submission guide](docs/SDC_SUBMISSION_GUIDE.md)
+An AI-era career guidance and skills-development platform for individuals, HR/L&D teams, and TVET/university career centres.
 
-The existing repository URL remains **SyncEra** for compatibility; it is not the current product branding. Skillogy was previously referred to as FutureProof AI during development.
+**Built by SyncEra · SDC Hackathon 2026 · Domain 1**
 
-> **Demo and evidence boundary:** The frontend supports interactive synthetic demonstrations. Individual (A), HR/L&D (B1), and TVET/Career Centre (B2) paths are implemented in the shared application and have protected Preview integration records. Public Production functionality must be assessed independently: the public homepage alone does not prove every Real API path is deployed or accessible. Do **not** submit real CVs, employee data or student records.
+**[Explore the Live Demo](https://syncera-frontend.vercel.app/) · [Watch the Demo Video](https://youtu.be/QHj16ZdgBDI) · [Download the Slides](submission/SyncEra_Skillogy_slides.pptx)**
+
+English · 简体中文 · Bahasa Melayu
+
+</div>
 
 ---
+
+## Contents
+
+[Team Information](#team-information) · [Links & Submission Documents](#links--submission-documents) · [Overview](#overview) · [Tech Stack & Architecture](#tech-stack--architecture) · [Project Structure](#project-structure) · [How to Run](#how-to-run) · [Platform Usage](#platform-usage) · [Challenges & Learnings](#challenges--learnings) · [Future Improvements](#future-improvements) · [Team](#team) · [Submission Checklist](#submission-checklist) · [License](#license)
 
 ## Team Information
 
 | Field | Details |
 | --- | --- |
-| **Team Name** | **TBD — registered team name to confirm** (submission PDFs currently use `SyncEra` in filenames) |
-| **Team Domain** | **Domain 1** |
-| **SDG Track (1–17)** | **TBD — confirm registered track**; solution has relevant SDG 4 (Quality Education) and SDG 8 (Decent Work) connections |
-| **Team Leader** | **TBD** |
-| **University** | **TBD** |
-| **Number of Members** | **TBD** |
+| **Team Name** | **SyncEra** |
+| **Team Domain** | **Domain 1 — The Aiversecity Future-Ready Workforce** |
+| **Proposed Primary SDG** | **SDG 4 — Quality Education** |
+| **Supporting SDG** | **SDG 8 — Decent Work and Economic Growth** |
+| **Team Leader** | Manar HAMMADOUCHE |
+| **University** | Xiamen University Malaysia |
+| **Number of Members** | 5 |
 
-## Links
+## Links & Submission Documents
 
-| Resource | Link / status |
+### Explore the Product
+
+| Resource | Link |
 | --- | --- |
-| GitHub Repository | [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra) |
-| Public Website | [syncera-frontend.vercel.app](https://syncera-frontend.vercel.app/) |
-| Replit Live Demo | **TBD — insert actual working Replit deployment link** |
-| Full-stack Preview | Protected Vercel Frontend Preview; access shared privately with authorized judges (never post bypass tokens) |
-| Slide Deck | **TBD — add final judge-accessible deck link** |
-| Demo Video (5–7 min) | **TBD — add final YouTube link** |
+| **Live Demo** | [Open Skillogy](https://syncera-frontend.vercel.app/) |
+| **Demo Video** | [Watch on YouTube](https://youtu.be/QHj16ZdgBDI) · [Download MP4](submission/SyncEra-Demo-video.mp4) |
+| **Slide Deck** | [Download PowerPoint](submission/SyncEra_Skillogy_slides.pptx) |
+| **Source Code** | [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra) |
+
+### Submission Documents
+
+| Document | File |
+| --- | --- |
+| Preliminary Submission | [View PDF](submission/SDC2026_SyncEra_Preliminary.pdf) |
+| Technology Declaration | [View PDF](submission/SDC2026_SyncEra_TechDeclaration.pdf) |
+| Replit Proof of Use | [View PDF](submission/SDC2026_SyncEra_Replit_POU.pdf) |
+
+> **Platform status:** The live demo is hosted on Vercel. Replit proof of use is submitted above. RunPod was not used.
+
+<details>
+<summary><strong>Demo scope and integration evidence</strong></summary>
+
+Individual (A), HR/L&D (B1), and TVET/Career Centre (B2) paths are implemented in the shared application and have protected Preview integration records. Preview access is shared privately with authorized judges. Public Production functionality must be assessed independently; a working homepage does not confirm every Real API path is accessible.
+
+Use fictional sample inputs. The prototype is designed for synthetic demonstrations; do not submit real CVs, employee data or student records.
+
+</details>
 
 ---
 
@@ -48,13 +76,19 @@ AI adoption and shifting skill requirements create uncertainty for learners and 
 
 ### Key Features
 
-1. **A — Individual:** Profile review, Career Radar, Career Atlas matches, role/task details, Skill Mind Maps, roadmaps and bamboo-inspired personal progress.
-2. **B1 — HR / L&D:** Department capability and skills-gap insights, internal mobility alternatives, and training priorities for fictional workforce cases.
-3. **B2 — TVET / Career Centre:** Student and cohort career exploration, skill gaps, workshop and curriculum improvement suggestions using fictional examples.
-4. **Transparency:** Rule-validated scores, visible uncertainty, distinct market vs individual-fit reasoning, and clearly labelled demo/synthetic information.
-5. **Accessibility:** Responsive web UI and English, Simplified Chinese and Bahasa Melayu interfaces.
+| Experience | Who It Serves | Key Capabilities |
+| --- | --- | --- |
+| **A · Individual** | Learners and working professionals | Profile review, Career Radar, Career Atlas matches, role/task details, Skill Mind Maps, roadmaps and bamboo-inspired progress |
+| **B1 · HR / L&D** | Organizations and workforce planners | Department capability insights, skills gaps, internal mobility and training priorities |
+| **B2 · TVET / Career Centre** | Institutions and career support teams | Student and cohort exploration, skill gaps, workshop and curriculum suggestions |
+
+**Across all journeys:** Rule-validated scores, visible uncertainty, clearly labelled synthetic data, responsive layouts and three interface languages.
 
 The present prototype is **decision support**, not a prediction of hiring probability, an official job-demand forecast, or a professional certification system.
+
+---
+
+## Tech Stack & Architecture
 
 ### Tech Stack
 
@@ -100,7 +134,8 @@ Current architecture details: [Vercel Preview Proxy](docs/VERCEL_PREVIEW_PROXY.m
 
 ## Project Structure
 
-The official SDC example uses a simple Python app. Our existing React + FastAPI source is preserved rather than moved into incompatible sample paths.
+<details>
+<summary><strong>View the repository layout</strong></summary>
 
 ```text
 SyncEra/
@@ -121,7 +156,9 @@ SyncEra/
 │   ├── SDC2026_SyncEra_Preliminary.pdf
 │   ├── SDC2026_SyncEra_TechDeclaration.pdf
 │   ├── SDC2026_SyncEra_Replit_POU.pdf
-│   └── README.md                   # Existing-PDF index
+│   ├── SyncEra_Skillogy_slides.pptx # Presentation deck
+│   ├── SyncEra-Demo-video.mp4       # Demo video (Git LFS)
+│   └── README.md                   # Submission document index
 ├── scripts/                        # Replit build/development/production scripts
 ├── .replit                         # Replit launcher
 ├── .env.example                    # Safe non-secret examples
@@ -131,19 +168,19 @@ SyncEra/
 └── README.md
 ```
 
-No runtime directories have been renamed solely to imitate the organizer's template.
+</details>
 
 ---
 
 ## How to Run
 
-### Option 1 — Replit
+### Option 1 · Replit
 
 Import [this repository](https://github.com/Frank219wan/SyncEra) into Replit. The committed [`.replit`](.replit) runs `scripts/run-replit.sh` and has corresponding deployment build/start scripts. It requires a Replit environment with Node.js, pnpm/Corepack and Python. Use **fictional sample inputs only**.
 
-A [Replit proof-of-use PDF](submission/SDC2026_SyncEra_Replit_POU.pdf) is present. Its contents have not been independently audited here. **Add the actual Replit demo URL in Links** and verify a fresh browser can open it; the public Vercel site alone is not Replit evidence.
+The team has submitted a [Replit proof-of-use PDF](submission/SDC2026_SyncEra_Replit_POU.pdf). The live demo is hosted on [Vercel](https://syncera-frontend.vercel.app/).
 
-### Option 2 — Run Locally
+### Option 2 · Run Locally
 
 Requirements: **Node.js 22+**, Corepack/pnpm, **Python 3.10+** (for backend).
 
@@ -156,7 +193,9 @@ corepack pnpm dev
 
 The frontend starts in **synthetic Demo mode** by default. Its pages may be explored without an LLM key or live backend.
 
-To run FastAPI separately:
+#### Start the Backend
+
+Run FastAPI in a separate terminal:
 
 ```bash
 cd backend
@@ -185,20 +224,25 @@ These are the repository's test commands, not a claim that they have been freshl
 
 ---
 
-## How We Use Replit *(Submission Required)*
+## Platform Usage
 
-- The repository includes a runnable **root `.replit`** file and separate development, build and production launch scripts.
-- The team's existing [Replit Proof of Use](submission/SDC2026_SyncEra_Replit_POU.pdf) is preserved in `submission/`; verify its evidence/screenshots before final submission.
-- Record the actual public or judge-accessible Replit deployment link above and verify it loads using a fresh session.
-- Secrets, if needed, should be configured with Replit Secrets; never commit credentials or put them in `VITE_*` environment variables.
+### Replit
+
+The project includes a root [`.replit`](.replit) configuration and scripts for development, building and deployment. Our submitted [Replit Proof of Use](submission/SDC2026_SyncEra_Replit_POU.pdf) documents the team's use of Replit. The live demo linked above is hosted on Vercel.
+
+### RunPod
+
+**RunPod was not used in this project.** There is no RunPod endpoint or RunPod proof-of-use document. The application uses a FastAPI backend with deterministic scoring and rules, plus optional gated MiniMax integration as described in the tech stack.
 
 ---
 
 ## Challenges & Learnings
 
-- **Evidence provenance:** Match scoring and labour-market indications must remain distinct. Unapproved datasets or fabricated figures must not be described as observed current demand.
-- **Integration and consistency:** The React app, server contracts, scenario snapshots and role identifiers must agree; failures and stale responses should not silently show demo results.
-- **Privacy and deploy controls:** Real CV/student/workforce information requires safeguards not provided by the synthetic Hackathon flow. Protected Preview deployments and their access tokens are not public production guarantees.
+| Challenge | Learning |
+| --- | --- |
+| **Evidence provenance** | Keep role-fit scores distinct from labour-market signals, and label dataset approval and coverage clearly. |
+| **Frontend/backend consistency** | Align contracts, scenario snapshots and role identifiers; handle stale responses and API failures explicitly. |
+| **Privacy and deployment** | Use fictional data for demonstrations and assess public Production separately from protected Preview verification. |
 
 ## Future Improvements
 
@@ -212,29 +256,30 @@ These are the repository's test commands, not a claim that they have been freshl
 
 | Name | Role | GitHub |
 | --- | --- | --- |
-| **TBD** | Team Lead / Integration | TBD |
-| **TBD** | Frontend / UI | TBD |
-| **TBD** | Backend | TBD |
-| **TBD** | AI / Technical | TBD |
-
-Fill this table with registered participants only; update the row count to match the official team roster.
+| Manar HAMMADOUCHE | Team Leader, Full Stack Development & Documentation | [Gizmo-coding](https://github.com/Gizmo-coding) |
+| WAN SIYU | Backend Developer | [Frank219wan](https://github.com/Frank219wan) |
+| YAN YUXIN | Frontend Developer | [Yasmin-001](https://github.com/Yasmin-001) |
+| YUAN XIAOYU | Frontend Developer | [MAOMAO](https://github.com/yuanxiaoyu779) |
+| XIANG JINGZHE | AI Developer | [XIANG JINGZHE](https://github.com/june250630) |
 
 ---
 
 ## Submission Checklist
 
-- [ ] Confirm registered **team name**, leader, university, team count and primary SDG track in this README.
-- [ ] Add the **Slide Deck** link and verify judge permissions.
-- [ ] Add the **5–7-minute YouTube Demo Video** link and verify playback.
+- [x] Team name, domain, proposed primary/supporting SDGs, leader, university and five-member roster provided.
+- [x] Slide deck linked from `submission/`.
+- [x] YouTube demo video link added.
+- [ ] Verify video playback, duration and judge access.
 - [x] Preliminary PDF exists: [SDC2026_SyncEra_Preliminary.pdf](submission/SDC2026_SyncEra_Preliminary.pdf).
 - [x] Technical declaration PDF exists: [SDC2026_SyncEra_TechDeclaration.pdf](submission/SDC2026_SyncEra_TechDeclaration.pdf).
 - [x] Replit Proof of Use PDF exists: [SDC2026_SyncEra_Replit_POU.pdf](submission/SDC2026_SyncEra_Replit_POU.pdf).
 - [ ] Confirm the content, registered team identity and organizer-required naming of those PDFs (no PDF modifications were made).
-- [ ] Add/verify a working Replit URL and confirm the submitted live demo works.
+- [x] Live demo URL provided; Replit proof-of-use linked.
+- [ ] Verify the live demo in a fresh browser session.
 - [ ] Run and record current test/build results and a fresh end-to-end demo.
 - [ ] Check GitHub access/collaborators, source attribution, AI/tools declaration and no committed secrets.
 
-The team has instructed that no RunPod-specific deliverable document is to be added as part of this reorganization. See [submission guide](docs/SDC_SUBMISSION_GUIDE.md) for the mapping to the organizer's sample format.
+RunPod was not used; its endpoint and proof-of-use items are explicitly recorded as not used. See the [organizer template](https://github.com/michaelzhngg/SDC_Hackathon_Submission_Template/blob/main/README.md) for the required submission format.
 
 ## License
 
@@ -242,6 +287,6 @@ Licensed under the [Apache License, Version 2.0](LICENSE).
 
 ---
 
-### 中文说明
+## 中文简介
 
-**Skillogy** 是 SDC Hackathon 2026 Domain 1 项目，提供个人职业探索（A）、企业人力与学习发展（B1）、TVET/大学职业支持（B2）三条路径，以合成演示数据展示职业推荐、技能差距与学习规划。请将正式参赛队名、SDG、团队成员、Replit 演示地址、Pitch Slides 与视频地址补齐；原有三份提交 PDF 已保留在 `submission/` 中，未修改。
+**Skillogy** 是 SDC Hackathon 2026 Domain 1 项目，提供个人职业探索（A）、企业人力与学习发展（B1）、TVET/大学职业支持（B2）三条路径，以合成演示数据展示职业推荐、技能差距与学习规划。参赛团队为 SyncEra，来自厦门大学马来西亚分校，共五名成员。拟定主要目标为 SDG 4，支持 SDG 8。上方提供 Vercel 在线演示、YouTube 视频、演示文稿及三份提交 PDF 的链接；Replit 使用证明已提交，本项目未使用 RunPod。
