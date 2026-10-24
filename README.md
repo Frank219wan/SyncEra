@@ -125,13 +125,14 @@ SyncEra/
 ├── scripts/                        # Replit build/development/production scripts
 ├── .replit                         # Replit launcher
 ├── .env.example                    # Safe non-secret examples
+├── requirements.txt                # Root Python deps wrapper for SDC template
 ├── package.json / pnpm-lock.yaml   # Frontend tooling
 ├── vercel.json                     # Vercel deployment config
 ├── LICENSE                         # Apache-2.0
 └── README.md
 ```
 
-No runtime directories have been renamed solely to imitate the organizer's template.
+**Why this root view has more folders than the template:** the organizer's sample is a minimal Python-only example, while Skillogy is a working React + FastAPI monorepo. The top-level `src/` contains the frontend, `backend/` holds the Python API, and `api/`, `public/`, `scripts/`, `server/`, `index.html`, Vite and pnpm files are used by building or deploying the full-stack app. The repository therefore preserves those extra paths rather than breaking imports and Vercel/Replit configuration to mimic an illustrative tree. `requirements.txt` is now present at the root and delegates to `backend/requirements.txt`. The only sample component intentionally omitted per the team's instruction is RunPod.
 
 ---
 
