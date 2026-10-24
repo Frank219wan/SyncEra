@@ -11,3 +11,8 @@ export function currentRoleRecommendation(
   if(!roleId||loadedContext!==currentContext)return null;
   return rows?.find(row=>row.roleId===roleId&&row.origin==='computed')??null;
 }
+
+/** A real roadmap must never borrow the name of an unrelated demo catalogue role. */
+export function roadmapRoleName(roleId:string,rows:Recommendation[]|null):string {
+  return rows?.find(row=>row.roleId===roleId&&row.origin==='computed')?.roleName??roleId;
+}

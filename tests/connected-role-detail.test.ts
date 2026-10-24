@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {currentRoleRecommendation,roleDetailContext} from '../src/pages/connectedRoleDetailState.ts';
+import {currentRoleRecommendation,roadmapRoleName,roleDetailContext} from '../src/pages/connectedRoleDetailState.ts';
 import type {Recommendation} from '../src/types.ts';
 
 const current:Recommendation={roleId:'synthetic-unknown-role',roleName:'Synthetic Unknown Role',rank:1,matchScore:73,origin:'computed',
@@ -25,4 +25,10 @@ test('scenario, profile revision, profile identity and snapshot changes hide sta
 test('demo-origin rows cannot populate the connected role detail',()=>{
   assert.equal(currentRoleRecommendation([{...current,origin:'demo'}],context,context,current.roleId),null);
   assert.equal(currentRoleRecommendation(null,context,context,current.roleId),null);
+});
+
+test('real roadmap keeps an unknown service role name without borrowing a demo title',()=>{
+  assert.equal(roadmapRoleName(current.roleId,[current]),'Synthetic Unknown Role');
+  assert.equal(roadmapRoleName(current.roleId,[{...current,origin:'demo'}]),current.roleId);
+  assert.equal(roadmapRoleName('another-role',[current]),'another-role');
 });
