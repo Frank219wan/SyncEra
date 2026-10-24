@@ -1,11 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyProfile } from '../src/data.ts';
+import { emptyProfile, tvetSample } from '../src/data.ts';
 import {
   applyBubbleSizes, fromContractLevel, fromContractRoleId, fromContractSkillId, mapRecommendations, mapRoadmap, mapTrendRoles,
-  mergeNormalizedProfile, profileToConfirmRequest, profileToNormalizeRequest, syntheticTextToNormalizeRequest,
+  mapOrganizationAnalysis, mergeNormalizedProfile, organizationToAnalyzeRequest, profileToConfirmRequest, profileToNormalizeRequest, syntheticTextToNormalizeRequest,
   targetWeeks, toContractLevel, toContractRoleId, toContractSkillId, validateRecommendationPayload, verifiedRoleAlignmentTags,
 } from '../src/services/api-contract.ts';
+
+test('B2 mapper preserves reviewed student inputs and server analysis modules',()=>{
+  const org=structuredClone(tvetSample);org.selected=['STU-001','STU-002'];
+  const request=organizationToAnalyzeRequest(org,'moderate','zh',true);
+  assert.equal(request.locale,'zh-CN');
+  assert.deepEqual(request.payload.selected_member_ids,['STU-001','STU-002']);
+  assert.equal(request.payload.members[0].skills[0].skill_id.startsWith('skill_'),true);
+  assert.equal(request.payload.members[0].skills[0].level,3);
+  assert.equal(request.payload.members[0].reviewed,true);
+  const analysis=mapOrganizationAnalysis({
+    workspace_id:'org_demo',workspace_revision:1,analysis_id:'organalysis_demo',mode:'career_centre',snapshot_id:'snap_demo',ai_scenario:'moderate',scoring_policy:'organization-b2-v0.1',warnings:['Synthetic'],
+    student_results:[{member_id:'STU-001',selected_role_id:'role_data_analyst',result_confidence:'high',missing_inputs:[],recommendations:[{rank:1,role_id:'role_data_analyst',role_name:'Data Analyst',match_score:80,score_breakdown:{skill_compatibility:80,interest_alignment:80,goal_alignment:80,work_style_alignment:80,scenario_outlook:80,transition_feasibility:80},strengths:['skill_sql'],skill_gaps:[{skill_id:'skill_python',name:'Python',current_level:null,target_level:3,importance:'high'}],evidence_ids:['ev_demo_001'],tag_sources:['curated']}],action_plan:{next_semester_courses:['Python'],self_study_topics:['Python'],project_or_internship:'Project',human_review_status:'required'}}],
+    cohort_result:{included_member_ids:['STU-001'],skill_gap_counts:[{skill_id:'skill_python',name:'Python',affected_members:1,member_ids:['STU-001']}],proposed_workshops:[{title:'Python in practice',target_gap:'skill_python',affected_members:1,evidence_ids:['ev_demo_001']}],tutoring_focus:['Python'],curriculum_supplements:[{course_name:'Programming',suggested_module:'Applied Python',reason:'Gap',evidence_ids:['ev_demo_001']}],human_review_status:'required'},
+  });
+  assert.equal(analysis.studentResults[0].selectedRoleId,'data-analyst');
+  assert.equal(analysis.studentResults[0].recommendations[0].skillGaps[0].skillId,'python');
+  assert.equal(analysis.cohortResult.proposedWorkshops[0].targetGap,'python');
+});
 
 test('real recommendations require matching profile, snapshot, ranking, scores and provenance', () => {
   const expected = {profileId:'profile_synthetic_1',scenario:'moderate' as const,snapshotId:'snap_my_1',topK:5};

@@ -37,6 +37,10 @@ def test_routes_and_openapi(client):
         assert {p for p,ops in paths.items() if method.lower() in ops}==expected
     assert client.get('/docs').status_code==200
 
+def test_postgres_migration_manifest_includes_organization_schema():
+    from scripts.migrate_postgres import MIGRATIONS
+    assert MIGRATIONS[-1]=='20261023_04_organization_mvp.sql'
+
 def test_public_catalogue_and_envelopes(client):
     health=good(client.get('/api/v1/health',headers={'X-Request-ID':'req_test'}))
     assert health=={'status':'ok','api_version':'1.0.0'}
@@ -124,9 +128,11 @@ def test_roadmap_limit_and_p1(client):
     tight={**CONSTRAINTS,'weekly_hours':1,'target_weeks':1}
     data=good(client.post('/api/v1/learning/roadmap',json={'profile_id':p['profile_id'],'role_id':'role_data_analyst','selected_skill_ids':['skill_python','skill_validation'],'study_constraints':tight}))
     assert data['feasibility']=='insufficient_time' and data['warnings']
-    for path in ['/api/v1/progress/skills','/api/v1/organizations/hr/analyze','/api/v1/admin/trends/refresh']:
+    for path in ['/api/v1/progress/skills','/api/v1/admin/trends/refresh']:
         r=client.post(path,json={})
         assert r.status_code==503 and r.json()['error']['code']=='SOURCE_UNAVAILABLE'
+    r=client.post('/api/v1/organizations/hr/analyze',json={})
+    assert r.status_code==422 and r.json()['error']['code']=='VALIDATION_ERROR'
 
 def test_original_openapi_response_shapes(client):
     import yaml
@@ -146,13 +152,15 @@ def test_original_openapi_response_shapes(client):
         return out
     spec=convert(spec)
     p=profile(client)
-    calls=[('get','/api/v1/health',None),('get','/api/v1/explore/bubbles',None),('get','/api/v1/trends/roles',None),('get','/api/v1/trends/skills',None),('get','/api/v1/roles/role_data_analyst',None),('get','/api/v1/roles/role_data_analyst/tasks',None),('get','/api/v1/evidence/ev_demo_001',None),('post','/api/v1/profiles/normalize',{'pipeline':'A','input_type':'guided_text','synthetic_input':True,'text':'SQL','study_constraints':CONSTRAINTS}),('post','/api/v1/profiles/confirm',{'profile_id':p['profile_id'],'skills':[],'reviewed_by_user':True,'profile_revision':p['revision']}),('post','/api/v1/recommendations',{'profile_id':p['profile_id'],'region':'MY','ai_scenario':'moderate'}),('post','/api/v1/learning/skill-map',{'profile_id':p['profile_id'],'role_id':'role_data_analyst','skill_id':'skill_python','language':'en','budget_amount':100,'currency':'MYR'}),('post','/api/v1/learning/roadmap',{'profile_id':p['profile_id'],'role_id':'role_data_analyst','selected_skill_ids':['skill_python'],'study_constraints':CONSTRAINTS})]
+    organization_payload={'schema_version':'organization-v0.1','synthetic_input':True,'reviewed_by_user':True,'region':'MY','locale':'en','ai_scenario':'moderate','payload':{'institution_label':'Synthetic Career Centre','selected_member_ids':['student_001'],'members':[{'member_id':'student_001','programme':'Information Systems','current_courses':['Database Fundamentals'],'skills':[{'skill_id':'skill_sql','level':3,'source':'confirmed','confidence':1}],'interests':['analytics'],'goal_tags':['digital_transformation'],'work_style':{'collaboration':'balanced','pace':'structured','structure':'guided'},'target_role_id':'role_data_analyst','weekly_learning_hours':6,'reviewed':True}]}}
+    calls=[('get','/api/v1/health',None),('get','/api/v1/explore/bubbles',None),('get','/api/v1/trends/roles',None),('get','/api/v1/trends/skills',None),('get','/api/v1/roles/role_data_analyst',None),('get','/api/v1/roles/role_data_analyst/tasks',None),('get','/api/v1/evidence/ev_demo_001',None),('post','/api/v1/profiles/normalize',{'pipeline':'A','input_type':'guided_text','synthetic_input':True,'text':'SQL','study_constraints':CONSTRAINTS}),('post','/api/v1/profiles/confirm',{'profile_id':p['profile_id'],'skills':[],'reviewed_by_user':True,'profile_revision':p['revision']}),('post','/api/v1/recommendations',{'profile_id':p['profile_id'],'region':'MY','ai_scenario':'moderate'}),('post','/api/v1/learning/skill-map',{'profile_id':p['profile_id'],'role_id':'role_data_analyst','skill_id':'skill_python','language':'en','budget_amount':100,'currency':'MYR'}),('post','/api/v1/learning/roadmap',{'profile_id':p['profile_id'],'role_id':'role_data_analyst','selected_skill_ids':['skill_python'],'study_constraints':CONSTRAINTS}),('post','/api/v1/organizations/career_centre/analyze',organization_payload)]
     for method,url,payload in calls:
         response=getattr(client,method)(url,**({'json':payload} if payload else {}))
         assert response.status_code==200,response.text
         path=url.removeprefix('/api/v1')
         if path.startswith('/roles/'): path='/roles/{role_id}/tasks' if path.endswith('/tasks') else '/roles/{role_id}'
         if path.startswith('/evidence/'): path='/evidence/{evidence_id}'
+        if path.startswith('/organizations/'): path='/organizations/{mode}/analyze'
         schema=spec['paths'][path][method]['responses']['200']['content']['application/json']['schema']
         validator=Draft7Validator({'$ref':schema['$ref'],'components':spec['components']})
         errors=list(validator.iter_errors(response.json()))

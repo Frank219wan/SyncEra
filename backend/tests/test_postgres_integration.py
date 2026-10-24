@@ -1,4 +1,4 @@
-"""Run against a disposable PostgreSQL database via TEST_DATABASE_URL."""
+"""Synthetic integration tests on the single reviewed Neon Preview target."""
 import os
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
@@ -20,14 +20,12 @@ CONSTRAINTS = {'weekly_hours': 5, 'budget_amount': 0, 'currency': 'MYR',
 
 @pytest.mark.skipif(not URL, reason='TEST_DATABASE_URL is not configured')
 def test_persistent_http_flow_and_atomic_revision(monkeypatch):
-    import psycopg
-    from scripts.migrate_postgres import main as migrate
-    monkeypatch.setenv('DATABASE_URL', URL)
+    from scripts.preview_test_db import checked_test_url
+    safe_url = checked_test_url(URL)
+    monkeypatch.setenv('DATABASE_URL', safe_url)
     monkeypatch.setenv('PROFILE_STORE', 'postgres')
-    migrate()
-    migrate()  # Idempotent initialization.
-    store_a = PostgresProfileStore(URL)
-    store_b = PostgresProfileStore(URL)
+    store_a = PostgresProfileStore(safe_url)
+    store_b = PostgresProfileStore(safe_url)
     first = TestClient(create_app(store=store_a, adapter=create_adapter()))
     second = TestClient(create_app(store=store_b, adapter=create_adapter()))
     marker = 'Synthetic ' + uuid4().hex
@@ -62,7 +60,8 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
             assert result.status_code == 200, result.text
             assert result.json()['data']['recommendations']
     finally:
-        with psycopg.connect(URL) as db:
+        from scripts.migrate_postgres import verified_preview_connection
+        with verified_preview_connection(URL) as (db, _server_ssl):
             db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
         store_a.close()
         store_b.close()
@@ -71,14 +70,13 @@ def test_persistent_http_flow_and_atomic_revision(monkeypatch):
 @pytest.mark.skipif(not URL, reason='TEST_DATABASE_URL is not configured')
 def test_synthetic_cv_psychology_confirm_postgres_readback(monkeypatch):
     import json
-    import psycopg
-    from scripts.migrate_postgres import main as migrate
+    from scripts.preview_test_db import checked_test_url
 
-    monkeypatch.setenv('DATABASE_URL', URL)
+    safe_url = checked_test_url(URL)
+    monkeypatch.setenv('DATABASE_URL', safe_url)
     monkeypatch.setenv('PROFILE_STORE', 'postgres')
-    migrate()
-    store_a = PostgresProfileStore(URL)
-    store_b = PostgresProfileStore(URL)
+    store_a = PostgresProfileStore(safe_url)
+    store_b = PostgresProfileStore(safe_url)
     adapter = create_adapter()  # Rule adapter: no paid MiniMax call.
     original_extract = adapter.extract_profile
     extracts = []
@@ -136,7 +134,8 @@ def test_synthetic_cv_psychology_confirm_postgres_readback(monkeypatch):
         assert len(extracts) == 1
     finally:
         if profile_id:
-            with psycopg.connect(URL) as db:
+            from scripts.migrate_postgres import verified_preview_connection
+            with verified_preview_connection(URL) as (db, _server_ssl):
                 db.execute('DELETE FROM public.profiles WHERE profile_id=%s', (profile_id,))
         store_a.close()
         store_b.close()

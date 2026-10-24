@@ -1,5 +1,15 @@
 # Full-stack integration status
 
+## Organization B2 update — 2026-10-23
+
+The local `feature/organization-mvp` workspace now implements the reviewed-fictional-data B2 path: existing TVET UI → relative `/api/v1` → Vite/Vercel proxy → `POST /organizations/career_centre/analyze` → revision-aware Organization repository → deterministic role/gap/cohort analysis → existing career, gap, workshop and curriculum UI modules. B1 HR remains disabled. The change is local and has not been committed, pushed or deployed.
+
+- Inputs include confirmed skill levels, interests, user-confirmed goal tags and work-style preferences. Free-text CV/personality fields are not converted into scored personality labels.
+- The server stores workspace input and analysis with revision CAS. Vercel enablement requires PostgreSQL, `ENABLE_ORGANIZATION_MVP=1`, and migration `20261023_04_organization_mvp.sql`; it does not silently fall back to SQLite.
+- Moderate/Fast resolve through the existing scenario snapshots. Scores use `organization-b2-v0.1`; MiniMax is not called.
+- The static OpenAPI contract, frontend mapper, exact Preview proxy allowlist and B2 response UI are connected. Real API failures do not fall back to local demo recommendations.
+- Deployment and browser Cloud E2E remain unverified until an approved protected Preview and Neon database are configured.
+
 Date: 2026-10-22  
 Upstream `origin/main`: `4542c18` (PRs #1–#9 merged)  
 Latest unsubmitted team branch integrated locally: `feat/frontend-ui-v1.2` at `a8d1093`  
@@ -18,7 +28,7 @@ Integration branch: `codex/latest-team-integration`
 - Local VS Code tasks run `futureproof_ai.futureproof_adapter`: deterministic profile extraction and `tech-v1` role scoring. No paid provider call is made by the default run configuration.
 - Current main also contains an **optional Tencent TokenHub MiniMax-M3 profile extraction adapter**. It is activated only when the backend is configured with `AI_ADAPTER_MODULE=futureproof_ai.tencent_tokenhub_adapter` and a server-side `TENCENT_TOKENHUB_API_KEY`. It calls the LLM for non-empty text declared synthetic. Form-only profile normalization stays local. Role scoring, score arithmetic, explanations, evidence checks, skill maps, and roadmaps remain deterministic. Metadata remains `synthetic_demo` / `is_mock=true`; this is not authorization for real CV or personal data.
 - The frontend is not wired to the backend file upload endpoint. PDF/DOCX upload remains a backend-only synthetic-input path.
-- Organization analysis, progress sync, and admin trend refresh routes return 503. HR/TVET local UI workflows do not imply server persistence.
+- Organization B2 Career Centre is connected locally for reviewed fictional records and supports revision-aware persistence when PostgreSQL is configured. Organization B1 HR, progress sync, and admin trend refresh remain unavailable.
 - Candidate market data and learning resources remain pending human approval; synthetic fixtures are the normal data source. No authentication, tenant isolation, real-data privacy/retention lifecycle, or production deployment is verified.
 
 ## Testing

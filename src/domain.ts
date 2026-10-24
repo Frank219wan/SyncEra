@@ -21,6 +21,7 @@ export function validatePeople(org: Organization, school=false) {
   if (org.people.some(p=>p.hours<1 || p.hours>40 || !Number.isFinite(p.hours))) errors.push('hours');
   if (org.people.some(p=>p.known && !p.skills.length)) errors.push('skills');
   if (school && org.people.some(p=>!p.target || !p.courses.trim())) errors.push('target');
+  if (school && org.people.some(p=>p.reviewed!==true)) errors.push('reviewed');
   if (!school) {
     const departments=org.departments||[];
     if (!departments.length) errors.push('departments');
