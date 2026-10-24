@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {emptyHr,hrSample,tvetSample} from '../src/data.ts';
-import {applyHrAnalysisResponse,applyStudentAnalysisResponse,hrAnalysisView,newHrDraftFromSample,restoreHr,studentAnalysisView} from '../src/hrState.ts';
+import {applyHrAnalysisResponse,applyStudentAnalysisResponse,beginHrAnalysis,hrAnalysisView,newHrDraftFromSample,restoreHr,studentAnalysisView} from '../src/hrState.ts';
 import type {Organization} from '../src/types.ts';
 
 test('a first visit and an untouched legacy fixture start with an empty team profile',()=>{
@@ -52,6 +52,21 @@ test('Real HR views require an analysis for the current revision and scenario',(
   assert.equal(hrAnalysisView({...current,revision:5},'moderate',false),'needs_analysis');
   assert.equal(hrAnalysisView(current,'fast',false),'needs_analysis');
   assert.equal(hrAnalysisView({...current,hrAnalysis:null},'moderate',true),'demo');
+});
+
+test('starting a Real B1 refresh hides old analysis without losing its workspace CAS token',()=>{
+  const previous:Organization={...structuredClone(hrSample),revision:4,analyzedRevision:4,
+    clientWorkspaceId:'client-hr',workspaceId:'server-hr',workspaceRevision:2,
+    hrAnalysis:{mode:'hr',scenario:'moderate'} as Organization['hrAnalysis'],
+    analysisMeta:{requestId:'synthetic',snapshotId:'snapshot',generatedAt:null,dataLabel:'synthetic',isMock:true,modelVersion:null}};
+  assert.equal(hrAnalysisView(previous,'moderate',false),'connected');
+  const pending=beginHrAnalysis(previous);
+  assert.equal(hrAnalysisView(pending,'moderate',false),'needs_analysis');
+  assert.equal(pending.hrAnalysis,null);
+  assert.equal(pending.analysisMeta,null);
+  assert.equal(pending.workspaceId,'server-hr');
+  assert.equal(pending.workspaceRevision,2);
+  assert.equal(pending.clientWorkspaceId,'client-hr');
 });
 
 test('a committed B2 response preserves its CAS identity without showing results after local changes',()=>{

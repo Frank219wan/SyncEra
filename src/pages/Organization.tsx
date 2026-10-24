@@ -4,7 +4,7 @@ import {useApp} from '../store';
 import {hrSample,tvetSample,skillNames,roles,organizationGoals} from '../data';
 import {cohortGaps,gapsFor,validatePeople,parseCsv} from '../domain';
 import {api,ApiError,isDemo} from '../services/api';
-import {applyHrAnalysisResponse,applyStudentAnalysisResponse,hrAnalysisView,newHrDraftFromSample,studentAnalysisView} from '../hrState';
+import {applyHrAnalysisResponse,applyStudentAnalysisResponse,beginHrAnalysis,hrAnalysisView,newHrDraftFromSample,studentAnalysisView} from '../hrState';
 import type {Department,Organization,Person} from '../types';
 import {PageHeader,Stepper,ButtonLink,DemoNotice,Field,SkillChip,Modal,EmptyState,ErrorState,EvidencePanel,icons} from '../components';
 import {TrainingGrowthPanel} from '../components/TrainingIvy';
@@ -99,6 +99,7 @@ function HRIntake(){
     const version={version:(current.planningVersions?.length||0)+1,createdAt:new Date().toISOString(),organizationGoals:[...(current.goals||[])],skills:[...current.needs],departments:structuredClone(current.departments||[]),budget:current.budget,weeks:current.weeks};
     analysisInFlight.current=true;
     setError('');setBusy(true);
+    if(!isDemo)setState(s=>({...s,hr:beginHrAnalysis(s.hr)}));
     try{
       if(isDemo){
         setState(s=>({...s,hr:{...s.hr,planningVersions:[...(s.hr.planningVersions||[]),version],analyzedRevision:s.hr.revision}}));

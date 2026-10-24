@@ -23,6 +23,12 @@ export function newHrDraftFromSample(): Organization {
     analyzedRevision:0,planningVersions:[]};
 }
 
+export function beginHrAnalysis(org: Organization): Organization {
+  // A failed refresh must not leave the previous server analysis visible.
+  // Keep the workspace CAS token so a retry updates the same workspace.
+  return {...org,hrAnalysis:null,analysisMeta:null};
+}
+
 export function applyHrAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, requestedClientWorkspaceId: string | undefined, analysis: HRAnalysis, meta: ServiceMeta, version: DepartmentPlanVersion): Organization {
   // A response from another workspace must not replace this workspace's CAS identity.
   // The local identity also protects the first request, before a server workspace ID exists.
