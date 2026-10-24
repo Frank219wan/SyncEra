@@ -78,6 +78,7 @@ function ConnectedHRTrainingSummary({org}:{org:Organization}){
 function HRIntake(){
   const {state,setState,t,copy,toast}=useApp();const nav=useNavigate();
   const analysisInFlight=useRef(false);
+  const openedClientWorkspaceId=useRef(state.hr.clientWorkspaceId);
   const [editing,setEditing]=useState(false),[draft,setDraft]=useState<Organization>(()=>structuredClone(state.hr));
   const org=editing?draft:state.hr;
   const firstTimeTeamProfile=!state.hrProfileSaved;
@@ -100,7 +101,21 @@ function HRIntake(){
   const update=(patch:Partial<Organization>)=>setDraft(current=>({...current,...patch,revision:current.revision+1}));
   const updatePerson=(i:number,p:Person)=>update({people:org.people.map((item,index)=>index===i?p:item)});
   const addPerson=()=>{const n=org.people.length+1;let id=`EMP-${String(n).padStart(3,'0')}`,i=n;while(org.people.some(p=>p.id===id)){id=`EMP-${String(++i).padStart(3,'0')}`;}update({people:[...org.people,{id,department:org.departments?.[0]?.name||'',skills:[],known:false,role:'',traits:'',aspiration:'',hours:4,courses:'',interests:'',notes:'',year:'',target:''}]});setActive(org.people.length);};
-  function review(){const errors=validatePeople(org,false);if(errors.length){setError(t('Complete the organization name and each department name, responsibility, status and challenge. Goals and target skills are optional. Any employee records must also be valid.','请填写机构名称及各部门名称、职责、状态和挑战。目标与目标技能为选填；已添加的员工资料仍需有效。','Lengkapkan nama organisasi, nama jabatan, tanggungjawab, status dan cabaran. Matlamat dan kemahiran sasaran adalah pilihan. Rekod pekerja juga mesti sah.'));return;}setError('');setBusy(true);setState(s=>({...s,hr:saveHrDraft(s.hr,{...org,clientWorkspaceId:org.clientWorkspaceId||crypto.randomUUID()}),hrProfileSaved:true}));setBusy(false);setEditing(false);toast(t('Team profile saved. Review the department plan again after input changes.','团队资料已保存；输入更新后请重新核对部门规划。','Profil pasukan disimpan. Semak semula perancangan jabatan selepas perubahan.'));}
+  function review(){
+    const errors=validatePeople(org,false);
+    if(errors.length){setError(t('Complete the organization name and each department name, responsibility, status and challenge. Goals and target skills are optional. Any employee records must also be valid.','请填写机构名称及各部门名称、职责、状态和挑战。目标与目标技能为选填；已添加的员工资料仍需有效。','Lengkapkan nama organisasi, nama jabatan, tanggungjawab, status dan cabaran. Matlamat dan kemahiran sasaran adalah pilihan. Rekod pekerja juga mesti sah.'));return;}
+    if(state.hr.clientWorkspaceId!==openedClientWorkspaceId.current){
+      setError(t('The workspace changed while this editor was open. Reopen the current workspace before saving.','编辑期间工作区已切换；请重新打开当前工作区后再保存。','Ruang kerja berubah semasa editor ini dibuka. Buka semula ruang kerja semasa sebelum menyimpan.'));
+      return;
+    }
+    setError('');setBusy(true);
+    setState(s=>{
+      const next=saveHrDraft(s.hr,{...org,clientWorkspaceId:org.clientWorkspaceId||crypto.randomUUID()},openedClientWorkspaceId.current);
+      return next===s.hr?s:{...s,hr:next,hrProfileSaved:true};
+    });
+    setBusy(false);setEditing(false);
+    toast(t('Team profile saved. Review the department plan again after input changes.','团队资料已保存；输入更新后请重新核对部门规划。','Profil pasukan disimpan. Semak semula perancangan jabatan selepas perubahan.'));
+  }
   async function reviewPlan(override?:Organization){
     if(analysisInFlight.current)return;
     if(!state.hrProfileSaved){setError(t('Create and save a team profile before reviewing a department plan.','请先创建并保存团队资料，再审核部门规划。','Cipta dan simpan profil pasukan sebelum menyemak pelan jabatan.'));return;}
@@ -131,6 +146,11 @@ function HRIntake(){
   }
   function confirmNewWorkspace(){
     if(analysisInFlight.current || !state.hr.hrRecovery || state.hr.hrRecovery.status==='pending')return;
+    if(editing && state.hr.clientWorkspaceId!==openedClientWorkspaceId.current){
+      setConfirmNew(false);
+      setError(t('The workspace changed while this editor was open. Reopen the current workspace before continuing.','编辑期间工作区已切换；请重新打开当前工作区后再继续。','Ruang kerja berubah semasa editor ini dibuka. Buka semula ruang kerja semasa sebelum meneruskan.'));
+      return;
+    }
     const source=editing?{...draft,clientWorkspaceId:state.hr.clientWorkspaceId,workspaceId:state.hr.workspaceId,
       workspaceRevision:state.hr.workspaceRevision,hrRecovery:state.hr.hrRecovery}:state.hr;
     if(validatePeople(source,false).length){setError(t('Complete the current draft before creating a new workspace.','创建新工作区前请补齐当前草稿。','Lengkapkan draf semasa sebelum mencipta ruang kerja baharu.'));setConfirmNew(false);return;}
@@ -153,7 +173,7 @@ function HRIntake(){
     </Modal>}
   </section>:null;
   if(!editing)return <><PageHeader title={t('Team profile','团队资料','Profil pasukan')} description={firstTimeTeamProfile?t('Create a profile for your organization and departments.','为机构和部门创建团队资料。','Cipta profil organisasi dan jabatan anda.'):t('Saved organization, department and optional employee information.','已保存的机构、部门和可选员工资料。','Maklumat organisasi, jabatan dan pekerja pilihan yang tersimpan.')} action={<DemoNotice/>}/>
-     <div className="form-actions"><button className="button" onClick={()=>{setDraft(structuredClone(state.hr));setEditing(true);}}>{firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button>{!firstTimeTeamProfile&&<button className="button secondary" disabled={busy||recovery?.status==='pending'} onClick={()=>void reviewPlan()}>{busy?t('Analyzing…','分析中…','Menganalisis…'):recovery?t('Resolve workspace revision','处理工作区版本','Selesaikan semakan ruang kerja'):t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button>}</div>
+     <div className="form-actions"><button className="button" onClick={()=>{openedClientWorkspaceId.current=state.hr.clientWorkspaceId;setDraft(structuredClone(state.hr));setEditing(true);}}>{firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button>{!firstTimeTeamProfile&&<button className="button secondary" disabled={busy||recovery?.status==='pending'} onClick={()=>void reviewPlan()}>{busy?t('Analyzing…','分析中…','Menganalisis…'):recovery?t('Resolve workspace revision','处理工作区版本','Selesaikan semakan ruang kerja'):t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button>}</div>
     {recoveryPanel}{error&&<ErrorState message={error} retry={recovery?undefined:()=>void reviewPlan()}/>}
     {Boolean(state.hr.previousWorkspaceIds?.length)&&<p className="fine-print">{t('Previous server workspaces were not deleted:','旧服务器工作区未删除：','Ruang kerja pelayan terdahulu tidak dipadam:')} {state.hr.previousWorkspaceIds?.join(', ')}</p>}
      {firstTimeTeamProfile&&<div className="surface empty-inline"><p>{t('No team profile has been saved. Create one from your organization and department information, or load the synthetic example in the editor.','尚未保存团队资料。请填写机构与部门信息，或在编辑页主动载入合成示例。','Belum ada profil pasukan disimpan. Isi maklumat organisasi dan jabatan, atau muat contoh sintetik dalam editor.')}</p></div>}

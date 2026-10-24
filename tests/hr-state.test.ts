@@ -204,7 +204,7 @@ test('saving an older edit after server success preserves its confirmed revision
   const run=runHrAnalysis(h.state,h.update,()=>delayed.promise);
   delayed.resolve(flowResponse(h.state.hr));await run;
   assert.equal(h.state.hr.workspaceRevision,5);
-  h.update(s=>({...s,hr:saveHrDraft(s.hr,draft)}));
+  h.update(s=>({...s,hr:saveHrDraft(s.hr,draft,draft.clientWorkspaceId)}));
   assert.equal(h.state.hr.name,draft.name);
   assert.equal(h.state.hr.workspaceRevision,5);
   assert.equal(h.state.hr.workspaceId,'server-flow');
@@ -216,11 +216,40 @@ test('saving an older edit while a request is pending retains the operation guar
   const h=flowHarness();const draft={...structuredClone(h.state.hr),name:'Edited during pending',revision:5};
   const delayed=deferred<ReturnType<typeof flowResponse>>();
   const run=runHrAnalysis(h.state,h.update,()=>delayed.promise);
-  h.update(s=>({...s,hr:saveHrDraft(s.hr,draft)}));
+  h.update(s=>({...s,hr:saveHrDraft(s.hr,draft,draft.clientWorkspaceId)}));
   assert.equal(h.state.hr.hrRecovery?.status,'pending');
   delayed.resolve(flowResponse(h.state.hr));await run;
   assert.equal(h.state.hr.workspaceRevision,5);
   assert.equal(h.state.hr.hrAnalysis,null);
+});
+
+test('saving an old editor after switching workspace cannot restore its identity, CAS token, or recovery marker',()=>{
+  const old={...flowState().hr,hrRecovery:{status:'unknown' as const,request:requestFor(flowState().hr)}};
+  const draft={...structuredClone(old),name:'Old edited workspace',revision:old.revision+1};
+  const current=createHrWorkspaceFromDraft(old);
+  const saved=saveHrDraft(current,draft,old.clientWorkspaceId);
+  assert.deepEqual(saved,current);
+  assert.notEqual(saved.clientWorkspaceId,old.clientWorkspaceId);
+  assert.equal(saved.workspaceId,undefined);
+  assert.equal(saved.workspaceRevision,undefined);
+  assert.equal(saved.hrRecovery,null);
+});
+
+test('an explicitly new synthetic draft can replace its original workspace without inheriting CAS metadata',()=>{
+  const current=flowState().hr;
+  const fresh={...newHrDraftFromSample(),revision:current.revision+1};
+  const saved=saveHrDraft(current,fresh,current.clientWorkspaceId);
+  assert.equal(saved.clientWorkspaceId,fresh.clientWorkspaceId);
+  assert.notEqual(saved.clientWorkspaceId,current.clientWorkspaceId);
+  assert.equal(saved.workspaceId,undefined);
+  assert.equal(saved.workspaceRevision,undefined);
+  assert.equal(saved.hrRecovery,null);
+});
+
+test('a different draft carrying a server identity cannot replace the active workspace',()=>{
+  const current=flowState().hr;
+  const other={...current,clientWorkspaceId:'other-client',workspaceId:'other-server',workspaceRevision:9};
+  assert.deepEqual(saveHrDraft(current,other,current.clientWorkspaceId),current);
 });
 
 test('CAS 04: a committed but timed-out request never guesses a new server revision',async()=>{

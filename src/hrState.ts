@@ -43,8 +43,14 @@ export function createHrWorkspaceFromDraft(org:Organization):Organization {
     analyzedRevision:0,planningVersions:[],hrRecovery:null,hrLastOperationId:undefined};
 }
 
-export function saveHrDraft(current:Organization,draft:Organization):Organization {
-  if(current.clientWorkspaceId!==draft.clientWorkspaceId)return draft;
+export function saveHrDraft(current:Organization,draft:Organization,openedClientWorkspaceId:string|undefined):Organization {
+  // An editor opened for a different workspace must not replace current state.
+  if(current.clientWorkspaceId!==openedClientWorkspaceId)return current;
+  if(current.clientWorkspaceId!==draft.clientWorkspaceId){
+    // An explicitly loaded fresh draft has no server CAS identity to restore.
+    return !draft.workspaceId && draft.workspaceRevision==null && !draft.hrRecovery && !draft.hrAnalysis
+      ? draft:current;
+  }
   // An edit opened before a response must never restore its old CAS token or
   // remove an in-flight/uncertain marker. The edited inputs remain the draft.
   return {...draft,revision:Math.max(draft.revision,current.revision+1),

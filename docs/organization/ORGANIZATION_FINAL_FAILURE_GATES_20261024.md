@@ -1,5 +1,15 @@
 # Organization B1/B2 protected Preview — final failure gates (2026-10-24)
 
+## B1 save-draft identity preflight (local, 2026-10-24)
+
+Before deploying the CAS recovery code, an independent worktree based on PR #37 `0b663e20da5f093102a8f9c850f4583ed5bcb278` reproduced an additional identity overwrite. An editor opened on an old HR workspace could save after the active workspace changed, and `saveHrDraft()` returned the old draft when client IDs differed. The red regression test proved that the old server workspace ID, CAS Revision, and recovery marker could replace the new workspace state.
+
+The local fix records the client workspace ID when the editor opens and rejects a save if that active identity changes. `saveHrDraft()` also refuses any cross-identity draft carrying server CAS or recovery state. An explicitly loaded fresh synthetic draft remains possible only while editing the same original workspace and only without server identity. The confirmation path for creating a new workspace rejects an editor whose original workspace has since changed. A stale editor shows an error and requires reopening the current workspace.
+
+Local evidence after the fix: Frontend **120/120**, TypeScript `tsc -b` **PASS**, Real-mode Vite build **PASS**, Backend **164 passed / 4 skipped**, local synthetic cross-stack **4/4**, `git diff --check` **PASS**. The red regression was observed before the fix; after the fix, the old draft leaves the new workspace unchanged. The first Frontend test attempt lacked the isolated worktree dependency link and was rerun successfully with the same package test files. Tests were run without `DATABASE_URL` or `TEST_DATABASE_URL`; no Neon, Vercel deployment, or paid AI was used for this preflight.
+
+This is **local-only evidence**. The repaired SHA has not been deployed, and the earlier protected Frontend still runs the older code until its source is independently checked and a deployment is explicitly confirmed. PR #37 remains unchanged pending the deployment lead's review of this new fix. **Protected Preview accepted: NO. Ready to merge #36/#37: NO/NO.** The prior Production-marked deployment incident below remains part of release history; it is not reset by this local preflight.
+
 ## B1 CAS recovery local addendum (2026-10-24)
 
 | Gate | Local result |
