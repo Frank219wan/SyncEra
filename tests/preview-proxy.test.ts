@@ -69,6 +69,28 @@ test('rejects production, missing configuration, arbitrary routes and methods', 
   assert.equal((await handleProxy(request('health?proxy_path=health'), env, neverFetch)).status, 404);
 });
 
+test('protected synthetic-only Production requires explicit config and exact Backend hostname', async () => {
+  const productionEnv = {
+    VERCEL_ENV: 'production',
+    ENABLE_SYNTHETIC_PRODUCTION: '1',
+    BACKEND_PRODUCTION_ORIGIN: 'https://syncera-backend.vercel.app',
+    BACKEND_PRODUCTION_BYPASS_SECRET: 'synthetic-production-test-only',
+  };
+  assert.equal((await handleProxy(request('health'), {...productionEnv, ENABLE_SYNTHETIC_PRODUCTION:'0'}, neverFetch)).status, 503);
+  assert.equal((await handleProxy(request('health'), {...productionEnv, BACKEND_PRODUCTION_BYPASS_SECRET:''}, neverFetch)).status, 503);
+  assert.equal((await handleProxy(request('health'), {...productionEnv, BACKEND_PRODUCTION_ORIGIN:'https://syncera-backend.vercel.app/'}, neverFetch)).status, 503);
+  assert.equal((await handleProxy(request('health'), {...productionEnv, BACKEND_PRODUCTION_ORIGIN:'https://attacker.example'}, neverFetch)).status, 503);
+  assert.equal((await handleProxy(request('health'), {...productionEnv, BACKEND_PRODUCTION_ORIGIN:'https://syncera-backend-rjq2c2trd-frank219wan.vercel.app'}, neverFetch)).status, 503);
+  const actual = await handleProxy(request('health'), productionEnv, async (url, init) => {
+    assert.equal(url.toString(), 'https://syncera-backend.vercel.app/api/v1/health');
+    assert.equal(new Headers(init?.headers).get('x-vercel-protection-bypass'), productionEnv.BACKEND_PRODUCTION_BYPASS_SECRET);
+    return Response.json({data:{status:'ok'},meta:{}});
+  });
+  assert.equal(actual.status, 200);
+  assert.equal((await handleProxy(request('profiles/upload', {method:'POST'}), productionEnv, neverFetch)).status, 404);
+  assert.equal((await handleProxy(request('profiles/normalize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({synthetic_input:false})}), productionEnv, neverFetch)).status, 422);
+});
+
 test('Vercel rewrite preserves only approved user query parameters upstream', async () => {
   const response = await handleProxy(request('trends/roles?region=MY&limit=50'), env, async (url) => {
     assert.equal(url.toString(), `${backend}/api/v1/trends/roles?region=MY&limit=50`);
