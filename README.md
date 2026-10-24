@@ -1,56 +1,176 @@
-# Skillogy / FutureProof AI
+# Skillogy — Grow Your Potential, Shape Your Future
 
-React + TypeScript + Vite 前端与 FastAPI 后端。默认英语，可切换中文和马来语。支持本地虚构资料演示，以及连接受保护 Preview API 的真实接口模式。
+**Completed Hackathon Product · SDC Hackathon 2026**
 
-## 启动与验证
+**Skillogy** (developed as **FutureProof AI / SyncEra**) is an interactive, full-stack AI-era career and skills development platform. It brings **individual career guidance, enterprise HR/L&D planning, and TVET institution insights** into one experience.
 
-```sh
-pnpm install --frozen-lockfile
-pnpm dev
-pnpm test
-pnpm build
+Our Hackathon product is **implemented, integrated in the public GitHub `main` branch, and demonstrated on Vercel with a connected FastAPI backend**. The three main journeys have been exercised against real API endpoints using fictional data. The public-facing Production rollout and operational hardening remain follow-up work; the protected full-stack Vercel Preview is the verified demonstration environment.
+
+**Website:** [syncera-frontend.vercel.app](https://syncera-frontend.vercel.app/)  
+**GitHub repository:** [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra)  
+**Interactive full-stack demo:** Vercel Frontend Preview (judge-access link provided privately through the Hackathon submission)  
+**Languages:** English · 简体中文 · Bahasa Melayu
+
+---
+
+## The problem we solve
+
+Career decisions are becoming harder as skills, industries and AI-enabled tasks evolve. Individuals need understandable career directions and actionable learning paths; HR teams need to identify capability gaps; and education providers need to understand how their students' skills align with changing role requirements.
+
+**Skillogy connects discovery → assessment → matching → gap analysis → learning and planning**, with transparent evidence and human oversight.
+
+## Product experiences — completed for the Hackathon
+
+### A · Individual — Discover and grow
+
+- **Guided onboarding and profile review:** build a profile from career goals, interests, education, experience, preferences and confirmed skills; try a fictional sample profile.
+- **Optional five-question psychology reflection:** review and edit answers, with clear consent and user control. Psychology text is **not silently converted into a hiring or personality score**.
+- **Career Radar and Career Matches:** explore potential directions and compare server-calculated, ranked role matches under **Moderate** and **Fast** AI scenarios.
+- **Career Atlas visual experience:** illustrated, responsive career cards using actual API role names, ranks, scores, strengths, skill gaps, explanations and evidence. The connected experience does not substitute demo roles for server results.
+- **Career role details and AI task insights:** examine role requirements, task-change examples, evidence provenance and uncertainty.
+- **Skill Mind Map and Learning Roadmap:** turn identified gaps into skill relationships and actionable learning recommendations.
+- **Bamboo Growth journey:** visualize growth and track personal learning activity in the interactive prototype; some plan/progress interactions remain browser-local rather than cloud-synchronized.
+
+**Real API journey:** `Profile → Normalize / Confirm → Trends → Recommendations → Role / Evidence → Skill Map → Roadmap`.
+
+### B1 · Organization — HR & Learning Development
+
+Designed for organizations planning skills development across departments.
+
+- Department-first organizational intake and goal setting.
+- Optional **fictional/anonymized** employee skill baselines.
+- **Skill gap heatmaps** and capability coverage.
+- **Internal mobility** planning and human-review recommendations.
+- Training and development priorities under explicit budget/horizon assumptions.
+- Deterministic backend analysis with revision-aware workspace persistence.
+
+**Real API:** `POST /api/v1/organizations/hr/analyze`.
+
+### B2 · Organization — TVET & Career Centre
+
+Designed for colleges, TVET institutions and career support teams.
+
+- Review fictional student profiles, skill levels and interests.
+- Analyze individual career directions and missing competencies.
+- Compare **Moderate / Fast** scenarios without inventing live job-demand evidence.
+- Explore trends, skill gaps and **cohort-level insights**.
+- Review workshop, tutoring and curriculum improvement suggestions.
+- Revision-aware server analysis and PostgreSQL-backed workspace storage.
+
+**Real API:** `POST /api/v1/organizations/career_centre/analyze`.
+
+## How it works
+
+```text
+                        SKILLOGY
+                    React + TypeScript + Vite
+                 English / Chinese / Malay UI
+                               |
+            Individual --------+-------- Organization
+                               |             |
+                               |          B1 HR / B2 TVET
+                               |
+                    Same-origin /api/v1/*
+                               |
+                Vercel Frontend server proxy
+                               |
+                     FastAPI Backend
+              (deterministic analysis engine)
+                               |
+                    PostgreSQL / Neon
+              (isolated protected Preview store)
 ```
 
-本机若 pnpm 不在 PATH，使用：
+| Layer | Implementation |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, responsive Career Atlas UI |
+| Backend | Python, FastAPI, validated request/response contracts |
+| Recommendation engine | Deterministic role scoring, scenario-aware matching, skills and gap analysis |
+| Organization engine | B1 HR/L&D and B2 TVET deterministic analysis, revision conflict handling |
+| Persistence | Neon PostgreSQL in the isolated full-stack Preview |
+| Deployment | Vercel Frontend and Backend projects, same-origin API proxy |
+| Languages | English, Chinese and Malay |
+| Quality | Automated frontend, backend, API contract, cross-stack and browser checks |
 
-```powershell
-node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\node_modules\pnpm\bin\pnpm.mjs dev
+**Why the AI approach is responsible:** the system makes its assumptions visible, preserves evidence identifiers, and distinguishes synthetic demonstration data from verified external observations. Optional MiniMax integration is gated; the validated Hackathon flows use deterministic analysis rather than paid generative scoring. There are **no claims of real hiring probability, verified salaries or live job-demand statistics**.
+
+## Interactive demo
+
+The product is deployed using the existing Vercel Frontend and Backend projects.
+
+- **Public website entry:** [https://syncera-frontend.vercel.app/](https://syncera-frontend.vercel.app/)
+- **Validated full-stack Hackathon build:** protected Vercel Preview, with an access-enabled share link furnished privately to judges.
+- **What judges can explore:** Individual Career Matches and learning pathway; HR dashboard, heatmap and mobility; TVET student analysis, trends and cohort insights.
+
+The validated Preview demonstrates **actual FastAPI requests and Neon Preview persistence**, not merely static mock screens. The public Production domain is being brought into alignment with that protected release; until then, it should not be treated as proof that every API path is publicly available.
+
+**For security, the Vercel share credential is intentionally not published in this repository.** Use the submission-provided demo URL. Fictional examples only; do not upload real CVs, employees' records or student data.
+
+## Delivered integration and verification
+
+- The **Individual**, **B1 HR/L&D** and **B2 TVET** implementations are merged into `main`.
+- The polished **Career Matches Real API** interface is merged, preserving backend-calculated scores, strict profile/snapshot checks, scenario switching, evidence and error handling.
+- Protected Frontend ↔ Backend Preview testing demonstrated all three core user journeys against the real API.
+- Neon Preview checks confirmed storage and revisioned organization/profile workflows with synthetic records.
+- The Career Matches UI fix passed **137 frontend tests**, a Real-mode TypeScript/Vite build and its GitHub contract/cross-stack CI checks. Additional backend and browser QA is maintained in this repository.
+- Desktop/mobile layout, dark theme and three languages are part of the experience.
+
+These are **Hackathon product and protected-environment verification results**, not certification for unrestricted use with real personal, employer or student data.
+
+## Run locally
+
+Requirements: Node.js 22+, Corepack/pnpm; Python 3.10+ for the backend.
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev
 ```
 
-默认预览 http://127.0.0.1:5173/ 。生产输出 dist。部署必须把前端路由回退至 index.html。
+The frontend defaults to **Demo Mode** (`VITE_API_MODE=demo`) so you can explore the complete interface locally with fictional examples.
 
-## 交付内容
+For frontend tests and the build:
 
-- 25 个主要路由及未找到页面：首页、个人成长与学习旅程、组织入口、HR 部门详情与工作区、TVET 工作区。
-- 职业雷达、画像录入与确认、情景推荐、职业详情、技能地图、计划草案、采纳与任务确认、成长、改期和历史。
-- HR 部门优先录入、员工资料可选、CSV 列映射/预览/确认、人工实施状态和本地规划版本历史；员工技能热图与培训进度仍需可选的员工资料。
-- 院校学生编辑、趋势、个人差距、手动选群、汇总图表、建议依据和导出。
-- 中英马三语、键盘焦点、弹窗焦点约束、错误和空状态、桌面与窄屏布局。
+```bash
+corepack pnpm test
+corepack pnpm build
+```
 
-## 数据与边界
+For the backend:
 
-默认启动的是前端演示模式，只使用虚构测试资料。演示资料与计划历史存于此浏览器的 localStorage（futureproof-v1），不会跨设备同步。清除站点数据会清除本地进度。连接 API 的 Preview 仅供虚构、已授权的测试资料使用。
+```bash
+cd backend
+python -m venv .venv
+# Activate .venv in your shell.
+python -m pip install -r requirements.txt
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-演示分数与图表只用于样例。连接 API 后，Individual 的画像录入／确认、职业推荐、技能地图与学习路线，以及 Organization B1 HR/L&D 和 B2 TVET 分析由同源 `/api/v1` 请求提供。职业排序、匹配分数和技能差距由确定性规则计算；界面不提供未经核实的工资、招聘数量或历史市场统计，也不代表课程认证结果。
+Backend health: `http://127.0.0.1:8000/api/v1/health`.
 
-`VITE_API_MODE` 默认 `demo`。设置为 `real` 后，Individual、Organization B1 和 B2 使用同源 `/api/v1`；跨栈测试见 `tests/cross-stack.test.ts`。Vercel Frontend Preview 由服务端 Function 代理至受保护的 Backend Preview；部署前须分别核对 Preview 数据库、服务器端代理凭据和访问保护，参见 [Preview API 代理](docs/VERCEL_PREVIEW_PROXY.md)。默认后端 AI 适配器为确定性实现；可选 MiniMax-M3 仅用于获准的文本画像提取，不负责职业评分。`real` 不表示生产数据已获批准。详见 [完整栈集成状态](docs/INTEGRATION_STATUS.md)。
+**Real API Mode** (`VITE_API_MODE=real`) requires a correctly configured same-origin proxy and Backend environment. It must never silently fall back to Demo results if the API is unavailable. For the supported protected Preview setup, see [Vercel Preview Proxy](docs/VERCEL_PREVIEW_PROXY.md), [Individual-first Test Plan](docs/TEST_PLAN_INDIVIDUAL_FIRST.md), and the [Organization cloud acceptance record](docs/organization/ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md).
 
-### 安全演示与 Preview 分享
+## Roadmap after Hackathon submission
 
-本地无需云端服务：运行 `pnpm dev`，保留默认 `demo` 模式，在 Individual、HR 或 TVET 页面选择虚构样例。真实接口验收只使用合成资料，不上传真实 CV、员工或学生记录；不要启用付费 AI 或未经审核的市场数据。
+**The Hackathon product is complete as an integrated, testable MVP.** Work continues beyond submission to finalize the general-public Production release: production-safe identity and authorization, tenant isolation, governed personal-data handling, durable learning-progress synchronization, approved market datasets, and final public-domain API/deployment validation.
 
-向外部评委分享受保护的 Vercel Preview 时，在对应 Frontend 部署的 **Share** 菜单创建 Shareable Link，先用无 Vercel 账号的无痕窗口验证页面及同源 API，再私下交付链接。分享令牌只应通过私密渠道传递，不得提交到仓库、公开 Issue 或 PR。Backend 部署保持访问保护。
+The goal is not to replace the completed product, but to turn a demonstrated working Hackathon MVP into a responsibly operated service.
 
-按个人流程逐项测试，请从 [Individual-first 测试计划](docs/TEST_PLAN_INDIVIDUAL_FIRST.md) 开始。
+## Project documents
 
-### VS Code 本地全栈运行
+- [Product / integration status](docs/INTEGRATION_STATUS.md)
+- [Frontend ↔ Backend Preview architecture](docs/VERCEL_PREVIEW_PROXY.md)
+- [Individual user journey test plan](docs/TEST_PLAN_INDIVIDUAL_FIRST.md)
+- [Organization B1/B2 cloud acceptance](docs/organization/ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md)
+- [Backend setup](backend/README.md)
 
-首次运行先执行 `pnpm install --frozen-lockfile`；在 `backend/` 创建 `.venv` 并运行 `.venv/bin/python -m pip install -r requirements.txt`。然后在 VS Code 运行 **Terminal → Run Task → Start FutureProof full stack (dev)**。前端地址为 `http://127.0.0.1:5174`，后端地址为 `http://127.0.0.1:8001`。单进程预览任务的地址为 `http://127.0.0.1:8765`。
+## License
 
-## Backend 与 Tech 集成
+Licensed under the [Apache License, Version 2.0](LICENSE).
 
-仓库包含 `backend/` FastAPI 服务、Tech v0.1.0 确定性 Adapter、DOSM／TalentCorp 候选 Snapshot 和 Microsoft Learn 候选课程。进入 `backend/` 后按 [Backend README](backend/README.md) 和 [Tech Integration](backend/tech_delivery/INTEGRATION.md) 操作。
+---
 
-候选来源与课程已经完成技术预检，但 `TECHNICAL_PRECHECK_NOT_FOR_ACTIVATION` 不是 Team Lead 治理批准。替换为真实 reviewer-owned approval manifest 前，不得把候选数据声明为已批准生产数据。
+### 中文简介
 
-根目录 `.replit` 会构建 real 模式前端，并由 FastAPI 在同一端口提供网页、前端路由和 `/api/v1`。部署前需提供 Node.js 22+、Corepack 和 Python；本地验证可运行 `pnpm install --frozen-lockfile`、`pnpm test`、`pnpm build`，再运行 `backend` 的 `pytest` 与跨栈测试。锁文件暂时固定 `electron-to-chromium@1.5.459`，使新环境能通过依赖等待期检查；未降低该策略。
+**Skillogy 是已完成整合的 SDC Hackathon 2026 全栈产品原型。** 我们在同一个平台提供三条核心体验：**Individual 个人职业探索与学习路线、Organization B1 企业 HR/L&D 技能规划、Organization B2 TVET 学生与群体职业分析**。系统使用 React + TypeScript + FastAPI，支持中英马三语；受保护的 Vercel Preview 已完成三个模块的真实 API 演示，并通过 Neon Preview 验证数据持久化。职业推荐使用可解释的确定性评分和合成测试数据，展示匹配分数、技能优势、技能差距、学习建议以及不确定性。
+
+**Hackathon 产品已交付，团队将在赛后持续完善公开 Production 环境、正式身份与数据安全能力。**
