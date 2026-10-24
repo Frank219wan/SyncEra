@@ -1,5 +1,7 @@
 # Organization B1/B2 Protected Preview 验收记录
 
+2026-10-24 最终故障验收补充：见 `ORGANIZATION_FINAL_FAILURE_GATES_20261024.md`。其记录了新的 B1 异步 CAS 身份保护修复、浏览器故障拦截与真实 Backend 故障仍未验证、近期日志窗口限制，以及一项独立 Vercel 项目误部署事件。本页较早的验收结论不得覆盖该补充报告。
+
 更新：2026-10-24。**当前修复 SHA 的 B1/B2 主要 Cloud UI 回归已通过；整体受保护 Preview 验收仍为 BLOCKED，ACCEPTED = NO。** ORG-FE-001／002 已经本地测试、独立代码审查及受保护浏览器验证。浏览器网络拦截模拟的超时／500／断网、恢复后重试和独立 Preview-only Backend 故障注入尚未完成。Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
 
 ## 本轮 B2 收尾修复（待最终 Cloud 验收）
