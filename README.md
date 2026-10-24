@@ -1,6 +1,6 @@
-# FutureProof AI UI
+# Skillogy / FutureProof AI
 
-完整的浏览器本地交互演示，React + TypeScript + Vite。默认英语，可切换中文和马来语。按照用户分享对话的锁定选择实现；原始项目文档保持不变。
+React + TypeScript + Vite 前端与 FastAPI 后端。默认英语，可切换中文和马来语。支持本地虚构资料演示，以及连接受保护 Preview API 的真实接口模式。
 
 ## 启动与验证
 
@@ -29,11 +29,17 @@ node C:\Users\asus\.cache\codex-runtimes\codex-primary-runtime\dependencies\node
 
 ## 数据与边界
 
-默认启动的是前端演示模式，只使用虚构测试资料。演示资料与计划历史存于此浏览器的 localStorage（futureproof-v1），不会跨设备同步。清除站点数据会清除本地进度。CSV 员工导入在本机预览并经用户确认后保存；当前未接入 XLSX/PDF/DOCX 解析。
+默认启动的是前端演示模式，只使用虚构测试资料。演示资料与计划历史存于此浏览器的 localStorage（futureproof-v1），不会跨设备同步。清除站点数据会清除本地进度。连接 API 的 Preview 仅供虚构、已授权的测试资料使用。
 
-固定推荐分数仅用于未修改样例；自填或修改画像不生成假分数。热图与群体图表依据当前演示输入计算。无真实工资、招聘数量或历史快照。前端尚未连接 CV 上传、实时市场预测、机构分析后端或课程认证评估。TXT 可本地读取。
+演示分数与图表只用于样例。连接 API 后，Individual 的画像录入／确认、职业推荐、技能地图与学习路线，以及 Organization B1 HR/L&D 和 B2 TVET 分析由同源 `/api/v1` 请求提供。职业排序、匹配分数和技能差距由确定性规则计算；界面不提供未经核实的工资、招聘数量或历史市场统计，也不代表课程认证结果。
 
-VITE_API_MODE 默认 demo。设置 `VITE_API_MODE=real` 后，个人职业雷达、推荐、职业详情、Evidence 和 Organization B2 Career Centre 会请求同源 `/api/v1`，跨栈请求测试见 `tests/cross-stack.test.ts`。Vercel Preview 通过服务端 Function 访问受保护的 Backend；部署和安全验收步骤见 [Preview API 代理](docs/VERCEL_PREVIEW_PROXY.md)。默认后端 AI 适配器是确定性实现；可选 Tencent TokenHub MiniMax-M3 只负责合成文本画像提取，职业和 B2 评分仍使用确定性规则。Organization B1 HR、学习进度与管理刷新尚未接入；real 不等于生产模式。详见 [完整栈集成状态](docs/INTEGRATION_STATUS.md)。
+`VITE_API_MODE` 默认 `demo`。设置为 `real` 后，Individual、Organization B1 和 B2 使用同源 `/api/v1`；跨栈测试见 `tests/cross-stack.test.ts`。Vercel Frontend Preview 由服务端 Function 代理至受保护的 Backend Preview；部署前须分别核对 Preview 数据库、服务器端代理凭据和访问保护，参见 [Preview API 代理](docs/VERCEL_PREVIEW_PROXY.md)。默认后端 AI 适配器为确定性实现；可选 MiniMax-M3 仅用于获准的文本画像提取，不负责职业评分。`real` 不表示生产数据已获批准。详见 [完整栈集成状态](docs/INTEGRATION_STATUS.md)。
+
+### 安全演示与 Preview 分享
+
+本地无需云端服务：运行 `pnpm dev`，保留默认 `demo` 模式，在 Individual、HR 或 TVET 页面选择虚构样例。真实接口验收只使用合成资料，不上传真实 CV、员工或学生记录；不要启用付费 AI 或未经审核的市场数据。
+
+向外部评委分享受保护的 Vercel Preview 时，在对应 Frontend 部署的 **Share** 菜单创建 Shareable Link，先用无 Vercel 账号的无痕窗口验证页面及同源 API，再私下交付链接。分享令牌只应通过私密渠道传递，不得提交到仓库、公开 Issue 或 PR。Backend 部署保持访问保护。
 
 按个人流程逐项测试，请从 [Individual-first 测试计划](docs/TEST_PLAN_INDIVIDUAL_FIRST.md) 开始。
 
