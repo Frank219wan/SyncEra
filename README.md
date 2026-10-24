@@ -186,7 +186,7 @@ The team used Replit during development and recorded screenshots of the project 
 - [x] Submission filenames use the team name.
 - [x] Verify the Replit run path, public demo and YouTube playback in a fresh session accessible to judges.
 - [x] Run and record current tests/builds and a complete end-to-end demonstration.
-- [ ] Complete an independent check for committed secrets, third-party licenses and source attribution.
+- [x] Complete an independent check for committed secrets, third-party licenses and source attribution.
 
 ## License
 
