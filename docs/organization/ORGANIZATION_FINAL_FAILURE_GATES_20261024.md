@@ -1,6 +1,32 @@
 # Organization B1/B2 protected Preview — final failure gates (2026-10-24)
 
-Status: **BLOCKED**. The latest evidence and release decision are in the final addendum below. This report covers the last three requested gates; it does not replace the earlier successful Neon, SSO, WAF, CAS, and primary Cloud E2E evidence in `ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md`. No migration, WAF load test, or merge was performed in this run.
+## B1 CAS recovery local addendum (2026-10-24)
+
+| Gate | Local result |
+| --- | --- |
+| ROOT CAUSE | B1 kept the old CAS token after a committed response was lost. The page-local request handler could also lose or overwrite response metadata during navigation or when saving a draft opened before the response. Retrying Revision 4 after the server reached Revision 5 returned HTTP 409. |
+| FIX DESIGN | A Provider-level state update now owns the request identity and pending status across route changes. Saving an older edit merges the current server identity and CAS token into the edited draft. The request coordinator prevents duplicate submissions in one browser session. |
+| SERVER-CONFIRMED RESPONSE | A received, matching HR response must have the requested Scenario and same server Workspace ID (when already known), with server Revision exactly requested Revision + 1. The confirmed CAS token is retained even if local inputs or Scenario changed; stale HR analysis, Snapshot metadata and Planning Version stay hidden. No speculative Revision increment is used. |
+| AMBIGUOUS RESPONSE | Timeout, network error, invalid response, or page reload with a pending request leaves the prior CAS token unchanged and blocks retry on that workspace. The UI states that the server may have completed the request. |
+| HTTP 409 RECOVERY | HTTP 409 enters an explicit conflict state. “Keep current draft” preserves inputs and the unresolved marker; it does not retry the stale Revision. |
+| NEW WORKSPACE FALLBACK | Only after a second user confirmation is a new client Workspace ID generated. The current draft is kept, prior server ID is listed for later review, old server CAS/analysis/Snapshot/planning state is cleared, and one normal API request creates Revision 1. No old Workspace is deleted automatically. |
+| CLIENT IDENTITY / CAS TOKEN SAFETY | Late responses cannot update a different client Workspace. Same-workspace responses are checked against the original request and current server identity; a saved edit cannot restore an older CAS token. |
+| NAVIGATION SAFETY | The async coordinator holds the Provider setter rather than a page-local state snapshot; a valid received response can update Provider state after the page unmounts. |
+| FRONTEND TESTS | 117/117 passed with the package's exact Node test arguments; `pnpm test` itself was blocked by the isolated worktree's external `node_modules` symlink and unavailable registry metadata. TypeScript `tsc -b` and `VITE_API_MODE=real` Vite build passed. |
+| BACKEND TESTS | 164 passed, 4 skipped, with `DATABASE_URL` and `TEST_DATABASE_URL` removed from the test environment. |
+| CROSS-STACK | 4/4 passed against a local synthetic-adapter server after adding the test virtual environment's Python to `PATH`. No Neon or paid API was used. |
+| LOCAL BROWSER | Synthetic request interception on `http://127.0.0.1:5185` observed HTTP 409 then HTTP 200, exactly two requests, old token Revision 4 untouched, new Workspace Revision 1 with a distinct client ID, and prior server ID retained for review. The local Vite dependency symlink caused font serve warnings; this check is limited to the CAS recovery UI. |
+| GITHUB CI | Pending verification on the final pushed PR #37 SHA; local checks do not stand in for CI. |
+| FINAL CODE SHA | `b93d792bbe23d68fad1f959f8fb46e739675f01e` (B1 CAS recovery code and tests). |
+| FILES CHANGED | `src/hrAnalysisFlow.ts`, `src/hrState.ts`, `src/pages/Organization.tsx`, `src/types.ts`, `tests/hr-state.test.ts`, and this report. |
+| NEON USED / VERCEL USED / PRODUCTION CHANGED | **NO / NO / NO in this CAS recovery run.** Earlier incidents remain recorded below. |
+| CAS RECOVERY LOCAL ACCEPTED | **YES for the tested local paths; Cloud CAS recovery remains untested.** |
+| READY FOR CONTROLLED PREVIEW DEPLOY | **Pending final GitHub CI and deployment-owner approval.** No deployment was performed here. |
+| PROTECTED PREVIEW ACCEPTED / READY TO MERGE #36 / READY TO MERGE #37 | **NO / NO / NO.** |
+
+The fallback creates a separate server Workspace by design. If the earlier request committed, both Workspaces may exist until an independently authorized review and cleanup. A same-Workspace read-only recovery API would need separate access authorization and review; knowing a Workspace ID cannot grant read access. No such API was added. Local browser interception is not a real Backend failure or a protected Preview acceptance test.
+
+Status: **BLOCKED**. The B1 CAS recovery local addendum above is the latest code evidence; the final Cloud addendum below remains the latest protected Preview evidence. This report covers the last three requested gates; it does not replace the earlier successful Neon, SSO, WAF, CAS, and primary Cloud E2E evidence in `ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md`. No migration, WAF load test, or merge was performed in this CAS recovery run.
 
 ## Version and scope
 
