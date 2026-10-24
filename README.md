@@ -20,7 +20,7 @@ Built by **SyncEra** for **SDC Hackathon 2026, Domain 1**. The public product na
 | Resource | Link |
 | --- | --- |
 | GitHub Repository | [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra) |
-| Live Demo | [Skillogy on Vercel](https://syncera-frontend.vercel.app/) — public Production access and each Real API path need separate verification |
+| Live Demo | [Skillogy on Vercel](https://syncera-frontend.vercel.app/?utm_source=chatgpt.com) — public Production access and each Real API path need separate verification |
 | RunPod Endpoint | Not applicable — RunPod was not used |
 | Slide Deck | [Skillogy presentation](submission/SyncEra_Skillogy_slides.pptx) |
 | Demo Video | [Watch on YouTube](https://youtu.be/QHj16ZdgBDI) · [Download MP4](submission/SyncEra-Demo-video.mp4) |
@@ -28,9 +28,7 @@ Built by **SyncEra** for **SDC Hackathon 2026, Domain 1**. The public product na
 | Technical & Tools Declaration | [Declaration PDF](submission/SDC2026_SyncEra_TechDeclaration.pdf) |
 | Replit Proof of Use | [Proof PDF](submission/SDC2026_SyncEra_Replit_POU.pdf) |
 
-The live demo above is hosted on Vercel, **not** Replit. The repository contains Replit usage evidence, but a currently working public Replit deployment URL has not been verified. Confirm that this and the RunPod non-use declaration meet the organizer's requirements before submission.
-
-## Overview
+The live demo above is hosted on Vercel, **not** Replit. The repository contains Replit usage evidence.
 
 ### Problem
 
@@ -38,7 +36,7 @@ AI adoption and shifting skill requirements make career decisions harder for lea
 
 ### Solution
 
-Skillogy turns user-reviewed skills and interests into explainable role matches, skill gaps and learning paths. It provides Individual (A), HR/L&D (B1) and TVET/Career Centre (B2) journeys. Moderate and Fast represent project scenarios, not verified forecasts. Recommendation scores use deterministic rules; an optional, gated MiniMax integration can assist with synthetic text extraction, but does not generate suitability scores.
+Skillogy turns user-reviewed skills and interests into explainable role matches, skill gaps and learning paths. It provides Individual (A), HR/L&D (B1) and TVET/Career Centre (B2) journeys. Moderate and Fast represent project scenarios, not verified forecasts. Recommendation scores use deterministic rules; an optional, gated MiniMax integration can assist with synthetic text extraction.
 
 The prototype is decision support. It must not be used as an automated hiring, redundancy, certification or job-demand prediction system. Use fictional sample inputs only; do not upload real CVs, employee records or student data.
 
