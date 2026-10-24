@@ -1,0 +1,4 @@
+# SDC submission template compatibility entrypoint.
+# Skillogy's actual Python backend dependencies are maintained in backend/requirements.txt.
+# This file intentionally does not install the Node.js/React frontend.
+-r backend/requirements.txt
