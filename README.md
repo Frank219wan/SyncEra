@@ -4,7 +4,7 @@
 
 **Skillogy** (developed as **FutureProof AI / SyncEra**) is an interactive, full-stack AI-era career and skills development platform. It brings **individual career guidance, enterprise HR/L&D planning, and TVET institution insights** into one experience.
 
-Our Hackathon product is **implemented, integrated in the public GitHub `main` branch, and demonstrated on Vercel with a connected FastAPI backend**. The three main journeys have been exercised against real API endpoints using fictional data. The public-facing Production rollout and operational hardening remain follow-up work; the protected full-stack Vercel Preview is the verified demonstration environment.
+Our Hackathon product is **implemented, integrated in the public GitHub `main` branch, and demonstrated on Vercel with a connected FastAPI backend**. The three main journeys have been exercised against real API endpoints using fictional data. **The team is completing the public Production deployment now, targeting launch before the Hackathon closes.** The protected full-stack Vercel Preview remains the verified demonstration environment until the public Production API passes its own acceptance checks.
 
 **Website:** [syncera-frontend.vercel.app](https://syncera-frontend.vercel.app/)  
 **GitHub repository:** [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra)  
@@ -149,11 +149,11 @@ Backend health: `http://127.0.0.1:8000/api/v1/health`.
 
 **Real API Mode** (`VITE_API_MODE=real`) requires a correctly configured same-origin proxy and Backend environment. It must never silently fall back to Demo results if the API is unavailable. For the supported protected Preview setup, see [Vercel Preview Proxy](docs/VERCEL_PREVIEW_PROXY.md), [Individual-first Test Plan](docs/TEST_PLAN_INDIVIDUAL_FIRST.md), and the [Organization cloud acceptance record](docs/organization/ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md).
 
-## Roadmap after Hackathon submission
+## Final Production launch — in progress before the Hackathon deadline
 
-**The Hackathon product is complete as an integrated, testable MVP.** Work continues beyond submission to finalize the general-public Production release: production-safe identity and authorization, tenant isolation, governed personal-data handling, durable learning-progress synchronization, approved market datasets, and final public-domain API/deployment validation.
+**The Hackathon product is complete as an integrated, testable MVP. Production release is the team's immediate next milestone, actively being completed before the competition closes — not a post-Hackathon task.** The launch work is to verify that the latest `main` frontend and matching backend are deployed to the official domain, that the three Real API journeys work in a fresh browser session, and that access protection, environment isolation, synthetic-data restrictions and rollback are correctly configured.
 
-The goal is not to replace the completed product, but to turn a demonstrated working Hackathon MVP into a responsibly operated service.
+Production is counted as **LIVE** only after the official domain and all three API journeys pass those checks. Further expansion to real personal or institution data will still require production-grade identity, authorization, tenant isolation, data governance and approvals. Durable learning-progress synchronization and approved market datasets can continue as separate enhancements; they are not represented as complete cloud features.
 
 ## Project documents
 
@@ -173,4 +173,4 @@ Licensed under the [Apache License, Version 2.0](LICENSE).
 
 **Skillogy 是已完成整合的 SDC Hackathon 2026 全栈产品原型。** 我们在同一个平台提供三条核心体验：**Individual 个人职业探索与学习路线、Organization B1 企业 HR/L&D 技能规划、Organization B2 TVET 学生与群体职业分析**。系统使用 React + TypeScript + FastAPI，支持中英马三语；受保护的 Vercel Preview 已完成三个模块的真实 API 演示，并通过 Neon Preview 验证数据持久化。职业推荐使用可解释的确定性评分和合成测试数据，展示匹配分数、技能优势、技能差距、学习建议以及不确定性。
 
-**Hackathon 产品已交付，团队将在赛后持续完善公开 Production 环境、正式身份与数据安全能力。**
+**Hackathon 产品已完成并整合至 `main`。团队正在立即推进 Production 正式域名上线，目标是在本次比赛结束前完成部署与 Individual、B1 HR、B2 TVET 三条真实 API 的公开环境验收，而不是等到赛后。正式上线状态以实际部署和验收结果为准；真实个人资料与机构数据的开放仍需独立完成身份、权限和隐私审核。**
