@@ -17,9 +17,17 @@ export function studentAnalysisView(org: Organization, scenario: Scenario, demo:
     ? 'connected' : 'needs_analysis';
 }
 
-export function applyHrAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, analysis: HRAnalysis, meta: ServiceMeta, version: DepartmentPlanVersion): Organization {
+export function newHrDraftFromSample(): Organization {
+  return {...structuredClone(hrSample),clientWorkspaceId:crypto.randomUUID(),
+    workspaceId:undefined,workspaceRevision:undefined,hrAnalysis:null,analysisMeta:null,
+    analyzedRevision:0,planningVersions:[]};
+}
+
+export function applyHrAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, requestedClientWorkspaceId: string | undefined, analysis: HRAnalysis, meta: ServiceMeta, version: DepartmentPlanVersion): Organization {
   // A response from another workspace must not replace this workspace's CAS identity.
-  if (org.workspaceId !== requestedWorkspaceId || (requestedWorkspaceId && analysis.workspaceId !== requestedWorkspaceId)) return org;
+  // The local identity also protects the first request, before a server workspace ID exists.
+  if (!requestedClientWorkspaceId || org.clientWorkspaceId !== requestedClientWorkspaceId
+    || org.workspaceId !== requestedWorkspaceId || (requestedWorkspaceId && analysis.workspaceId !== requestedWorkspaceId)) return org;
   const current=org.revision===requestedRevision && scenario===requestedScenario;
   // The server may already have committed an analysis when local inputs change.
   // Retain its CAS token for the same workspace, but hide its stale result.
@@ -58,5 +66,5 @@ export function restoreHr(saved: Partial<Organization> | undefined, savedFlag: u
     return sampleDepartment?structuredClone(sampleDepartment):{id:`migrated-dept-${index+1}`,name,responsibilities:'',currentStatus:'',challenges:'',goals:[],headcount:people.filter(person=>person.department?.trim()===name).length};
   });
   const goals=Array.isArray(previous.goals)&&(previous.goals.length>0||!sampleWorkspace)?previous.goals:(sampleWorkspace?hrSample.goals||[]:[]);
-  return {hr:{...emptyHr,...previous,people,departments,goals},hrProfileSaved:true};
+  return {hr:{...emptyHr,...previous,people,departments,goals,clientWorkspaceId:previous.clientWorkspaceId||crypto.randomUUID()},hrProfileSaved:true};
 }

@@ -47,6 +47,7 @@ export interface Organization {
   training: Record<string, string[]>;
   departments?: Department[]; goals?: string[]; planningVersions?: DepartmentPlanVersion[];
   workspaceId?: string; workspaceRevision?: number;
+  clientWorkspaceId?: string;
   analysis?: OrganizationAnalysis | null; analysisMeta?: ServiceMeta | null;
   hrAnalysis?: HRAnalysis | null;
 }
