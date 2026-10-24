@@ -1,6 +1,6 @@
 # PR #47 — Real API Career Detail acceptance record
 
-Date: 2026-10-25 (Asia/Bangkok). PR: [#47](https://github.com/Frank219wan/SyncEra/pull/47), branch `fix/real-career-detail-demo-parity-20261025`. Local synthetic QA began at `2112b97c29dbb2c1401be84cb9f1462f299103f6`. Protected cloud QA was performed against the exact deployed PR commit `cd44487eb6de4fc201756f8eafda2c0ca2daf23f`. The target `main` later advanced to `0ab6437eeab5d2f4af338bbf0be96a9a6b370269`; its translation changes are being integrated on this PR. Cloud results below apply to `cd44487`, and any newer PR head requires a fresh Preview verification.
+Date: 2026-10-25 (Asia/Bangkok). PR: [#47](https://github.com/Frank219wan/SyncEra/pull/47), branch `fix/real-career-detail-demo-parity-20261025`. Local synthetic QA began at `2112b97c29dbb2c1401be84cb9f1462f299103f6`. Protected cloud QA was performed against the exact deployed PR commit `cd44487eb6de4fc201756f8eafda2c0ca2daf23f`. The target `main` later advanced to `3a21303`; its translation changes and latest README were integrated on this PR. Cloud results below apply to `cd44487`, and any newer PR head requires a fresh Preview verification.
 
 ## Local browser evidence — PASS with a synthetic HTTP adapter
 
@@ -56,7 +56,7 @@ The available Vercel runtime-log API returned no grouped records for this deploy
 
 ## Branch integration and test status
 
-After cloud QA, `main` advanced with localization changes. The PR branch encountered three conflicts (`package.json`, `src/pages/ConnectedCareers.tsx`, `src/pages/Learning.tsx`). They were resolved locally by keeping PR #47's real detail design and incorporating `main`'s dynamic translations and both test files. The merged source has **not** been deployed, so cloud PASS results above are restricted to `cd44487`. The final PR head and CI must be rechecked after the merge commit is pushed.
+After cloud QA, `main` advanced with localization changes. The PR branch encountered three conflicts (`package.json`, `src/pages/ConnectedCareers.tsx`, `src/pages/Learning.tsx`). They were resolved locally by keeping PR #47's real detail design and incorporating `main`'s dynamic translations and both test files. The subsequent README-only `main` commit was also integrated. The merged source has **not** been deployed, so cloud PASS results above are restricted to `cd44487`. The final PR head and CI must be rechecked after the merge commit is pushed.
 
 - `corepack pnpm test`: **148 passed, 0 failed** on the locally integrated source.
 - `corepack pnpm exec tsc -b`: **PASS**.
