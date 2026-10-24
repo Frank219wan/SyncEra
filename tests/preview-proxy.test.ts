@@ -91,6 +91,24 @@ test('protected synthetic-only Production requires explicit config and exact Bac
   assert.equal((await handleProxy(request('profiles/normalize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({synthetic_input:false})}), productionEnv, neverFetch)).status, 422);
 });
 
+test('Vercel share tokens are accepted once but never forwarded to FastAPI', async () => {
+  const token = 'fictionalVercelShareToken12345678';
+  const response = await handleProxy(request('health?_vercel_share='+token), env, async (url) => {
+    assert.equal(url.toString(), backend+'/api/v1/health');
+    assert.equal(new URL(url).searchParams.has('_vercel_share'), false);
+    return Response.json({data:{status:'ok'},meta:{}});
+  });
+  assert.equal(response.status,200);
+  assert.equal((await handleProxy(request('health?_vercel_share='+token+'&_vercel_share='+token),env,neverFetch)).status,400);
+  assert.equal((await handleProxy(request('health?_vercel_share=bad'),env,neverFetch)).status,400);
+  assert.equal((await handleProxy(request('health?_vercel_share='+token+'&unexpected=1'),env,neverFetch)).status,400);
+  const forward = await handleProxy(request('trends/roles?region=MY&_vercel_share='+token), env, async (url) => {
+    assert.equal(url.toString(),backend+'/api/v1/trends/roles?region=MY');
+    return Response.json({data:{items:[]},meta:{}});
+  });
+  assert.equal(forward.status,200);
+});
+
 test('Vercel rewrite preserves only approved user query parameters upstream', async () => {
   const response = await handleProxy(request('trends/roles?region=MY&limit=50'), env, async (url) => {
     assert.equal(url.toString(), `${backend}/api/v1/trends/roles?region=MY&limit=50`);

@@ -195,6 +195,10 @@ export async function handleProxy(
   const allowedQuery = route?.[1] ?? new Set<string>();
   for (const [key, value] of incoming.searchParams) {
     if (key === 'proxy_path') continue;
+    // Vercel Shareable Links append this platform access token as a query parameter.
+    // Let Vercel validate it, but never forward it to FastAPI or treat it as an API filter.
+    if (key === '_vercel_share' && /^[A-Za-z0-9_-]{10,256}$/.test(value) &&
+        incoming.searchParams.getAll(key).length === 1) continue;
     if (!allowedQuery.has(key) || value.length > 256 || incoming.searchParams.getAll(key).length !== 1 ||
         (path === 'market/radar' && key === 'period' && !/^\d{4}-Q[1-4]$/.test(value))) {
       return jsonError(400, 'BAD_QUERY', 'Unsupported API query.');
@@ -234,7 +238,9 @@ export async function handleProxy(
   }
 
   const target = new URL(`/api/v1/${path}`, backend);
-  for (const [key, value] of incoming.searchParams) if (key !== 'proxy_path') target.searchParams.set(key, value);
+  for (const [key, value] of incoming.searchParams) {
+    if (key !== 'proxy_path' && key !== '_vercel_share') target.searchParams.set(key, value);
+  }
   const headers = new Headers({
     Accept: 'application/json',
     'x-vercel-protection-bypass': secret,
