@@ -10,6 +10,8 @@ Local evidence after the fix: Frontend **120/120**, TypeScript `tsc -b` **PASS**
 
 This is **local-only evidence**. The repaired SHA has not been deployed, and the earlier protected Frontend still runs the older code until its source is independently checked and a deployment is explicitly confirmed. PR #37 remains unchanged pending the deployment lead's review of this new fix. **Protected Preview accepted: NO. Ready to merge #36/#37: NO/NO.** The prior Production-marked deployment incident below remains part of release history; it is not reset by this local preflight.
 
+Read-only Vercel verification on 2026-10-24: the existing scope is `frank219wan`, Frontend project `syncera-frontend` has ID `prj_tiNiv4Jgd6RUl5TqOM0YafawEMPy`, a blank Root Directory, Vite framework, and Git repository `Frank219wan/SyncEra`. Its branch alias `syncera-frontend-git-feature-organization-b1-hr-frank219wan.vercel.app` points to a Ready **Preview** deployment `dpl_9jKX2Hj5FTsseGuswqwwpL24b7ie` sourced from `30687c4c381f21e61c77cf0632f619437da3753a`. Frontend and Backend Vercel Authentication both show `Require Log In` enabled. No deployment or security setting was changed. The local repair is on independent commit `e9da8ac4e24993d8972479c7e94e6e85785f81ba`, not on that Preview. GitHub's PR #37 check API reports head `0b663e20da5f093102a8f9c850f4583ed5bcb278` with integrated CI success; GitHub shows Yasmin-001's formal review still requested on both #36 and #37. A fresh Git fetch failed due local DNS resolution, so the PR check API is the current remote-head evidence. Deployment and Cloud CAS recovery are pending review and the release lead's specific deployment confirmation.
+
 ## B1 CAS recovery local addendum (2026-10-24)
 
 | Gate | Local result |
