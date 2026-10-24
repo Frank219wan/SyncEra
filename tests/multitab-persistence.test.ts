@@ -287,3 +287,67 @@ test('closing a tab during pending releases its browser lock while refreshed B1 
   assert.equal(await b.tab.reserveHrRequest(request,restored),false);
   b.tab.close();
 });
+
+test('GREEN QA: both concurrent write orders preserve confirmed CAS metadata',async()=>{
+  async function run(staleFirst:boolean){
+    const f=fixture();const a=f.make(state()),b=f.make(state());await tick();await a.tab.persist(state());
+    const request={clientWorkspaceId:'client-synthetic',workspaceId:'server-synthetic',workspaceRevision:2,
+      revision:2,scenario:'moderate' as const,operationId:`synthetic-order-${staleFirst}`};
+    assert.equal(await a.tab.reserveHrRequest(request,state()),true);
+    const confirmed={...state(3),hr:{...state(3).hr,hrAnalysis:null,analyzedRevision:2,
+      hrRecovery:null,hrLastOperationId:request.operationId}};
+    const stale={...state(),hr:{...state().hr,name:'Concurrent stale draft',revision:3}};
+    const writes=staleFirst
+      ?[b.tab.persist(stale),a.tab.persist(confirmed)]
+      :[a.tab.persist(confirmed),b.tab.persist(stale)];
+    await Promise.all(writes);
+    const revision=readCanonicalHr(f.storage)?.hr.workspaceRevision;
+    a.tab.close();b.tab.close();return revision;
+  }
+  assert.deepEqual([await run(false),await run(true)],[3,3]);
+});
+
+test('GREEN QA: a late HTTP 200 keeps the newer draft and hides the stale analysis',async()=>{
+  const f=fixture();const a=f.make(state());await tick();await a.tab.persist(state());
+  let current=state();const update=(change:(value:AppState)=>AppState)=>{current=change(current);};
+  let complete!:(value:{analysis:HRAnalysis;meta:never})=>void;
+  const delayed=new Promise<{analysis:HRAnalysis;meta:never}>(resolve=>{complete=resolve;});
+  const run=runHrAnalysis(current,update,()=>delayed,undefined,request=>a.tab.reserveHrRequest(request,current));
+  await tick();
+  current={...current,hr:{...current.hr,name:'Edited after request',revision:3}};
+  complete({analysis:{mode:'hr',workspaceId:'server-synthetic',workspaceRevision:3,scenario:'moderate',
+    snapshotId:'synthetic-late'} as HRAnalysis,meta:{requestId:'synthetic-late',snapshotId:'synthetic-late',
+    generatedAt:null,dataLabel:'synthetic',isMock:true,modelVersion:null} as never});
+  assert.equal((await run).kind,'received');await a.tab.persist(current);
+  assert.equal(current.hr.name,'Edited after request');
+  assert.equal(current.hr.workspaceRevision,3);
+  assert.equal(current.hr.hrAnalysis,null);
+  assert.equal(current.hr.analysisMeta,null);
+  assert.equal(hrAnalysisView(current.hr,'moderate',false),'needs_analysis');
+  assert.equal(readCanonicalHr(f.storage)?.hr.workspaceRevision,3);
+  a.tab.close();
+});
+
+test('GREEN QA: a late first-workspace response cannot bind to a replacement workspace',async()=>{
+  const first={...state(),hr:{...structuredClone(hrSample),clientWorkspaceId:'first-synthetic-client',
+    revision:1,analyzedRevision:0,hrAnalysis:null,analysisMeta:null,hrRecovery:null},hrProfileSaved:true};
+  const f=fixture(first);const a=f.make(first);await tick();await a.tab.persist(first);
+  let current=first;const update=(change:(value:AppState)=>AppState)=>{current=change(current);};
+  let complete!:(value:{analysis:HRAnalysis;meta:never})=>void;
+  const delayed=new Promise<{analysis:HRAnalysis;meta:never}>(resolve=>{complete=resolve;});
+  const run=runHrAnalysis(current,update,()=>delayed,undefined,request=>a.tab.reserveHrRequest(request,current));
+  await tick();
+  const replacement={...createHrWorkspaceFromDraft(current.hr),name:'Replacement synthetic workspace'};
+  current={...current,hr:replacement};await a.tab.persist(current);
+  complete({analysis:{mode:'hr',workspaceId:'late-first-server',workspaceRevision:1,scenario:'moderate',
+    snapshotId:'synthetic-late-first'} as HRAnalysis,meta:{requestId:'synthetic-late-first',
+    snapshotId:'synthetic-late-first',generatedAt:null,dataLabel:'synthetic',isMock:true,modelVersion:null} as never});
+  await run;await a.tab.persist(current);
+  const saved=readCanonicalHr(f.storage)!.hr;
+  assert.equal(saved.clientWorkspaceId,replacement.clientWorkspaceId);
+  assert.equal(saved.workspaceId,undefined);
+  assert.equal(saved.workspaceRevision,undefined);
+  assert.equal(saved.name,'Replacement synthetic workspace');
+  assert.equal(saved.hrAnalysis,null);
+  a.tab.close();
+});
