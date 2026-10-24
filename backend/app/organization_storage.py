@@ -50,7 +50,8 @@ class InMemoryOrganizationRepository:
                     raise OrganizationRevisionConflict("workspace already exists")
                 revision = 1
             else:
-                if existing is None or existing["revision"] != expected:
+                if (existing is None or existing["revision"] != expected or
+                        existing["mode"] != values["mode"]):
                     raise OrganizationRevisionConflict("stale workspace revision")
                 revision = expected + 1
             self._workspaces[workspace_id] = {

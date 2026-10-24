@@ -6,6 +6,8 @@ const MAX_RESPONSE_BYTES = 1024 * 1024;
 const UPLOAD_TIMEOUT_MS = 52_000;
 const UPLOAD_READ_TIMEOUT_MS = 10_000;
 const WINDOW_MS = 60_000;
+// Verified Vercel Preview branch alias for PR #37. Keep this exact; no host suffix wildcard.
+const ORGANIZATION_B1_BACKEND_HOST = 'syncera-backend-git-feature-organization-b1-hr-frank219wan.vercel.app';
 const requests = new Map<string, { until: number; count: number }>();
 
 const GET_ROUTES: Array<[RegExp, ReadonlySet<string>]> = [
@@ -19,7 +21,7 @@ const GET_ROUTES: Array<[RegExp, ReadonlySet<string>]> = [
 ];
 const POST_ROUTES = new Set([
   'profiles/normalize', 'profiles/upload', 'profiles/confirm', 'recommendations',
-  'learning/skill-map', 'learning/roadmap', 'organizations/career_centre/analyze',
+  'learning/skill-map', 'learning/roadmap', 'organizations/career_centre/analyze', 'organizations/hr/analyze',
 ]);
 
 function jsonError(status: number, code: string, message: string): Response {
@@ -168,8 +170,9 @@ export async function handleProxy(
   let backend: URL;
   try { backend = new URL(configuredOrigin); }
   catch { return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.'); }
-  if (backend.protocol !== 'https:' || backend.origin !== configuredOrigin ||
-      !/^syncera-backend-git-(?:integration-(?:postgres-pre|career-radar?)|feature-organization-mvp)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname)) {
+  const allowedBackend = backend.hostname === ORGANIZATION_B1_BACKEND_HOST ||
+    /^syncera-backend-git-(?:integration-(?:postgres-pre|career-radar?)|feature-organization-mvp)-[a-z0-9]+-frank219wan\.vercel\.app$/.test(backend.hostname);
+  if (backend.protocol !== 'https:' || backend.origin !== configuredOrigin || !allowedBackend) {
     return jsonError(503, 'PROXY_NOT_CONFIGURED', 'Preview API is unavailable.');
   }
 
@@ -218,7 +221,7 @@ export async function handleProxy(
       if (path === 'profiles/normalize' && (parsed as Record<string, unknown>).synthetic_input !== true) {
         return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional test profiles are accepted.');
       }
-      if (path === 'organizations/career_centre/analyze' && (parsed as Record<string, unknown>).synthetic_input !== true) {
+      if (path.startsWith('organizations/') && (parsed as Record<string, unknown>).synthetic_input !== true) {
         return jsonError(422, 'SYNTHETIC_ONLY', 'Only fictional organization records are accepted.');
       }
     }

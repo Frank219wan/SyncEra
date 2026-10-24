@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
 from .models import SkillGap, Strict
+
+
+OrganizationSkillId = Annotated[str, Field(pattern=r"^skill_[A-Za-z0-9_]+$")]
 
 
 class OrganizationSkillInput(Strict):
@@ -65,14 +68,70 @@ class CareerCentrePayload(Strict):
 class HRDepartmentInput(Strict):
     department_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
     label: str = Field(min_length=1, max_length=160)
+    responsibilities: str = Field(min_length=1, max_length=2000)
+    current_status: str = Field(min_length=1, max_length=500)
+    challenges: str = Field(min_length=1, max_length=2000)
     headcount: int = Field(ge=0, le=100000)
-    target_skill_ids: list[str] = Field(default_factory=list, max_length=50)
+    goal_tags: list[str] = Field(default_factory=list, max_length=30)
+    target_skill_ids: list[OrganizationSkillId] = Field(default_factory=list, max_length=50)
+
+    @model_validator(mode="after")
+    def unique_values(self):
+        if len(self.target_skill_ids) != len(set(self.target_skill_ids)):
+            raise ValueError("department target_skill_ids must be unique")
+        for value in [*self.goal_tags, *self.target_skill_ids]:
+            if not value.strip():
+                raise ValueError("department list values must not be blank")
+        return self
+
+
+class HREmployeeInput(Strict):
+    member_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
+    department_id: str = Field(pattern=r"^[A-Za-z0-9_-]{1,80}$")
+    current_role: str | None = Field(default=None, max_length=160)
+    skills: list[OrganizationSkillInput] = Field(default_factory=list, max_length=50)
+    baseline_known: bool
+    target_role_id: str | None = Field(default=None, pattern=r"^role_[A-Za-z0-9_]+$")
+    weekly_learning_hours: float = Field(default=4, gt=0, le=40)
+    reviewed: Literal[True]
+
+    @model_validator(mode="after")
+    def valid_baseline(self):
+        skill_ids = [item.skill_id for item in self.skills]
+        if len(skill_ids) != len(set(skill_ids)):
+            raise ValueError("employee skills must be unique")
+        if not self.baseline_known and self.skills:
+            raise ValueError("unknown employee baseline cannot contain skills")
+        return self
 
 
 class HRPayload(Strict):
     organization_label: str = Field(min_length=1, max_length=160)
     sector: str | None = Field(default=None, max_length=160)
-    departments: list[HRDepartmentInput] = Field(default_factory=list, max_length=100)
+    organization_goal_tags: list[str] = Field(default_factory=list, max_length=30)
+    target_skill_ids: list[OrganizationSkillId] = Field(default_factory=list, max_length=50)
+    training_budget_myr: float = Field(default=0, ge=0)
+    planning_horizon_weeks: int = Field(default=8, ge=1, le=52)
+    departments: list[HRDepartmentInput] = Field(min_length=1, max_length=100)
+    employees: list[HREmployeeInput] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def valid_organization(self):
+        department_ids = [item.department_id for item in self.departments]
+        if len(department_ids) != len(set(department_ids)):
+            raise ValueError("department_id values must be unique")
+        member_ids = [item.member_id for item in self.employees]
+        if len(member_ids) != len(set(member_ids)):
+            raise ValueError("employee member_id values must be unique")
+        missing_departments = {item.department_id for item in self.employees} - set(department_ids)
+        if missing_departments:
+            raise ValueError("every employee department_id must exist in departments")
+        if len(self.target_skill_ids) != len(set(self.target_skill_ids)):
+            raise ValueError("organization target_skill_ids must be unique")
+        for value in [*self.organization_goal_tags, *self.target_skill_ids]:
+            if not value.strip():
+                raise ValueError("organization list values must not be blank")
+        return self
 
 
 class OrganizationAnalyzeRequest(Strict):
@@ -188,4 +247,90 @@ class OrganizationAnalysisData(Strict):
     scoring_policy: Literal["organization-b2-v0.1"]
     student_results: list[StudentOrganizationResult]
     cohort_result: CareerCentreCohortResult
+    warnings: list[str]
+
+
+class HRSkillCoverage(Strict):
+    skill_id: str
+    name: str
+    coverage_state: Literal["measured", "unknown"]
+    recorded_profiles: int = Field(ge=0)
+    profiles_with_skill: int = Field(ge=0)
+    coverage_percent: float | None = Field(default=None, ge=0, le=100)
+    missing_member_ids: list[str]
+
+
+class HRMobilitySuggestion(Strict):
+    member_id: str
+    current_role: str | None
+    recommended_role_id: str
+    recommended_role_name: str
+    match_score: float = Field(ge=0, le=100)
+    skill_compatibility: float = Field(ge=0, le=100)
+    scenario_outlook: float = Field(ge=0, le=100)
+    transition_feasibility: float = Field(ge=0, le=100)
+    skill_gaps: list[SkillGap]
+    evidence_ids: list[str]
+    human_review_status: Literal["required"] = "required"
+
+
+class HRTrainingPriority(Strict):
+    skill_id: str
+    name: str
+    priority: Literal["review_required", "high", "medium", "low"]
+    coverage_state: Literal["measured", "unknown"]
+    affected_profiles: int | None = Field(default=None, ge=0)
+    affected_member_ids: list[str]
+    estimated_hours_per_learner: float = Field(ge=0)
+    estimate_basis: Literal["synthetic_planning_assumption"] = "synthetic_planning_assumption"
+    evidence_ids: list[str]
+
+
+class HRDepartmentResult(Strict):
+    department_id: str
+    label: str
+    reported_headcount: int = Field(ge=0)
+    employee_profile_count: int = Field(ge=0)
+    known_baseline_count: int = Field(ge=0)
+    skill_coverage: list[HRSkillCoverage]
+    training_priorities: list[HRTrainingPriority]
+    mobility_suggestions: list[HRMobilitySuggestion]
+    warnings: list[str]
+
+
+class HRCrossDepartmentPriority(HRTrainingPriority):
+    affected_department_ids: list[str]
+
+
+class HRCapacitySummary(Strict):
+    planning_horizon_weeks: int = Field(ge=1, le=52)
+    recorded_weekly_learning_hours: float | None = Field(default=None, ge=0)
+    estimated_capacity_hours: float | None = Field(default=None, ge=0)
+    estimated_training_hours: float | None = Field(default=None, ge=0)
+    horizon_status: Literal["not_assessed", "feasible", "stretch"]
+    budget_myr: float = Field(ge=0)
+    budget_status: Literal["not_assessed"] = "not_assessed"
+
+
+class HROrganizationSummary(Strict):
+    reported_headcount: int = Field(ge=0)
+    department_count: int = Field(ge=0)
+    employee_profile_count: int = Field(ge=0)
+    known_baseline_count: int = Field(ge=0)
+    profile_coverage_percent: float = Field(ge=0, le=100)
+    cross_department_skill_priorities: list[HRCrossDepartmentPriority]
+    capacity: HRCapacitySummary
+    human_review_status: Literal["required"] = "required"
+
+
+class HRAnalysisData(Strict):
+    workspace_id: str
+    workspace_revision: int = Field(ge=1)
+    analysis_id: str
+    mode: Literal["hr"]
+    snapshot_id: str
+    ai_scenario: Literal["moderate", "fast"]
+    scoring_policy: Literal["organization-b1-v0.1"]
+    department_results: list[HRDepartmentResult]
+    organization_summary: HROrganizationSummary
     warnings: list[str]

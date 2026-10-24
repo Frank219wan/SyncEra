@@ -29,8 +29,11 @@ from .upload_guard import UploadBodyLimitMiddleware
 from .career_analysis import CareerAnalyzer, rule_fallback
 from .career_analysis_ledger import PostgresCareerAnalysisLedger
 from .organization_analysis import analyze_career_centre
+from .organization_hr_analysis import analyze_hr
 from .organization_models import (
     CareerCentrePayload,
+    HRAnalysisData,
+    HRPayload,
     OrganizationAnalysisData,
     OrganizationAnalyzeRequest,
 )
@@ -340,36 +343,57 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
 
     @app.post('/api/v1/progress/skills',status_code=503,response_model=APIErrorEnvelope)
     def progress(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 progress is not implemented')
-    @app.post('/api/v1/organizations/{mode}/analyze',response_model=Envelope[OrganizationAnalysisData],responses=documented_errors(400,409,422,503))
+    @app.post('/api/v1/organizations/{mode}/analyze',response_model=Envelope[OrganizationAnalysisData | HRAnalysisData],responses=documented_errors(400,409,422,503))
     def organization(mode:str,request:Request,payload:OrganizationAnalyzeRequest):
         if mode not in ('hr','career_centre'):
             raise svc.APIError(400,'BAD_REQUEST','Unsupported organization mode')
-        if mode == 'hr':
-            raise svc.APIError(503,'SOURCE_UNAVAILABLE','B1 HR analysis remains disabled in this B2-first MVP')
         if not app.state.organization_enabled or app.state.organization_store is None:
             raise svc.APIError(503,'SOURCE_UNAVAILABLE','Organization MVP is not enabled for this deployment')
-        if not isinstance(payload.payload,CareerCentrePayload):
-            raise svc.APIError(422,'VALIDATION_ERROR','career_centre mode requires a CareerCentre payload')
         snap=svc.require_snapshot(app.state.market,payload.snapshot_id,payload.region)
-        student_results,cohort_result,warnings=analyze_career_centre(payload.payload,snap,payload.ai_scenario)
         workspace_id=payload.workspace_id or 'org_'+uuid4().hex[:16]
         workspace_revision=(payload.workspace_revision+1) if payload.workspace_revision is not None else 1
         analysis_id='organalysis_'+uuid4().hex[:16]
-        result=OrganizationAnalysisData(
-            workspace_id=workspace_id,
-            workspace_revision=workspace_revision,
-            analysis_id=analysis_id,
-            mode='career_centre',
-            snapshot_id=snap.snapshot_id,
-            ai_scenario=payload.ai_scenario,
-            scoring_policy='organization-b2-v0.1',
-            student_results=student_results,
-            cohort_result=cohort_result,
-            warnings=warnings,
-        )
+        if mode == 'career_centre':
+            if not isinstance(payload.payload,CareerCentrePayload):
+                raise svc.APIError(422,'VALIDATION_ERROR','career_centre mode requires a CareerCentre payload')
+            student_results,cohort_result,warnings=analyze_career_centre(payload.payload,snap,payload.ai_scenario)
+            scoring_policy='organization-b2-v0.1'
+            payload_label=payload.payload.institution_label
+            result=OrganizationAnalysisData(
+                workspace_id=workspace_id,
+                workspace_revision=workspace_revision,
+                analysis_id=analysis_id,
+                mode='career_centre',
+                snapshot_id=snap.snapshot_id,
+                ai_scenario=payload.ai_scenario,
+                scoring_policy=scoring_policy,
+                student_results=student_results,
+                cohort_result=cohort_result,
+                warnings=warnings,
+            )
+            response_model=OrganizationAnalysisData
+        else:
+            if not isinstance(payload.payload,HRPayload):
+                raise svc.APIError(422,'VALIDATION_ERROR','hr mode requires an HR payload')
+            department_results,organization_summary,warnings=analyze_hr(payload.payload,snap,payload.ai_scenario)
+            scoring_policy='organization-b1-v0.1'
+            payload_label=payload.payload.organization_label
+            result=HRAnalysisData(
+                workspace_id=workspace_id,
+                workspace_revision=workspace_revision,
+                analysis_id=analysis_id,
+                mode='hr',
+                snapshot_id=snap.snapshot_id,
+                ai_scenario=payload.ai_scenario,
+                scoring_policy=scoring_policy,
+                department_results=department_results,
+                organization_summary=organization_summary,
+                warnings=warnings,
+            )
+            response_model=HRAnalysisData
         data_label='mixed_demo' if not snap.is_mock else 'synthetic_demo'
         workspace_body=payload.model_dump(mode='json')
-        workspace_body['payload_label']=payload.payload.institution_label
+        workspace_body['payload_label']=payload_label
         try:
             persisted_revision=app.state.organization_store.save_analysis(
                 workspace_id=workspace_id,
@@ -381,8 +405,8 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
                 analysis_id=analysis_id,
                 snapshot_id=snap.snapshot_id,
                 scenario=payload.ai_scenario,
-                scoring_policy='organization-b2-v0.1',
-                method_version='organization-b2-v0.1',
+                scoring_policy=scoring_policy,
+                method_version=scoring_policy,
                 data_label=data_label,
                 is_mock=True,
                 result=result.model_dump(mode='json'),
@@ -392,7 +416,7 @@ def create_app(store=None,adapter=None,market=None,resources=None,site_dir=None,
             raise svc.APIError(409,'REVISION_CONFLICT','Organization workspace revision is stale') from None
         if persisted_revision != workspace_revision:
             raise RuntimeError('Organization repository returned an unexpected revision')
-        return success(request,result.model_dump(mode='json'),snap,OrganizationAnalysisData,data_label=data_label,is_mock=True,model_version='rules-only')
+        return success(request,result.model_dump(mode='json'),snap,response_model,data_label=data_label,is_mock=True,model_version='rules-only')
     @app.post('/api/v1/admin/trends/refresh',status_code=503,response_model=APIErrorEnvelope)
     def refresh(request:Request,payload:dict): raise svc.APIError(503,'SOURCE_UNAVAILABLE','P1 trend refresh is disabled')
 

@@ -1,10 +1,13 @@
 from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi.testclient import TestClient
 
+import app.main as main_module
 from app.main import create_app
 from app.models import Envelope
-from app.organization_models import OrganizationAnalysisData
+from app.organization_models import HRAnalysisData, OrganizationAnalysisData
+from app.organization_storage import InMemoryOrganizationRepository
 from app.storage import ProfileStore
 
 
@@ -60,6 +63,76 @@ def request_body(scenario="moderate"):
     }
 
 
+def hr_request_body(scenario="moderate", include_employees=True):
+    employees = [
+        {
+            "member_id": "EMP-001",
+            "department_id": "dept-data",
+            "current_role": "Reporting analyst",
+            "skills": [
+                {"skill_id": "skill_sql", "level": 3, "source": "confirmed", "confidence": 1},
+                {"skill_id": "skill_python", "level": 2, "source": "confirmed", "confidence": 1},
+            ],
+            "baseline_known": True,
+            "target_role_id": "role_data_analyst",
+            "weekly_learning_hours": 4,
+            "reviewed": True,
+        },
+        {
+            "member_id": "EMP-002",
+            "department_id": "dept-data",
+            "current_role": "Operations coordinator",
+            "skills": [],
+            "baseline_known": False,
+            "target_role_id": None,
+            "weekly_learning_hours": 3,
+            "reviewed": True,
+        },
+    ] if include_employees else []
+    return {
+        "schema_version": "organization-v0.1",
+        "synthetic_input": True,
+        "workspace_id": None,
+        "workspace_revision": None,
+        "reviewed_by_user": True,
+        "region": "MY",
+        "locale": "en",
+        "ai_scenario": scenario,
+        "snapshot_id": None,
+        "payload": {
+            "organization_label": "Canopy Works Demo",
+            "sector": "Professional services",
+            "organization_goal_tags": ["internal-mobility"],
+            "target_skill_ids": ["skill_sql", "skill_validation"],
+            "training_budget_myr": 1200,
+            "planning_horizon_weeks": 8,
+            "departments": [
+                {
+                    "department_id": "dept-data",
+                    "label": "Data Operations",
+                    "responsibilities": "Prepare operational reports.",
+                    "current_status": "Growing",
+                    "challenges": "Manual validation workload.",
+                    "headcount": 8,
+                    "goal_tags": ["internal-mobility"],
+                    "target_skill_ids": ["skill_python"],
+                },
+                {
+                    "department_id": "dept-people",
+                    "label": "People Operations",
+                    "responsibilities": "Support employee development.",
+                    "current_status": "Stable",
+                    "challenges": "Training capacity is not measured.",
+                    "headcount": 4,
+                    "goal_tags": [],
+                    "target_skill_ids": [],
+                },
+            ],
+            "employees": employees,
+        },
+    }
+
+
 def make_client(tmp_path):
     return TestClient(create_app(store=ProfileStore(str(tmp_path / "profiles.sqlite"))))
 
@@ -85,9 +158,11 @@ def test_b2_response_matches_existing_frontend_modules(tmp_path):
     assert first["action_plan"]["next_semester_courses"]
     assert first["action_plan"]["self_study_topics"]
     assert first["action_plan"]["project_or_internship"]
+    assert all(item["action_plan"]["human_review_status"] == "required" for item in data["student_results"])
     assert data["cohort_result"]["proposed_workshops"]
     assert data["cohort_result"]["tutoring_focus"]
     assert data["cohort_result"]["curriculum_supplements"]
+    assert data["cohort_result"]["human_review_status"] == "required"
 
 
 def test_b2_score_is_reproducible_and_scenario_sensitive(tmp_path):
@@ -110,6 +185,15 @@ def test_b2_score_is_reproducible_and_scenario_sensitive(tmp_path):
         2,
     )
     assert item["match_score"] == expected
+    assert item["match_score"] != round(
+        0.60 * score["skill_compatibility"]
+        + 0.25 * score["scenario_outlook"]
+        + 0.15 * score["transition_feasibility"],
+        2,
+    )
+    for field in ("skill_compatibility", "interest_alignment", "goal_alignment", "work_style_alignment", "transition_feasibility"):
+        assert score[field] == fast_roles[role_id]["score_breakdown"][field]
+    assert item["skill_gaps"] == fast_roles[role_id]["skill_gaps"]
     assert "skill_levels" in moderate["student_results"][1]["missing_inputs"]
 
 
@@ -136,7 +220,168 @@ def test_b2_rejects_invalid_selection_and_real_data(tmp_path):
     assert client.post("/api/v1/organizations/career_centre/analyze", json=real).status_code == 422
 
 
-def test_b1_remains_explicitly_disabled(tmp_path):
-    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=request_body())
-    assert response.status_code == 503
-    assert response.json()["error"]["code"] == "SOURCE_UNAVAILABLE"
+def test_b1_department_only_does_not_invent_employee_gaps(tmp_path):
+    response = make_client(tmp_path).post(
+        "/api/v1/organizations/hr/analyze", json=hr_request_body(include_employees=False)
+    )
+    assert response.status_code == 200, response.text
+    Envelope[HRAnalysisData].model_validate(response.json())
+    data = response.json()["data"]
+    assert data["mode"] == "hr"
+    assert data["scoring_policy"] == "organization-b1-v0.1"
+    assert data["organization_summary"]["employee_profile_count"] == 0
+    assert data["organization_summary"]["capacity"]["horizon_status"] == "not_assessed"
+    for department in data["department_results"]:
+        for coverage in department["skill_coverage"]:
+            assert coverage["coverage_state"] == "unknown"
+            assert coverage["coverage_percent"] is None
+            assert coverage["missing_member_ids"] == []
+        assert department["mobility_suggestions"] == []
+
+
+def test_b1_employee_baseline_drives_coverage_mobility_and_scenario(tmp_path):
+    client = make_client(tmp_path)
+    moderate = client.post("/api/v1/organizations/hr/analyze", json=hr_request_body("moderate"))
+    fast = client.post("/api/v1/organizations/hr/analyze", json=hr_request_body("fast"))
+    assert moderate.status_code == 200, moderate.text
+    assert fast.status_code == 200, fast.text
+    data = moderate.json()["data"]
+    department = next(item for item in data["department_results"] if item["department_id"] == "dept-data")
+    sql = next(item for item in department["skill_coverage"] if item["skill_id"] == "skill_sql")
+    validation = next(item for item in department["skill_coverage"] if item["skill_id"] == "skill_validation")
+    assert sql["coverage_state"] == "measured"
+    assert sql["coverage_percent"] == 100
+    assert validation["coverage_percent"] == 0
+    assert validation["missing_member_ids"] == ["EMP-001"]
+    assert len(department["mobility_suggestions"]) == 1
+    assert department["mobility_suggestions"][0]["member_id"] == "EMP-001"
+    suggestion = department["mobility_suggestions"][0]
+    moderate_score = suggestion["match_score"]
+    assert moderate_score == round(
+        0.60 * suggestion["skill_compatibility"]
+        + 0.25 * suggestion["scenario_outlook"]
+        + 0.15 * suggestion["transition_feasibility"],
+        2,
+    )
+    fast_department = next(item for item in fast.json()["data"]["department_results"] if item["department_id"] == "dept-data")
+    assert moderate_score != fast_department["mobility_suggestions"][0]["match_score"]
+    assert data["organization_summary"]["capacity"]["budget_status"] == "not_assessed"
+
+
+def test_b1_empty_skill_baseline_does_not_create_mobility_or_measured_coverage(tmp_path):
+    body = hr_request_body()
+    employee = body["payload"]["employees"][0]
+    employee["baseline_known"] = True
+    employee["skills"] = []
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=body)
+    assert response.status_code == 200, response.text
+    department = next(
+        item for item in response.json()["data"]["department_results"]
+        if item["department_id"] == "dept-data"
+    )
+    assert department["known_baseline_count"] == 0
+    assert department["mobility_suggestions"] == []
+    assert all(item["coverage_state"] == "unknown" for item in department["skill_coverage"])
+
+
+def test_b1_rejects_employee_with_unknown_department(tmp_path):
+    body = hr_request_body()
+    body["payload"]["employees"][0]["department_id"] = "dept-missing"
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=body)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_b1_workspace_revision_cas(tmp_path):
+    client = make_client(tmp_path)
+    first = client.post("/api/v1/organizations/hr/analyze", json=hr_request_body()).json()["data"]
+    update = hr_request_body()
+    update["workspace_id"] = first["workspace_id"]
+    update["workspace_revision"] = first["workspace_revision"]
+    second = client.post("/api/v1/organizations/hr/analyze", json=update)
+    assert second.status_code == 200
+    assert second.json()["data"]["workspace_revision"] == 2
+    stale = client.post("/api/v1/organizations/hr/analyze", json=update)
+    assert stale.status_code == 409
+    assert stale.json()["error"]["code"] == "REVISION_CONFLICT"
+
+
+def test_b1_and_b2_cannot_reuse_the_same_workspace_id(tmp_path):
+    client = make_client(tmp_path)
+    b2 = analyze(client, request_body())["data"]
+    b1_request = hr_request_body()
+    b1_request["workspace_id"] = b2["workspace_id"]
+    b1_request["workspace_revision"] = b2["workspace_revision"]
+    response = client.post("/api/v1/organizations/hr/analyze", json=b1_request)
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "REVISION_CONFLICT"
+
+
+def test_organization_openapi_documents_mode_request_and_conflicts(tmp_path):
+    spec = make_client(tmp_path).get("/openapi.json").json()
+    operation = spec["paths"]["/api/v1/organizations/{mode}/analyze"]["post"]
+    assert {"200", "400", "409", "422", "503"} <= set(operation["responses"])
+    assert any(item["name"] == "mode" and item["in"] == "path" for item in operation["parameters"])
+    request_schema = operation["requestBody"]["content"]["application/json"]["schema"]
+    assert request_schema["$ref"].endswith("/OrganizationAnalyzeRequest")
+
+
+def test_b1_forbidden_narrative_fields_are_rejected_before_scoring(tmp_path, monkeypatch):
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("B1 scoring received a forbidden narrative field")
+
+    monkeypatch.setattr(main_module, "analyze_hr", fail_if_called)
+    client = make_client(tmp_path)
+    for field, value in (
+        ("hr_notes", "Synthetic manager opinion"),
+        ("personality", "Introverted"),
+        ("interests", ["finance"]),
+        ("protected_characteristic", "Do not score"),
+    ):
+        body = hr_request_body()
+        body["payload"]["employees"][0][field] = value
+        response = client.post("/api/v1/organizations/hr/analyze", json=body)
+        assert response.status_code == 422, (field, response.text)
+        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_b1_training_estimates_and_budget_remain_unassessed(tmp_path):
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=hr_request_body())
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    priorities = [item for department in data["department_results"] for item in department["training_priorities"]]
+    assert priorities
+    assert all(item["estimated_hours_per_learner"] == 6 for item in priorities)
+    assert all(item["estimate_basis"] == "synthetic_planning_assumption" for item in priorities)
+    assert data["organization_summary"]["capacity"]["budget_status"] == "not_assessed"
+    assert data["organization_summary"]["human_review_status"] == "required"
+
+
+def test_invalid_organization_workspace_id_is_rejected(tmp_path):
+    body = hr_request_body()
+    body["workspace_id"] = "../../not-a-workspace"
+    body["workspace_revision"] = 1
+    response = make_client(tmp_path).post("/api/v1/organizations/hr/analyze", json=body)
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_in_memory_organization_cas_allows_one_concurrent_update(tmp_path):
+    app = create_app(
+        store=ProfileStore(str(tmp_path / "profiles.sqlite")),
+        organization_store=InMemoryOrganizationRepository(),
+    )
+    first = TestClient(app).post("/api/v1/organizations/hr/analyze", json=hr_request_body())
+    assert first.status_code == 200, first.text
+    data = first.json()["data"]
+    update = hr_request_body()
+    update["workspace_id"] = data["workspace_id"]
+    update["workspace_revision"] = data["workspace_revision"]
+
+    def submit(_index):
+        response = TestClient(app).post("/api/v1/organizations/hr/analyze", json=update)
+        return response.status_code, response.json().get("error", {}).get("code")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        outcomes = sorted(pool.map(submit, range(2)))
+    assert outcomes == [(200, None), (409, "REVISION_CONFLICT")]

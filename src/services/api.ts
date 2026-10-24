@@ -1,4 +1,4 @@
-import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, OrganizationAnalysis, Evidence, Locale, MarketRadarPackage } from '../types';
+import type { Profile, Scenario, Recommendation, Constraints, Plan, TrendPackage, Organization, OrganizationAnalysis, HRAnalysis, Evidence, Locale, MarketRadarPackage } from '../types';
 import { demoRecommendations, makePlan } from '../domain';
 import { roles } from '../data';
 import { validateSyntheticCvFile } from './cv-upload';
@@ -7,8 +7,8 @@ import {
   fromContractSkillId, profileToConfirmRequest, profileToNormalizeRequest, targetWeeks,
   toContractLevel, toContractRoleId, toContractSkillId, toServiceMeta, validateRecommendationPayload,
   syntheticTextToNormalizeRequest,
-  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData, type ApiOrganizationAnalysis,
-  mapMarketRadar, mapOrganizationAnalysis, organizationToAnalyzeRequest,
+  type ApiMeta, type ApiNormalizedProfile, type ApiRecommendation, type ApiCareerAnalysis, type ApiRoadmap, type ApiRoleData, type ApiTaskImpact, type ApiRoleSignal, type ApiBubblesData, type ApiSkillSignal, type ApiMarketRadarData, type ApiOrganizationAnalysis, type ApiHRAnalysis,
+  mapMarketRadar, mapHRAnalysis, mapOrganizationAnalysis, hrOrganizationToAnalyzeRequest, organizationToAnalyzeRequest,
 } from './api-contract';
 
 export const isDemo = import.meta.env.VITE_API_MODE !== 'real';
@@ -265,9 +265,13 @@ export const api = {
 
   adopt: async (plan: Plan): Promise<Plan> => ({ ...plan, adopted: true }),
 
-  organization: async (org: Organization, actor: 'hr' | 'tvet', scenario: Scenario, locale: Locale, selectedOnly = false): Promise<{analysis:OrganizationAnalysis|null;meta:ReturnType<typeof toServiceMeta>}> => {
-    if (actor === 'hr') throw new ApiError(503, 'SERVICE_UNAVAILABLE', 'B1 HR analysis is not connected yet. Your inputs remain saved locally.');
+  organization: async (org: Organization, actor: 'hr' | 'tvet', scenario: Scenario, locale: Locale, selectedOnly = false): Promise<{analysis:OrganizationAnalysis|HRAnalysis|null;meta:ReturnType<typeof toServiceMeta>}> => {
     if (isDemo) return {analysis:null,meta:demoMeta()};
+    if (actor === 'hr') {
+      const body=hrOrganizationToAnalyzeRequest(org,scenario,locale);
+      const response=await request<ApiHRAnalysis>('/organizations/hr/analyze',{body});
+      return {analysis:mapHRAnalysis(response.data),meta:toServiceMeta(response.meta)};
+    }
     const body=organizationToAnalyzeRequest(org,scenario,locale,selectedOnly);
     if (!body.payload.selected_member_ids.length) throw new ApiError(422,'VALIDATION_ERROR','Review at least one complete synthetic student before analysis.');
     const response=await request<ApiOrganizationAnalysis>('/organizations/career_centre/analyze',{body});

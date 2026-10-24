@@ -24,3 +24,5 @@ data/approved/
 data/uploads/
 uploads/
 .DS_Store
+.vercel
+.env*
