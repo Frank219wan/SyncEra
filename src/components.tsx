@@ -70,7 +70,7 @@ export function Shell({children}:{children:ReactNode}) {
     </aside>
     <div className="main-area"><header className="topbar"><nav className="breadcrumb" aria-label={t('Breadcrumb','当前位置','Jejak navigasi')}>
       {breadcrumbs.map((crumb,index)=><span className="breadcrumb-part" key={`${index}-${crumb.label}`}>{index>0&&<ChevronRight size={13} aria-hidden="true"/>}{crumb.to?<Link to={crumb.to}>{crumb.label}</Link>:<span aria-current="page">{crumb.label}</span>}</span>)}
-    </nav><div className="topbar-actions"><ThemeSwitcher/><LocaleSwitcher/></div></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>FutureProof AI</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div>
+    </nav><div className="topbar-actions"><ThemeSwitcher/><LocaleSwitcher/></div></header><main id="main" className="page-content">{children}</main><footer className="app-footer"><span>Skillogy</span><span>{t('Grow with intention. Move with confidence.','有方向地成长，从容地前行。','Berkembang dengan tujuan. Melangkah dengan yakin.')}</span></footer></div>
   </div>;
 }
 export function PageHeader({title,description,action,back}:{title:ReactNode;description?:string;action?:ReactNode;back?:string}){
