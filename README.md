@@ -1,167 +1,240 @@
-# Skillogy — Grow Your Potential, Shape Your Future
+# Skillogy — AI Career Intelligence & Personalized Reskilling
 
-**Completed Hackathon Product · SDC Hackathon 2026**
+> An AI-era career guidance and skills-development platform for individuals, HR/L&D teams, and TVET/university career centres, with explainable choices and practical learning plans.
 
-**Skillogy** (developed as **FutureProof AI / SyncEra**) is an interactive, full-stack AI-era career and skills development platform. It brings **individual career guidance, enterprise HR/L&D planning, and TVET institution insights** into one experience.
+**SDC Hackathon 2026 · Domain 1** · **Product name: Skillogy**
 
-Our Hackathon product is **implemented, integrated in the public GitHub `main` branch, and demonstrated on Vercel with a connected FastAPI backend**. The three main journeys have been exercised against real API endpoints using fictional data. **The team is completing the public Production deployment now, targeting launch before the Hackathon closes.** The protected full-stack Vercel Preview remains the verified demonstration environment until the public Production API passes its own acceptance checks.
+[Public website](https://syncera-frontend.vercel.app/) · [Source repository](https://github.com/Frank219wan/SyncEra) · [Submission documents](submission/README.md) · [Submission guide](docs/SDC_SUBMISSION_GUIDE.md)
 
-**Website:** [syncera-frontend.vercel.app](https://syncera-frontend.vercel.app/)  
-**GitHub repository:** [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra)  
-**Interactive full-stack demo:** Vercel Frontend Preview (judge-access link provided privately through the Hackathon submission)  
-**Languages:** English · 简体中文 · Bahasa Melayu
+The existing repository URL remains **SyncEra** for compatibility; it is not the current product branding. Skillogy was previously referred to as FutureProof AI during development.
+
+> **Demo and evidence boundary:** The frontend supports interactive synthetic demonstrations. Individual (A), HR/L&D (B1), and TVET/Career Centre (B2) paths are implemented in the shared application and have protected Preview integration records. Public Production functionality must be assessed independently: the public homepage alone does not prove every Real API path is deployed or accessible. Do **not** submit real CVs, employee data or student records.
 
 ---
 
-## The problem we solve
+## Team Information
 
-Career decisions are becoming harder as skills, industries and AI-enabled tasks evolve. Individuals need understandable career directions and actionable learning paths; HR teams need to identify capability gaps; and education providers need to understand how their students' skills align with changing role requirements.
+| Field | Details |
+| --- | --- |
+| **Team Name** | **TBD — registered team name to confirm** (submission PDFs currently use `SyncEra` in filenames) |
+| **Team Domain** | **Domain 1** |
+| **SDG Track (1–17)** | **TBD — confirm registered track**; solution has relevant SDG 4 (Quality Education) and SDG 8 (Decent Work) connections |
+| **Team Leader** | **TBD** |
+| **University** | **TBD** |
+| **Number of Members** | **TBD** |
 
-**Skillogy connects discovery → assessment → matching → gap analysis → learning and planning**, with transparent evidence and human oversight.
+## Links
 
-## Product experiences — completed for the Hackathon
+| Resource | Link / status |
+| --- | --- |
+| GitHub Repository | [Frank219wan/SyncEra](https://github.com/Frank219wan/SyncEra) |
+| Public Website | [syncera-frontend.vercel.app](https://syncera-frontend.vercel.app/) |
+| Replit Live Demo | **TBD — insert actual working Replit deployment link** |
+| Full-stack Preview | Protected Vercel Frontend Preview; access shared privately with authorized judges (never post bypass tokens) |
+| Slide Deck | **TBD — add final judge-accessible deck link** |
+| Demo Video (5–7 min) | **TBD — add final YouTube link** |
 
-### A · Individual — Discover and grow
+---
 
-- **Guided onboarding and profile review:** build a profile from career goals, interests, education, experience, preferences and confirmed skills; try a fictional sample profile.
-- **Optional five-question psychology reflection:** review and edit answers, with clear consent and user control. Psychology text is **not silently converted into a hiring or personality score**.
-- **Career Radar and Career Matches:** explore potential directions and compare server-calculated, ranked role matches under **Moderate** and **Fast** AI scenarios.
-- **Career Atlas visual experience:** illustrated, responsive career cards using actual API role names, ranks, scores, strengths, skill gaps, explanations and evidence. The connected experience does not substitute demo roles for server results.
-- **Career role details and AI task insights:** examine role requirements, task-change examples, evidence provenance and uncertainty.
-- **Skill Mind Map and Learning Roadmap:** turn identified gaps into skill relationships and actionable learning recommendations.
-- **Bamboo Growth journey:** visualize growth and track personal learning activity in the interactive prototype; some plan/progress interactions remain browser-local rather than cloud-synchronized.
+## Overview
 
-**Real API journey:** `Profile → Normalize / Confirm → Trends → Recommendations → Role / Evidence → Skill Map → Roadmap`.
+### Problem
 
-### B1 · Organization — HR & Learning Development
+AI adoption and shifting skill requirements create uncertainty for learners and working professionals. Organizations need to identify workforce capability gaps, while education providers need clearer feedback on student skills and career readiness. Existing generic advice can be difficult to turn into an achievable, evidence-aware learning plan.
 
-Designed for organizations planning skills development across departments.
+### Solution
 
-- Department-first organizational intake and goal setting.
-- Optional **fictional/anonymized** employee skill baselines.
-- **Skill gap heatmaps** and capability coverage.
-- **Internal mobility** planning and human-review recommendations.
-- Training and development priorities under explicit budget/horizon assumptions.
-- Deterministic backend analysis with revision-aware workspace persistence.
+**Skillogy** organizes declared skills and interests into a user-confirmed profile, combines it with structured career/skills signals, and presents **explainable role matches, skill gaps and learning paths**. Users explore **Moderate** and **Fast** AI-change scenarios without treating those assumptions as facts. Its organization routes use the shared analysis foundation for skills planning and cohort advice, not automated hiring or redundancy decisions.
 
-**Real API:** `POST /api/v1/organizations/hr/analyze`.
+### Key Features
 
-### B2 · Organization — TVET & Career Centre
+1. **A — Individual:** Profile review, Career Radar, Career Atlas matches, role/task details, Skill Mind Maps, roadmaps and bamboo-inspired personal progress.
+2. **B1 — HR / L&D:** Department capability and skills-gap insights, internal mobility alternatives, and training priorities for fictional workforce cases.
+3. **B2 — TVET / Career Centre:** Student and cohort career exploration, skill gaps, workshop and curriculum improvement suggestions using fictional examples.
+4. **Transparency:** Rule-validated scores, visible uncertainty, distinct market vs individual-fit reasoning, and clearly labelled demo/synthetic information.
+5. **Accessibility:** Responsive web UI and English, Simplified Chinese and Bahasa Melayu interfaces.
 
-Designed for colleges, TVET institutions and career support teams.
+The present prototype is **decision support**, not a prediction of hiring probability, an official job-demand forecast, or a professional certification system.
 
-- Review fictional student profiles, skill levels and interests.
-- Analyze individual career directions and missing competencies.
-- Compare **Moderate / Fast** scenarios without inventing live job-demand evidence.
-- Explore trends, skill gaps and **cohort-level insights**.
-- Review workshop, tutoring and curriculum improvement suggestions.
-- Revision-aware server analysis and PostgreSQL-backed workspace storage.
+### Tech Stack
 
-**Real API:** `POST /api/v1/organizations/career_centre/analyze`.
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite |
+| Backend | Python 3.10+, FastAPI, validated JSON contracts |
+| Recommendation / AI | Deterministic scoring and rules; optional gated MiniMax extraction/narrative for approved protected synthetic testing |
+| Data | Synthetic fixtures by default; local SQLite and isolated Neon/PostgreSQL for selected protected Preview workflows |
+| Dev / Deployment | Existing Replit startup scripts; Vercel Frontend and Backend projects, server-side same-origin API proxy |
+| Testing | Frontend Node tests, backend pytest, API-contract and cross-stack checks |
 
-## How it works
+### Architecture
 
 ```text
-                        SKILLOGY
-                    React + TypeScript + Vite
-                 English / Chinese / Malay UI
-                               |
-            Individual --------+-------- Organization
-                               |             |
-                               |          B1 HR / B2 TVET
-                               |
-                    Same-origin /api/v1/*
-                               |
-                Vercel Frontend server proxy
-                               |
-                     FastAPI Backend
-              (deterministic analysis engine)
-                               |
-                    PostgreSQL / Neon
-              (isolated protected Preview store)
+                       SKILLOGY
+              React / TypeScript / Vite
+                  EN · ZH · Bahasa Melayu
+                           |
+             +-------------+-------------+
+             |                           |
+        Individual A               Organization B
+             |                      HR B1 / TVET B2
+             +-------------+-------------+
+                           |
+                     /api/v1/*
+                           |
+                Vercel proxy / API
+                           |
+                  FastAPI Backend
+               /         |           \
+        Profile data   Role/skill    Learning plans
+        (fictional)    matching         & gaps
+               \         |           /
+                  Rule-validated outputs
+                           |
+                  Local / protected store
 ```
 
-| Layer | Implementation |
-| --- | --- |
-| Frontend | React 19, TypeScript, Vite, responsive Career Atlas UI |
-| Backend | Python, FastAPI, validated request/response contracts |
-| Recommendation engine | Deterministic role scoring, scenario-aware matching, skills and gap analysis |
-| Organization engine | B1 HR/L&D and B2 TVET deterministic analysis, revision conflict handling |
-| Persistence | Neon PostgreSQL in the isolated full-stack Preview |
-| Deployment | Vercel Frontend and Backend projects, same-origin API proxy |
-| Languages | English, Chinese and Malay |
-| Quality | Automated frontend, backend, API contract, cross-stack and browser checks |
+Current architecture details: [Vercel Preview Proxy](docs/VERCEL_PREVIEW_PROXY.md) · [Backend](backend/README.md). Protected Preview data, credentials and access controls must not be copied into the public browser build.
 
-**Why the AI approach is responsible:** the system makes its assumptions visible, preserves evidence identifiers, and distinguishes synthetic demonstration data from verified external observations. Optional MiniMax integration is gated; the validated Hackathon flows use deterministic analysis rather than paid generative scoring. There are **no claims of real hiring probability, verified salaries or live job-demand statistics**.
+---
 
-## Interactive demo
+## Project Structure
 
-The product is deployed using the existing Vercel Frontend and Backend projects.
+The official SDC example uses a simple Python app. Our existing React + FastAPI source is preserved rather than moved into incompatible sample paths.
 
-- **Public website entry:** [https://syncera-frontend.vercel.app/](https://syncera-frontend.vercel.app/)
-- **Validated full-stack Hackathon build:** protected Vercel Preview, with an access-enabled share link furnished privately to judges.
-- **What judges can explore:** Individual Career Matches and learning pathway; HR dashboard, heatmap and mobility; TVET student analysis, trends and cohort insights.
+```text
+SyncEra/
+├── src/                            # Actual Skillogy React frontend
+├── backend/
+│   ├── app/                        # FastAPI routes, services, models
+│   ├── futureproof_ai/             # Legacy import-compatible Python package
+│   ├── tests/                      # Backend tests
+│   └── requirements.txt            # Python dependencies
+├── api/                            # Server-side Vercel frontend API proxy
+├── public/                         # Brand images/assets
+├── tests/                          # Frontend and integration tests
+├── docs/
+│   ├── SDC_SUBMISSION_GUIDE.md     # Official template mapping/checklist
+│   ├── TECHNICAL_README_ARCHIVE_20261025.md
+│   └── ...                         # Architecture, QA and release evidence
+├── submission/
+│   ├── SDC2026_SyncEra_Preliminary.pdf
+│   ├── SDC2026_SyncEra_TechDeclaration.pdf
+│   ├── SDC2026_SyncEra_Replit_POU.pdf
+│   └── README.md                   # Existing-PDF index
+├── scripts/                        # Replit build/development/production scripts
+├── .replit                         # Replit launcher
+├── .env.example                    # Safe non-secret examples
+├── package.json / pnpm-lock.yaml   # Frontend tooling
+├── vercel.json                     # Vercel deployment config
+├── LICENSE                         # Apache-2.0
+└── README.md
+```
 
-The validated Preview demonstrates **actual FastAPI requests and Neon Preview persistence**, not merely static mock screens. The public Production domain is being brought into alignment with that protected release; until then, it should not be treated as proof that every API path is publicly available.
+No runtime directories have been renamed solely to imitate the organizer's template.
 
-**For security, the Vercel share credential is intentionally not published in this repository.** Use the submission-provided demo URL. Fictional examples only; do not upload real CVs, employees' records or student data.
+---
 
-## Delivered integration and verification
+## How to Run
 
-- The **Individual**, **B1 HR/L&D** and **B2 TVET** implementations are merged into `main`.
-- The polished **Career Matches Real API** interface is merged, preserving backend-calculated scores, strict profile/snapshot checks, scenario switching, evidence and error handling.
-- Protected Frontend ↔ Backend Preview testing demonstrated all three core user journeys against the real API.
-- Neon Preview checks confirmed storage and revisioned organization/profile workflows with synthetic records.
-- The Career Matches UI fix passed **137 frontend tests**, a Real-mode TypeScript/Vite build and its GitHub contract/cross-stack CI checks. Additional backend and browser QA is maintained in this repository.
-- Desktop/mobile layout, dark theme and three languages are part of the experience.
+### Option 1 — Replit
 
-These are **Hackathon product and protected-environment verification results**, not certification for unrestricted use with real personal, employer or student data.
+Import [this repository](https://github.com/Frank219wan/SyncEra) into Replit. The committed [`.replit`](.replit) runs `scripts/run-replit.sh` and has corresponding deployment build/start scripts. It requires a Replit environment with Node.js, pnpm/Corepack and Python. Use **fictional sample inputs only**.
 
-## Run locally
+A [Replit proof-of-use PDF](submission/SDC2026_SyncEra_Replit_POU.pdf) is present. Its contents have not been independently audited here. **Add the actual Replit demo URL in Links** and verify a fresh browser can open it; the public Vercel site alone is not Replit evidence.
 
-Requirements: Node.js 22+, Corepack/pnpm; Python 3.10+ for the backend.
+### Option 2 — Run Locally
+
+Requirements: **Node.js 22+**, Corepack/pnpm, **Python 3.10+** (for backend).
 
 ```bash
+git clone https://github.com/Frank219wan/SyncEra.git
+cd SyncEra
 corepack pnpm install --frozen-lockfile
 corepack pnpm dev
 ```
 
-The frontend defaults to **Demo Mode** (`VITE_API_MODE=demo`) so you can explore the complete interface locally with fictional examples.
+The frontend starts in **synthetic Demo mode** by default. Its pages may be explored without an LLM key or live backend.
 
-For frontend tests and the build:
-
-```bash
-corepack pnpm test
-corepack pnpm build
-```
-
-For the backend:
+To run FastAPI separately:
 
 ```bash
 cd backend
 python -m venv .venv
-# Activate .venv in your shell.
+# Activate .venv (Windows: .venv\Scripts\activate; macOS/Linux: source .venv/bin/activate)
 python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Backend health: `http://127.0.0.1:8000/api/v1/health`.
+Backend health: `http://127.0.0.1:8000/api/v1/health`. **Real API Mode** (`VITE_API_MODE=real`) requires an appropriate same-origin proxy and correctly configured backend; merely launching the two dev servers does not prove the Vercel Preview integration.
 
-**Real API Mode** (`VITE_API_MODE=real`) requires a correctly configured same-origin proxy and Backend environment. It must never silently fall back to Demo results if the API is unavailable. For the supported protected Preview setup, see [Vercel Preview Proxy](docs/VERCEL_PREVIEW_PROXY.md), [Individual-first Test Plan](docs/TEST_PLAN_INDIVIDUAL_FIRST.md), and the [Organization cloud acceptance record](docs/organization/ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md).
+### Run Tests
 
-## Final Production launch — in progress before the Hackathon deadline
+```bash
+# At repository root
+corepack pnpm test
+corepack pnpm build
 
-**The Hackathon product is complete as an integrated, testable MVP. Production release is the team's immediate next milestone, actively being completed before the competition closes — not a post-Hackathon task.** The launch work is to verify that the latest `main` frontend and matching backend are deployed to the official domain, that the three Real API journeys work in a fresh browser session, and that access protection, environment isolation, synthetic-data restrictions and rollback are correctly configured.
+# Backend tests
+cd backend
+python -m pip install -r requirements-dev.txt
+python -m pytest tests -q
+```
 
-Production is counted as **LIVE** only after the official domain and all three API journeys pass those checks. Further expansion to real personal or institution data will still require production-grade identity, authorization, tenant isolation, data governance and approvals. Durable learning-progress synchronization and approved market datasets can continue as separate enhancements; they are not represented as complete cloud features.
+These are the repository's test commands, not a claim that they have been freshly rerun by this documentation-only change. See the [Individual-first test plan](docs/TEST_PLAN_INDIVIDUAL_FIRST.md) and [Organization cloud acceptance log](docs/organization/ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md) for historic scope, limitations and unresolved checks.
 
-## Project documents
+---
 
-- [Product / integration status](docs/INTEGRATION_STATUS.md)
-- [Frontend ↔ Backend Preview architecture](docs/VERCEL_PREVIEW_PROXY.md)
-- [Individual user journey test plan](docs/TEST_PLAN_INDIVIDUAL_FIRST.md)
-- [Organization B1/B2 cloud acceptance](docs/organization/ORGANIZATION_B1_B2_CLOUD_ACCEPTANCE.md)
-- [Backend setup](backend/README.md)
+## How We Use Replit *(Submission Required)*
+
+- The repository includes a runnable **root `.replit`** file and separate development, build and production launch scripts.
+- The team's existing [Replit Proof of Use](submission/SDC2026_SyncEra_Replit_POU.pdf) is preserved in `submission/`; verify its evidence/screenshots before final submission.
+- Record the actual public or judge-accessible Replit deployment link above and verify it loads using a fresh session.
+- Secrets, if needed, should be configured with Replit Secrets; never commit credentials or put them in `VITE_*` environment variables.
+
+---
+
+## Challenges & Learnings
+
+- **Evidence provenance:** Match scoring and labour-market indications must remain distinct. Unapproved datasets or fabricated figures must not be described as observed current demand.
+- **Integration and consistency:** The React app, server contracts, scenario snapshots and role identifiers must agree; failures and stale responses should not silently show demo results.
+- **Privacy and deploy controls:** Real CV/student/workforce information requires safeguards not provided by the synthetic Hackathon flow. Protected Preview deployments and their access tokens are not public production guarantees.
+
+## Future Improvements
+
+- [ ] Complete and independently verify Production deployment of applicable Real API flows and their access controls.
+- [ ] Activate only reviewed/approved public market evidence and vetted resources, with date, geography and coverage metadata.
+- [ ] Improve durable progress tracking, team/education review and operational monitoring where supported by permissions and real data governance.
+
+---
+
+## Team
+
+| Name | Role | GitHub |
+| --- | --- | --- |
+| **TBD** | Team Lead / Integration | TBD |
+| **TBD** | Frontend / UI | TBD |
+| **TBD** | Backend | TBD |
+| **TBD** | AI / Technical | TBD |
+
+Fill this table with registered participants only; update the row count to match the official team roster.
+
+---
+
+## Submission Checklist
+
+- [ ] Confirm registered **team name**, leader, university, team count and primary SDG track in this README.
+- [ ] Add the **Slide Deck** link and verify judge permissions.
+- [ ] Add the **5–7-minute YouTube Demo Video** link and verify playback.
+- [x] Preliminary PDF exists: [SDC2026_SyncEra_Preliminary.pdf](submission/SDC2026_SyncEra_Preliminary.pdf).
+- [x] Technical declaration PDF exists: [SDC2026_SyncEra_TechDeclaration.pdf](submission/SDC2026_SyncEra_TechDeclaration.pdf).
+- [x] Replit Proof of Use PDF exists: [SDC2026_SyncEra_Replit_POU.pdf](submission/SDC2026_SyncEra_Replit_POU.pdf).
+- [ ] Confirm the content, registered team identity and organizer-required naming of those PDFs (no PDF modifications were made).
+- [ ] Add/verify a working Replit URL and confirm the submitted live demo works.
+- [ ] Run and record current test/build results and a fresh end-to-end demo.
+- [ ] Check GitHub access/collaborators, source attribution, AI/tools declaration and no committed secrets.
+
+The team has instructed that no RunPod-specific deliverable document is to be added as part of this reorganization. See [submission guide](docs/SDC_SUBMISSION_GUIDE.md) for the mapping to the organizer's sample format.
 
 ## License
 
@@ -169,8 +242,6 @@ Licensed under the [Apache License, Version 2.0](LICENSE).
 
 ---
 
-### 中文简介
+### 中文说明
 
-**Skillogy 是已完成整合的 SDC Hackathon 2026 全栈产品原型。** 我们在同一个平台提供三条核心体验：**Individual 个人职业探索与学习路线、Organization B1 企业 HR/L&D 技能规划、Organization B2 TVET 学生与群体职业分析**。系统使用 React + TypeScript + FastAPI，支持中英马三语；受保护的 Vercel Preview 已完成三个模块的真实 API 演示，并通过 Neon Preview 验证数据持久化。职业推荐使用可解释的确定性评分和合成测试数据，展示匹配分数、技能优势、技能差距、学习建议以及不确定性。
-
-**Hackathon 产品已完成并整合至 `main`。团队正在立即推进 Production 正式域名上线，目标是在本次比赛结束前完成部署与 Individual、B1 HR、B2 TVET 三条真实 API 的公开环境验收，而不是等到赛后。正式上线状态以实际部署和验收结果为准；真实个人资料与机构数据的开放仍需独立完成身份、权限和隐私审核。**
+**Skillogy** 是 SDC Hackathon 2026 Domain 1 项目，提供个人职业探索（A）、企业人力与学习发展（B1）、TVET/大学职业支持（B2）三条路径，以合成演示数据展示职业推荐、技能差距与学习规划。请将正式参赛队名、SDG、团队成员、Replit 演示地址、Pitch Slides 与视频地址补齐；原有三份提交 PDF 已保留在 `submission/` 中，未修改。
