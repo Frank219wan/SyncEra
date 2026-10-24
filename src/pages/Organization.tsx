@@ -1,11 +1,12 @@
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {Link,useLocation,useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {useApp} from '../store';
 import {hrSample,tvetSample,skillNames,roles,organizationGoals} from '../data';
 import {cohortGaps,gapsFor,validatePeople,parseCsv} from '../domain';
 import {api,ApiError,isDemo} from '../services/api';
-import {applyHrAnalysisResponse,applyStudentAnalysisResponse,beginHrAnalysis,hrAnalysisView,newHrDraftFromSample,studentAnalysisView} from '../hrState';
-import type {Department,Organization,Person} from '../types';
+import {applyStudentAnalysisResponse,createHrWorkspaceFromDraft,hrAnalysisView,newHrDraftFromSample,saveHrDraft,studentAnalysisView} from '../hrState';
+import {runHrAnalysis} from '../hrAnalysisFlow';
+import type {Department,HrRequestIdentity,Organization,Person} from '../types';
 import {PageHeader,Stepper,ButtonLink,DemoNotice,Field,SkillChip,Modal,EmptyState,ErrorState,EvidencePanel,icons} from '../components';
 import {TrainingGrowthPanel} from '../components/TrainingIvy';
 const {ArrowRight,ArrowLeft,Check,ChevronRight,Users,Building2,GraduationCap,BarChart3,Leaf,Info,BookOpen,X,Search}=icons;
@@ -76,56 +77,85 @@ function ConnectedHRTrainingSummary({org}:{org:Organization}){
 }
 function HRIntake(){
   const {state,setState,t,copy,toast}=useApp();const nav=useNavigate();
-  const latestState=useRef(state);latestState.current=state;
   const analysisInFlight=useRef(false);
   const [editing,setEditing]=useState(false),[draft,setDraft]=useState<Organization>(()=>structuredClone(state.hr));
   const org=editing?draft:state.hr;
   const firstTimeTeamProfile=!state.hrProfileSaved;
   const [active,setActive]=useState(0),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [recoveryOpen,setRecoveryOpen]=useState(true),[confirmNew,setConfirmNew]=useState(false),[runComplete,setRunComplete]=useState<HrRequestIdentity|null>(null);
+  const recovery=state.hr.hrRecovery;
+  useEffect(()=>{
+    if(!runComplete || recovery?.status==='pending')return;
+    setRunComplete(null);
+    if(state.hr.hrLastOperationId===runComplete.operationId
+      && state.hr.clientWorkspaceId===runComplete.clientWorkspaceId
+      && state.hr.hrAnalysis?.workspaceId===state.hr.workspaceId
+      && hrAnalysisView(state.hr,state.scenario,false)==='connected'){
+      toast(t('Deterministic HR analysis updated. Human review is still required.','确定性 HR 分析已更新，仍需人工审核。','Analisis HR deterministik dikemas kini. Semakan manusia masih diperlukan.'));
+      nav('/organization/hr/dashboard');
+    }else if(!recovery){
+      setError(t('Team inputs or scenario changed during analysis. The previous result is hidden; review the current draft before analyzing again.','分析期间团队资料或情景已变更；旧结果已隐藏，请核对当前草稿后重新分析。','Input atau senario berubah semasa analisis. Hasil lama disembunyikan; semak draf sebelum menganalisis semula.'));
+    }
+  },[runComplete,recovery,state.hr,state.scenario,nav,t,toast]);
   const update=(patch:Partial<Organization>)=>setDraft(current=>({...current,...patch,revision:current.revision+1}));
   const updatePerson=(i:number,p:Person)=>update({people:org.people.map((item,index)=>index===i?p:item)});
   const addPerson=()=>{const n=org.people.length+1;let id=`EMP-${String(n).padStart(3,'0')}`,i=n;while(org.people.some(p=>p.id===id)){id=`EMP-${String(++i).padStart(3,'0')}`;}update({people:[...org.people,{id,department:org.departments?.[0]?.name||'',skills:[],known:false,role:'',traits:'',aspiration:'',hours:4,courses:'',interests:'',notes:'',year:'',target:''}]});setActive(org.people.length);};
-  function review(){const errors=validatePeople(org,false);if(errors.length){setError(t('Complete the organization name and each department name, responsibility, status and challenge. Goals and target skills are optional. Any employee records must also be valid.','请填写机构名称及各部门名称、职责、状态和挑战。目标与目标技能为选填；已添加的员工资料仍需有效。','Lengkapkan nama organisasi, nama jabatan, tanggungjawab, status dan cabaran. Matlamat dan kemahiran sasaran adalah pilihan. Rekod pekerja juga mesti sah.'));return;}setError('');setBusy(true);setState(s=>({...s,hr:{...org,clientWorkspaceId:org.clientWorkspaceId||crypto.randomUUID()},hrProfileSaved:true}));setBusy(false);setEditing(false);toast(t('Team profile saved. Review the department plan again after input changes.','团队资料已保存；输入更新后请重新核对部门规划。','Profil pasukan disimpan. Semak semula perancangan jabatan selepas perubahan.'));}
-  async function reviewPlan(){
+  function review(){const errors=validatePeople(org,false);if(errors.length){setError(t('Complete the organization name and each department name, responsibility, status and challenge. Goals and target skills are optional. Any employee records must also be valid.','请填写机构名称及各部门名称、职责、状态和挑战。目标与目标技能为选填；已添加的员工资料仍需有效。','Lengkapkan nama organisasi, nama jabatan, tanggungjawab, status dan cabaran. Matlamat dan kemahiran sasaran adalah pilihan. Rekod pekerja juga mesti sah.'));return;}setError('');setBusy(true);setState(s=>({...s,hr:saveHrDraft(s.hr,{...org,clientWorkspaceId:org.clientWorkspaceId||crypto.randomUUID()}),hrProfileSaved:true}));setBusy(false);setEditing(false);toast(t('Team profile saved. Review the department plan again after input changes.','团队资料已保存；输入更新后请重新核对部门规划。','Profil pasukan disimpan. Semak semula perancangan jabatan selepas perubahan.'));}
+  async function reviewPlan(override?:Organization){
     if(analysisInFlight.current)return;
     if(!state.hrProfileSaved){setError(t('Create and save a team profile before reviewing a department plan.','请先创建并保存团队资料，再审核部门规划。','Cipta dan simpan profil pasukan sebelum menyemak pelan jabatan.'));return;}
-    const errors=validatePeople(state.hr,false);
+    const current=override??state.hr;
+    if(current.hrRecovery){setRecoveryOpen(true);return;}
+    const errors=validatePeople(current,false);
     if(errors.length){setError(t('Complete the organization and department fields before saving a planning version.','请先补齐机构与部门资料，再保存规划版本。','Lengkapkan maklumat organisasi dan jabatan sebelum menyimpan versi perancangan.'));return;}
-    const current=state.hr;
-    const requestedScenario=state.scenario;
-    const requestedWorkspaceId=current.workspaceId;
-    const requestedClientWorkspaceId=current.clientWorkspaceId;
-    if(!requestedClientWorkspaceId){setError(t('Reload the team profile before analyzing.','分析前请重新载入团队资料。','Muat semula profil pasukan sebelum menganalisis.'));return;}
-    const version={version:(current.planningVersions?.length||0)+1,createdAt:new Date().toISOString(),organizationGoals:[...(current.goals||[])],skills:[...current.needs],departments:structuredClone(current.departments||[]),budget:current.budget,weeks:current.weeks};
+    if(!current.clientWorkspaceId){setError(t('Reload the team profile before analyzing.','分析前请重新载入团队资料。','Muat semula profil pasukan sebelum menganalisis.'));return;}
     analysisInFlight.current=true;
     setError('');setBusy(true);
-    if(!isDemo)setState(s=>({...s,hr:beginHrAnalysis(s.hr)}));
     try{
       if(isDemo){
+        const version={version:(current.planningVersions?.length||0)+1,createdAt:new Date().toISOString(),organizationGoals:[...(current.goals||[])],skills:[...current.needs],departments:structuredClone(current.departments||[]),budget:current.budget,weeks:current.weeks};
         setState(s=>({...s,hr:{...s.hr,planningVersions:[...(s.hr.planningVersions||[]),version],analyzedRevision:s.hr.revision}}));
         toast(t('Local department plan saved. No AI analysis was generated.','部门规划草案已保存在本地；没有生成 AI 分析。','Draf perancangan jabatan disimpan secara setempat. Tiada analisis AI dijana.'));
+        nav('/organization/hr/dashboard');
       }else{
-        const result=await api.organization(current,'hr',requestedScenario,state.locale);
-        const analysis=result.analysis?.mode==='hr'?result.analysis:null;
-        if(!analysis)throw new Error(t('The HR service returned an unexpected response.','HR 服务返回了不符合预期的结果。','Perkhidmatan HR mengembalikan respons tidak dijangka.'));
-        if(requestedWorkspaceId&&analysis.workspaceId!==requestedWorkspaceId)throw new Error(t('The HR service returned an analysis for another workspace. Review the current team before retrying.','HR 服务返回了其他工作区的分析；重试前请核对当前团队。','Perkhidmatan HR memulangkan analisis ruang kerja lain. Semak pasukan semasa sebelum mencuba lagi.'));
-        const inputsChanged=latestState.current.hr.revision!==current.revision||latestState.current.scenario!==requestedScenario||latestState.current.hr.workspaceId!==requestedWorkspaceId||latestState.current.hr.clientWorkspaceId!==requestedClientWorkspaceId;
-        setState(s=>({...s,hr:applyHrAnalysisResponse(s.hr,s.scenario,current.revision,requestedScenario,requestedWorkspaceId,requestedClientWorkspaceId,analysis,result.meta,version)}));
-        if(inputsChanged){
-          setError(t('Team inputs changed while analysis was running. Review the current workspace, revision and scenario before retrying.','分析期间团队资料已变更；重试前请核对当前工作区、版本和情景。','Maklumat pasukan berubah semasa analisis. Semak ruang kerja, versi dan senario semasa sebelum mencuba lagi.'));
-          return;
-        }
-        toast(t('Deterministic HR analysis updated. Human review is still required.','确定性 HR 分析已更新，仍需人工审核。','Analisis HR deterministik dikemas kini. Semakan manusia masih diperlukan.'));
+        const result=await runHrAnalysis({...state,hr:current},setState,async (team,scenario,locale)=>{
+          const response=await api.organization(team,'hr',scenario,locale);
+          return {analysis:response.analysis?.mode==='hr'?response.analysis:null,meta:response.meta};
+        });
+        if(result.kind==='received' && result.request)setRunComplete(result.request);
+        else if(result.kind==='conflict'||result.kind==='unknown')setRecoveryOpen(true);
       }
-      nav('/organization/hr/dashboard');
     }catch(e){
-      if(e instanceof ApiError&&e.status===409)setError(t('This HR workspace revision is stale. Reload the latest workspace or start a new analysis before retrying.','此 HR 工作区版本已过期；请载入最新版或新建分析后重试。','Versi ruang kerja HR telah lapuk. Muat versi terkini atau mulakan analisis baharu.'));
-      else setError((e as Error).message);
+      setError((e as Error).message);
     }finally{analysisInFlight.current=false;setBusy(false);}
   }
+  function confirmNewWorkspace(){
+    if(analysisInFlight.current || !state.hr.hrRecovery || state.hr.hrRecovery.status==='pending')return;
+    const source=editing?{...draft,clientWorkspaceId:state.hr.clientWorkspaceId,workspaceId:state.hr.workspaceId,
+      workspaceRevision:state.hr.workspaceRevision,hrRecovery:state.hr.hrRecovery}:state.hr;
+    if(validatePeople(source,false).length){setError(t('Complete the current draft before creating a new workspace.','创建新工作区前请补齐当前草稿。','Lengkapkan draf semasa sebelum mencipta ruang kerja baharu.'));setConfirmNew(false);return;}
+    const fresh=createHrWorkspaceFromDraft(source);
+    setConfirmNew(false);setRecoveryOpen(false);setEditing(false);setError('');
+    setState(s=>({...s,hr:fresh}));
+    void reviewPlan(fresh);
+  }
+  const recoveryPanel=recovery?<section className="surface department-detail" role="alert">
+    <h2>{t('Workspace revision could not be confirmed.','无法确认工作区版本。','Semakan ruang kerja tidak dapat disahkan.')}</h2>
+    <p>{recovery.status==='pending'
+      ?t('The analysis request is still running. Wait for its result before submitting again.','分析请求仍在进行中；请等待结果，不要重复提交。','Permintaan analisis masih berjalan. Tunggu hasil sebelum menghantar semula.')
+      :t('The previous request may have completed on the server. Your current draft is preserved. Do not retry with the old revision.','先前请求可能已在服务器完成。当前草稿已保留，请勿用旧版本重试。','Permintaan terdahulu mungkin telah selesai di pelayan. Draf semasa dikekalkan; jangan cuba semula dengan versi lama.')}</p>
+    {recovery.status!=='pending'&&(recoveryOpen?<><p>{t('You may keep this draft, or explicitly create a separate workspace. The earlier server workspace will not be deleted.','你可以保留草稿，或明确创建独立的新工作区。旧服务器工作区不会被删除。','Anda boleh menyimpan draf atau mencipta ruang kerja baharu. Ruang kerja lama tidak akan dipadam.')}</p>
+      <div className="form-actions"><button className="button secondary" onClick={()=>setRecoveryOpen(false)}>{t('Keep current draft','保留当前草稿','Simpan draf semasa')}</button><button className="button" onClick={()=>setConfirmNew(true)}>{t('Create a new workspace','创建新工作区','Cipta ruang kerja baharu')}</button></div></>
+      :<button className="button secondary" onClick={()=>setRecoveryOpen(true)}>{t('Resolve workspace revision','处理工作区版本','Selesaikan semakan ruang kerja')}</button>)}
+    {confirmNew&&<Modal title={t('Create a separate workspace?','创建独立工作区？','Cipta ruang kerja berasingan?')} onClose={()=>setConfirmNew(false)}>
+      <p>{t('The previous request may have completed. This creates a new server workspace at revision 1 from your current draft; it does not delete the earlier workspace.','先前请求可能已完成。这会用当前草稿在服务器创建 Revision 1 的新工作区；不会删除旧工作区。','Permintaan terdahulu mungkin selesai. Ini mencipta ruang kerja baharu pada revisi 1 tanpa memadam yang lama.')}</p>
+      <div className="form-actions"><button className="button secondary" onClick={()=>setConfirmNew(false)}>{t('Cancel','取消','Batal')}</button><button className="button" onClick={confirmNewWorkspace}>{t('Confirm new workspace','确认创建新工作区','Sahkan ruang kerja baharu')}</button></div>
+    </Modal>}
+  </section>:null;
   if(!editing)return <><PageHeader title={t('Team profile','团队资料','Profil pasukan')} description={firstTimeTeamProfile?t('Create a profile for your organization and departments.','为机构和部门创建团队资料。','Cipta profil organisasi dan jabatan anda.'):t('Saved organization, department and optional employee information.','已保存的机构、部门和可选员工资料。','Maklumat organisasi, jabatan dan pekerja pilihan yang tersimpan.')} action={<DemoNotice/>}/>
-     <div className="form-actions"><button className="button" onClick={()=>{setDraft(structuredClone(state.hr));setEditing(true);}}>{firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button>{!firstTimeTeamProfile&&<button className="button secondary" disabled={busy} onClick={()=>void reviewPlan()}>{busy?t('Analyzing…','分析中…','Menganalisis…'):t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button>}</div>
-    {error&&<ErrorState message={error} retry={()=>void reviewPlan()}/>}
+     <div className="form-actions"><button className="button" onClick={()=>{setDraft(structuredClone(state.hr));setEditing(true);}}>{firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')}<ArrowRight size={16}/></button>{!firstTimeTeamProfile&&<button className="button secondary" disabled={busy||recovery?.status==='pending'} onClick={()=>void reviewPlan()}>{busy?t('Analyzing…','分析中…','Menganalisis…'):recovery?t('Resolve workspace revision','处理工作区版本','Selesaikan semakan ruang kerja'):t('Review department plan','审核部门规划','Semak perancangan jabatan')}<ArrowRight size={16}/></button>}</div>
+    {recoveryPanel}{error&&<ErrorState message={error} retry={recovery?undefined:()=>void reviewPlan()}/>}
+    {Boolean(state.hr.previousWorkspaceIds?.length)&&<p className="fine-print">{t('Previous server workspaces were not deleted:','旧服务器工作区未删除：','Ruang kerja pelayan terdahulu tidak dipadam:')} {state.hr.previousWorkspaceIds?.join(', ')}</p>}
      {firstTimeTeamProfile&&<div className="surface empty-inline"><p>{t('No team profile has been saved. Create one from your organization and department information, or load the synthetic example in the editor.','尚未保存团队资料。请填写机构与部门信息，或在编辑页主动载入合成示例。','Belum ada profil pasukan disimpan. Isi maklumat organisasi dan jabatan, atau muat contoh sintetik dalam editor.')}</p></div>}
      {!firstTimeTeamProfile&&<>
     {Boolean(org.planningVersions?.length)&&org.analyzedRevision!==org.revision&&<div className="stale-notice"><Info size={18}/><span>{t('Team inputs have changed since the last saved planning view. Review the department plan before relying on it.','团队输入已变化；使用既有部门规划前请重新核对。','Input pasukan berubah sejak paparan perancangan terakhir. Semak semula pelan jabatan.')}</span></div>}
@@ -133,7 +163,7 @@ function HRIntake(){
     <section className="department-workspace"><div className="section-heading"><h2>{t('Department profiles','部门资料','Profil jabatan')}</h2><span className="subtle-tag">{org.departments?.length||0}</span></div>{org.departments?.length?org.departments.map(department=><article className="surface department-card" key={department.id}><h3>{department.name||t('Unnamed department','未命名部门','Jabatan tanpa nama')}</h3><p>{department.responsibilities||t('Responsibilities not provided','尚未填写职责','Tanggungjawab belum diisi')}</p><p className="muted">{department.currentStatus||'—'} · {department.challenges||t('Challenges not provided','尚未填写挑战','Cabaran belum diisi')}</p><p className="muted">{t('Reported headcount','申报人数','Jumlah dilaporkan')}: {department.headcount}</p></article>):<div className="empty-inline">{t('No departments saved yet.','尚未保存部门资料。','Belum ada jabatan tersimpan.')}</div>}</section>
      <section className="surface department-detail"><h2>{t('Optional employee profiles','可选员工资料','Profil pekerja pilihan')}</h2>{org.people.length?org.people.map(person=><div className="evidence-person" key={person.id}><strong>{person.id} · {person.department||t('Department not recorded','未记录部门','Jabatan belum direkodkan')}</strong><span>{person.role||t('Role not recorded','未记录岗位','Jawatan belum direkodkan')} · {person.known?person.skills.map(id=>skillNames[id]?copy(skillNames[id]):id).join(', '):t('Baseline not recorded','尚未记录技能基础','Asas belum direkodkan')}</span></div>):<p className="muted">{t('No employee records saved. Department planning can continue without them.','尚未保存员工资料；仍可仅凭部门资料继续规划。','Tiada rekod pekerja. Perancangan jabatan boleh diteruskan.')}</p>}</section></>}
   </>;
-   return <><PageHeader title={firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')} description={t('Record departments and optional anonymous employees. Changes remain a draft until you save.','记录部门与可选匿名员工；保存前的修改仅在草稿中。','Rekod jabatan dan pekerja pilihan. Perubahan kekal sebagai draf sehingga disimpan.')} action={<DemoNotice/>}/><OrgFlow school={false} step={0}/>{error&&<ErrorState message={error} retry={()=>setError('')}/>}
+   return <><PageHeader title={firstTimeTeamProfile?t('Create team profile','创建团队资料','Cipta profil pasukan'):t('Edit team profile','编辑团队资料','Edit profil pasukan')} description={t('Record departments and optional anonymous employees. Changes remain a draft until you save.','记录部门与可选匿名员工；保存前的修改仅在草稿中。','Rekod jabatan dan pekerja pilihan. Perubahan kekal sebagai draf sehingga disimpan.')} action={<DemoNotice/>}/><OrgFlow school={false} step={0}/>{recoveryPanel}{error&&<ErrorState message={error} retry={()=>setError('')}/>}
     <section className="surface org-settings"><div className="section-heading"><div><h2>{t('Organization profile','机构资料','Profil organisasi')}</h2><p className="muted">{t('This local workspace is saved in this browser; do not enter sensitive employee data.','此工作空间保存在当前浏览器中，请勿填写敏感员工资料。','Ruang kerja ini disimpan dalam pelayar ini; jangan masukkan data pekerja sensitif.')}</p></div><button className="text-button" onClick={()=>{update(newHrDraftFromSample());setActive(0);toast(t('Synthetic example loaded into this draft','合成示例已载入当前草稿','Contoh sintetik dimuatkan ke draf ini'));}}>{t('Load synthetic example','载入合成示例','Muat contoh sintetik')}</button></div><div className="field-grid"><Field label={t('Organization name *','机构名称 *','Nama organisasi *')}><input value={org.name} onChange={e=>update({name:e.target.value})}/></Field><Field label={t('Sector / context','行业／背景','Sektor / konteks')}><input value={org.sector} onChange={e=>update({sector:e.target.value})}/></Field></div><div className="field goal-field"><span>{t('Organization goals (optional)','机构目标（选填）','Matlamat organisasi (pilihan)')}</span><GoalsEditor value={org.goals||[]} onChange={goals=>update({goals})}/></div><h3>{t('Skills to support across departments','各部门需要发展的技能','Kemahiran untuk disokong merentas jabatan')}</h3><SkillsEditor value={org.needs} onChange={needs=>update({needs})}/><div className="field-grid"><Field label={t('Training budget (MYR)','培训预算（MYR）','Bajet latihan (MYR)')}><input type="number" min="0" value={org.budget} onChange={e=>update({budget:Math.max(0,e.target.valueAsNumber||0)})}/></Field><Field label={t('Planning horizon (weeks)','规划周期（周）','Tempoh perancangan (minggu)')}><input type="number" min="1" max="52" value={org.weeks} onChange={e=>update({weeks:Math.max(1,e.target.valueAsNumber||1)})}/></Field></div></section>
     <DepartmentEditor value={org.departments||[]} onChange={departments=>update({departments})}/>
     <details className="optional-employee-section"><summary className="section-heading" style={{cursor:'pointer',listStyle:'none',display:'flex',alignItems:'center'}}><h2>{t('Optional employee profiles','可选员工资料','Profil pekerja pilihan')}</h2><ChevronRight size={20}/></summary><div className="section-heading"><div><p className="muted">{t('You can continue with department summaries alone. Add anonymous employees only when person-level analysis is needed.','仅使用部门摘要也可以继续；只有需要个人层级分析时才添加匿名员工资料。','Anda boleh teruskan dengan ringkasan jabatan sahaja. Tambah pekerja tanpa nama hanya jika analisis individu diperlukan.')}</p><span className="count">{org.people.length}</span></div><button className="button secondary" onClick={addPerson}>+ {t('Add employee','新增员工','Tambah pekerja')}</button></div><EmployeeCsvImport employees={org.people} departments={(org.departments||[]).map(d=>d.name)} onImport={people=>update({people:[...org.people,...people]})}/>{org.people.map((person,index)=><article className="surface employee-profile-card" key={person.id}><PersonEditor person={person} school={false} departments={(org.departments||[]).map(d=>d.name)} onChange={p=>updatePerson(index,p)}/><button className="text-button danger" onClick={()=>{update({people:org.people.filter((_,i)=>i!==index)});setActive(Math.max(0,index-1));}}>{t('Remove employee profile','移除员工资料','Buang profil pekerja')}</button></article>)}</details>

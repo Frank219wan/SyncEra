@@ -1,5 +1,5 @@
 import {emptyHr,hrSample} from './data.ts';
-import type {DepartmentPlanVersion,HRAnalysis,Organization,OrganizationAnalysis,Scenario,ServiceMeta} from './types.ts';
+import type {DepartmentPlanVersion,HRAnalysis,HrRequestIdentity,Organization,OrganizationAnalysis,Scenario,ServiceMeta} from './types.ts';
 
 export function hrAnalysisView(org: Organization, scenario: Scenario, demo: boolean): 'demo' | 'connected' | 'needs_analysis' {
   if (demo) return 'demo';
@@ -20,26 +20,62 @@ export function studentAnalysisView(org: Organization, scenario: Scenario, demo:
 export function newHrDraftFromSample(): Organization {
   return {...structuredClone(hrSample),clientWorkspaceId:crypto.randomUUID(),
     workspaceId:undefined,workspaceRevision:undefined,hrAnalysis:null,analysisMeta:null,
-    analyzedRevision:0,planningVersions:[]};
+    hrRecovery:null,hrLastOperationId:undefined,previousWorkspaceIds:[],analyzedRevision:0,planningVersions:[]};
 }
 
-export function beginHrAnalysis(org: Organization): Organization {
+export function beginHrAnalysis(org: Organization, request?: HrRequestIdentity): Organization {
   // A failed refresh must not leave the previous server analysis visible.
   // Keep the workspace CAS token so a retry updates the same workspace.
-  return {...org,hrAnalysis:null,analysisMeta:null};
+  if(request && (org.clientWorkspaceId!==request.clientWorkspaceId || org.workspaceId!==request.workspaceId || org.workspaceRevision!==request.workspaceRevision)) return org;
+  return {...org,hrAnalysis:null,analysisMeta:null,hrRecovery:request?{status:'pending',request}:org.hrRecovery};
 }
 
-export function applyHrAnalysisResponse(org: Organization, scenario: Scenario, requestedRevision: number, requestedScenario: Scenario, requestedWorkspaceId: string | undefined, requestedClientWorkspaceId: string | undefined, analysis: HRAnalysis, meta: ServiceMeta, version: DepartmentPlanVersion): Organization {
+export function markHrResultUnknown(org:Organization,request:HrRequestIdentity,status:'unknown'|'conflict'):Organization {
+  if(org.clientWorkspaceId!==request.clientWorkspaceId || org.workspaceId!==request.workspaceId
+    || org.hrRecovery?.request.operationId!==request.operationId) return org;
+  return {...org,hrAnalysis:null,analysisMeta:null,hrRecovery:{status,request}};
+}
+
+export function createHrWorkspaceFromDraft(org:Organization):Organization {
+  return {...org,clientWorkspaceId:crypto.randomUUID(),
+    previousWorkspaceIds:org.workspaceId?[...new Set([...(org.previousWorkspaceIds||[]),org.workspaceId])]:org.previousWorkspaceIds,
+    workspaceId:undefined,workspaceRevision:undefined,hrAnalysis:null,analysisMeta:null,
+    analyzedRevision:0,planningVersions:[],hrRecovery:null,hrLastOperationId:undefined};
+}
+
+export function saveHrDraft(current:Organization,draft:Organization):Organization {
+  if(current.clientWorkspaceId!==draft.clientWorkspaceId)return draft;
+  // An edit opened before a response must never restore its old CAS token or
+  // remove an in-flight/uncertain marker. The edited inputs remain the draft.
+  return {...draft,revision:Math.max(draft.revision,current.revision+1),
+    workspaceId:current.workspaceId,workspaceRevision:current.workspaceRevision,
+    hrRecovery:current.hrRecovery,hrLastOperationId:current.hrLastOperationId,
+    previousWorkspaceIds:current.previousWorkspaceIds,
+    planningVersions:current.planningVersions,analyzedRevision:current.analyzedRevision,
+    hrAnalysis:null,analysisMeta:null};
+}
+
+export function hrRecoveryNeeded(org:Organization):boolean {
+  return org.hrRecovery?.status==='unknown'||org.hrRecovery?.status==='conflict';
+}
+
+export function applyHrAnalysisResponse(org: Organization, scenario: Scenario, request:HrRequestIdentity, analysis: HRAnalysis, meta: ServiceMeta, version: DepartmentPlanVersion): Organization {
   // A response from another workspace must not replace this workspace's CAS identity.
   // The local identity also protects the first request, before a server workspace ID exists.
-  if (!requestedClientWorkspaceId || org.clientWorkspaceId !== requestedClientWorkspaceId
-    || org.workspaceId !== requestedWorkspaceId || (requestedWorkspaceId && analysis.workspaceId !== requestedWorkspaceId)) return org;
-  const current=org.revision===requestedRevision && scenario===requestedScenario;
+  if (!request.clientWorkspaceId || org.clientWorkspaceId !== request.clientWorkspaceId
+    || org.workspaceId !== request.workspaceId || org.workspaceRevision!==request.workspaceRevision
+    || (org.hrRecovery && org.hrRecovery.request.operationId!==request.operationId)
+    || analysis.mode!=='hr' || analysis.scenario!==request.scenario
+    || !analysis.workspaceId || (request.workspaceId && analysis.workspaceId!==request.workspaceId)
+    || !Number.isSafeInteger(analysis.workspaceRevision)
+    || analysis.workspaceRevision!==(request.workspaceRevision??0)+1) return org;
+  const current=org.revision===request.revision && scenario===request.scenario;
   // The server may already have committed an analysis when local inputs change.
   // Retain its CAS token for the same workspace, but hide its stale result.
-  return {...org,workspaceId:analysis.workspaceId,workspaceRevision:analysis.workspaceRevision,
+  return {...org,workspaceId:analysis.workspaceId,workspaceRevision:analysis.workspaceRevision,hrRecovery:null,
+    hrLastOperationId:request.operationId,
     hrAnalysis:current?analysis:null,analysisMeta:current?meta:null,
-    analyzedRevision:current?requestedRevision:org.analyzedRevision,
+    analyzedRevision:current?request.revision:org.analyzedRevision,
     planningVersions:current?[...(org.planningVersions||[]),version]:org.planningVersions};
 }
 
@@ -72,5 +108,8 @@ export function restoreHr(saved: Partial<Organization> | undefined, savedFlag: u
     return sampleDepartment?structuredClone(sampleDepartment):{id:`migrated-dept-${index+1}`,name,responsibilities:'',currentStatus:'',challenges:'',goals:[],headcount:people.filter(person=>person.department?.trim()===name).length};
   });
   const goals=Array.isArray(previous.goals)&&(previous.goals.length>0||!sampleWorkspace)?previous.goals:(sampleWorkspace?hrSample.goals||[]:[]);
-  return {hr:{...emptyHr,...previous,people,departments,goals,clientWorkspaceId:previous.clientWorkspaceId||crypto.randomUUID()},hrProfileSaved:true};
+  const recovery=previous.hrRecovery?.status==='pending'
+    ? {...previous.hrRecovery,status:'unknown' as const}:previous.hrRecovery;
+  return {hr:{...emptyHr,...previous,people,departments,goals,hrRecovery:recovery,
+    clientWorkspaceId:previous.clientWorkspaceId||crypto.randomUUID()},hrProfileSaved:true};
 }

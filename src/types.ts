@@ -41,6 +41,13 @@ export interface DepartmentPlanVersion {
   version: number; createdAt: string; organizationGoals: string[]; skills: string[];
   departments: Department[]; budget: number; weeks: number;
 }
+export interface HrRequestIdentity {
+  clientWorkspaceId: string; workspaceId?: string; workspaceRevision?: number;
+  revision: number; scenario: Scenario; operationId: string;
+}
+export interface HrRecovery {
+  status: 'pending' | 'unknown' | 'conflict'; request: HrRequestIdentity;
+}
 export interface Organization {
   name: string; sector: string; needs: string[]; budget: number; weeks: number;
   people: Person[]; selected: string[]; revision: number; analyzedRevision: number;
@@ -48,6 +55,9 @@ export interface Organization {
   departments?: Department[]; goals?: string[]; planningVersions?: DepartmentPlanVersion[];
   workspaceId?: string; workspaceRevision?: number;
   clientWorkspaceId?: string;
+  hrRecovery?: HrRecovery | null;
+  hrLastOperationId?: string;
+  previousWorkspaceIds?: string[];
   analysis?: OrganizationAnalysis | null; analysisMeta?: ServiceMeta | null;
   hrAnalysis?: HRAnalysis | null;
 }
