@@ -1,6 +1,6 @@
 # Organization B1/B2 Protected Preview 验收记录
 
-更新：2026-10-24。**真实 Cloud 主链路先前已 PASS；整体受保护 Preview 验收：BLOCKED，ACCEPTED = NO。** ORG-FE-001／002 的修复已在独立工作区实现并经本地测试；最终 SHA 的 Cloud 故障、重试和旧分析失效尚待验收。Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
+更新：2026-10-24。**真实 Cloud 主链路先前已 PASS；整体受保护 Preview 验收：BLOCKED，ACCEPTED = NO。** ORG-FE-001／002 的修复已在独立工作区实现、提交并经本地及 CI 测试。同一代码 SHA 的双端 Preview 已部署且同源 Health 200；当前修复版本的 B1/B2 旧分析失效、网络故障、重试和真实 Backend 故障尚未完成浏览器验收。Vercel Function 日志可查时间范围有限。下表只记录实际完成的检查。
 
 ## 本轮 B2 收尾修复（待最终 Cloud 验收）
 
@@ -11,9 +11,21 @@
 | 本地 Frontend QA | 新增六项 B2 状态回归：6/6 PASS；全套 96/96 PASS。Real 模式本地构建、TypeScript PASS。 |
 | Backend／Cross-stack | Backend 全套 159 passed、4 skipped；Cross-stack 4/4 PASS。均使用合成输入与确定性适配器，未访问 Neon 或付费 AI。 |
 | 队友 Offline QA Patch | 本轮未找到可独立核验的本地 Patch 或 Commit；上述六项为当前工作区新增测试，不能冒称已导入队友的两个失败测试。 |
-| 独立代码审查 | Reviewer 提出的 CAS token 丢失已修复并复核；另指出首次分析期间显式重置的并发边界，本轮在请求忙碌时禁用重载示例数据。此项需最终复核。 |
+| 独立代码审查 | 独立 Reviewer 对最终代码 SHA `d76afe9…` 复核通过，无 P0/P1 阻塞；提出的 CAS token 丢失已修复，首次分析期间禁用示例数据重载。该结论是代码审查，不等于 GitHub 正式 Approval。 |
 
-**本轮最终 Preview 部署、GitHub CI、浏览器网络拦截、真实 Backend 故障和 Function 日志审计尚不能根据上述本地结果标记 PASS。**
+**本轮双端 Preview Ready、GitHub CI 与同源 Health 已验证。浏览器网络拦截、真实 Backend 故障和完整 Function 日志审计仍不能标记 PASS。**
+
+## 本轮最终代码 SHA 的验收增量
+
+| 项目 | 结果与证据 |
+| --- | --- |
+| 提交与 CI | `feature/organization-b1-hr` 的修复代码 SHA `d76afe947787bd0cd0a7b1747159cb00f3b112f4` 已推送至 PR #37；GitHub `integrated` Check 对该 SHA 为 `completed/success`，Frontend／Backend Vercel 状态均 `success`。本报告后续文档提交会产生更晚 PR SHA；需单独核对该 SHA 的 CI。 |
+| 双端受保护 Preview | Frontend `dpl_BiSToeVKKhREM1w3mNGvYtzTYV9K`、Backend `dpl_B9Tsb5MVCaranbQWzuzMFjNReoHj` 均 Ready，均由上述 Git-ref SHA 部署，仅 Preview；Frontend 同源 `GET /api/v1/health` 返回 FastAPI 200 JSON。此前 B1/B2 Cloud 主链路的通过记录属于较早的 `f5a995c…` 版本。 |
+| 本地与 CI QA | 新增 B2 状态测试 6/6 PASS，Frontend 全套 96/96 PASS，TypeScript 与 Real 模式 Build PASS；Backend 159 passed、4 skipped；Cross-stack 4/4 PASS。独立工作区的 `corepack pnpm test` 因复制的 `node_modules` 在非 TTY 下被 pnpm 拒绝清理而未直接完成；按 `package.json` 的同一 Node 测试命令执行通过，GitHub `integrated` Check 成功。 |
+| JS 凭据标记扫描 | 对本轮 Real 模式构建的全部 Frontend JS（1 个文件）扫描：未发现 Bypass Header 名、服务端 Secret 环境变量名、`DATABASE_URL`、Backend 分支 Alias 或 Neon 域名。该扫描只证明检查范围内未发现这些标记，不证明完整日志历史无泄漏。 |
+| 当前 Cloud UI | 浏览器控制在进入本次 UI 回归时返回 `Local browser use is disabled in Work settings`，且禁止自动化操作 ChatGPT 应用设置。未完成本 SHA 的 B1/B2 Revision、Scenario、无分析空状态、超时／500／断网、恢复后重试验证。不能借用旧版本结果。 |
+| Function Logs | Vercel CLI 对 `--since 8h` 和 `1h` 返回超出可用保留窗口；`--since 10m` 可查。UTC 2026-10-24 01:08:06–01:18:06 的新部署日志中，Frontend 和 Backend 各有一次 `GET /api/v1/health` HTTP 200，请求日志可见；该窗口两端 Runtime Log 均为 0 条。只审核了该 10 分钟窗口的结构化元数据，历史与其他请求的 Secret Redaction 为 `NOT VERIFIED`。 |
+| Cloud 故障验证 | Browser Network Interception：`NOT VERIFIED`；Actual Backend Failure：`NOT VERIFIED`。未关闭 Authentication、未使用 Production 故障注入。 |
 
 ## 版本与安全边界
 
@@ -21,7 +33,7 @@
 | --- | --- |
 | 核对的 `origin/main` | `199523f0a48dc1a25588371f7cb44fde3588f79e` |
 | PR #36 | `feature/organization-mvp`，`17b75f16ac64336909c0743aa0262eb52a05ff47` |
-| Cloud 部署源代码 | PR #37 `feature/organization-b1-hr`，`f5a995c0d06a132c67d7f2bdb88ad8912202abba`；本报告后续提交只改文档，不代表重新部署 |
+| Cloud 部署源代码 | 当前双端部署 `d76afe947787bd0cd0a7b1747159cb00f3b112f4`；以下较早的全链路证据属于 `f5a995c0d06a132c67d7f2bdb88ad8912202abba`，不能代表修复版本的全部 UI 验收；本报告后续提交只改文档，不代表重新部署 |
 | Production | 本轮未部署或修改 Production、main、Production 环境变量或数据库；两个 `git.deploymentEnabled=false` 保持不变 |
 | 数据边界 | 仅虚构组织、学生与合成角色资料；未启用付费 MiniMax 或未审查 DOSM 数据导入；不能将合成结果称为已核实市场事实 |
 
@@ -45,7 +57,7 @@
 | 并发 CAS、409、Mode 隔离 | PASS | 两个并发更新仅一个成功；旧 Revision 返回 `REVISION_CONFLICT`；B1／B2 独立。Cloud 两种模式也分别验证 Revision 1→2→旧 Revision 409。 |
 | 精确清理 | PASS | 按本轮六个已知合成 Workspace ID 清理其记录及 7 条分析；四张 Organization 表最终各 0 行，`profiles=11`、`career_analysis_calls=0`，与测试前基线一致。未删除未知记录。 |
 
-## Phase 3：受保护 Vercel Preview
+## Phase 3：受保护 Vercel Preview（下表为较早的 `f5a995c…` 全链路验收）
 
 | 检查 | 状态 | 证据 |
 | --- | --- | --- |
@@ -56,7 +68,7 @@
 | Preview-only WAF | PASS | Backend 规则 `org-preview-api-rate-limit` 同时限定精确分支 Alias 与 `/api/v1/`，每 IP 60 秒 10 次，动作 429；已发布。12 次受控授权 Health 请求：10×200、2×429；Vercel Firewall Traffic 显示该规则 `Rate Limited 2`，非 Proxy 内存限流。精确 Host 条件排除 Production Host。 |
 | 凭据可见性 | PASS（已检查范围） | 扫描已部署 Frontend JS bundle：未见 Bypass Secret 变量名／Header、`DATABASE_URL`、Neon Host 或 Backend Alias；浏览器请求保持同源。未输出或提交 Secret。近期 Vercel 日志仅返回有限元数据，完整 Function 日志历史审计为 `NOT VERIFIED`。 |
 
-## Phase 4：Frontend → Proxy → FastAPI → Neon
+## Phase 4：Frontend → Proxy → FastAPI → Neon（较早的 `f5a995c…` 验收）
 
 下列请求通过同一 `f5a995c…` Preview 版本和 Frontend 同源 `/api/v1/*`；Neon 用新 TLS 连接按精确合成 ID 回读。响应标记 `data_label=synthetic_demo`、`is_mock=true`：HTTP、计算和数据库持久化是真实链路，角色目录和输入是合成资料。
 
@@ -78,11 +90,27 @@
 | 项目 | 结果 |
 | --- | --- |
 | `corepack pnpm install --frozen-lockfile` | PASS，依赖已是最新 |
-| `corepack pnpm test` | PASS，89 passed、0 failed |
+| `corepack pnpm test` | 较早部署版本 PASS，89 passed、0 failed；本轮修复版本直接运行同一 Node 测试命令 96/96 PASS，`corepack pnpm test` 在隔离工作区受 pnpm 非 TTY `node_modules` 清理限制 |
 | `corepack pnpm exec tsc -b` | PASS |
 | `VITE_API_MODE=real corepack pnpm run build` | PASS |
 | Backend `python -m pytest tests -q` | PASS，159 passed、4 skipped；真实 PostgreSQL 专项另为 2 passed 和 11 passed |
-| GitHub CI | #36 最新 SHA 的四项 Check 成功；#37 部署 SHA 的 integrated Check 和两个 Vercel 状态成功。报告新 SHA 必须重新核对，不能借用旧结果。 |
-| 独立 Reviewer Approval | NOT VERIFIED；PR #36／#37 均未合并 |
+| GitHub CI | #36 已核对 SHA 的四项 Check 成功；#37 修复代码 SHA `d76afe9…` 的 `integrated` Check、两个 Vercel 部署状态均成功。文档新 SHA 的 CI 须另行核对。 |
+| 独立 Reviewer | 对修复代码 SHA `d76afe9…` 的独立代码复核 PASS；GitHub 正式 Approval：NOT VERIFIED；PR #36／#37 均未合并 |
+
+## 最终判定矩阵
+
+| 验收项 | 判定 |
+| --- | --- |
+| ORG-FE-001／ORG-FE-002 | 本地与代码审查 PASS；当前修复 SHA 的受保护 Cloud UI NOT VERIFIED |
+| FRONTEND QA／BACKEND QA | 96/96 PASS；159 passed、4 skipped；Cross-stack 4/4 PASS |
+| B1 CLOUD REGRESSION／B2 CLOUD REGRESSION | 旧 SHA 主链路 PASS；当前修复 SHA 的目标 UI 回归 NOT VERIFIED |
+| NO DEMO FALLBACK／STALE REVISION／SCENARIO INVALIDATION | 本地状态及界面检查 PASS；当前修复 SHA 的 Cloud UI NOT VERIFIED |
+| NETWORK FAILURE／RETRY | Browser Network Interception NOT VERIFIED |
+| ACTUAL BACKEND FAILURE | NOT VERIFIED |
+| FUNCTION LOG AUDIT／SECRET REDACTION | 本轮可得 10 分钟请求元数据检查完成，Runtime Log 0 条；JS 标记扫描通过；完整历史与故障响应日志 NOT VERIFIED |
+| INDEPENDENT REVIEW | 独立代码审查 PASS；GitHub Approval NOT VERIFIED |
+| NEON／SSO／WAF PREVIOUS ACCEPTANCE | 较早 SHA 通过，本轮未重复迁移、WAF 压测或 Neon 写入；新 SHA 的这些项目未重验 |
+| PRODUCTION UNCHANGED | PASS（本轮未修改 Production、main 或 Production 数据／环境） |
+| PROTECTED PREVIEW ACCEPTED／READY TO MERGE #36／READY TO MERGE #37 | NO／NO／NO |
 
 **整体状态：BLOCKED；PROTECTED PREVIEW ACCEPTED = NO；READY TO MERGE #36 = NO；READY TO MERGE #37 = NO；PRODUCTION RELEASED = NO。** 后续须在维持双端 Authentication、Preview 隔离与无付费调用的条件下，完成受控故障 UI 验证、可得范围内的 Function 日志审核及独立 Reviewer Approval，再由部署负责人决定是否合并。
