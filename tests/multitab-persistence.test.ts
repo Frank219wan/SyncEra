@@ -4,7 +4,7 @@ import {emptyProfile,hrSample,tvetSample} from '../src/data.ts';
 import {createHrWorkspaceFromDraft,hrAnalysisView,restoreHr,studentAnalysisView} from '../src/hrState.ts';
 import {runHrAnalysis} from '../src/hrAnalysisFlow.ts';
 import {STORAGE_KEY} from '../src/individual-state.ts';
-import {HR_STORAGE_KEY,readCanonicalHr,TabPersistence,type LocksPort,type StoragePort} from '../src/multitabPersistence.ts';
+import {HR_EDITOR_LOCK,HR_STORAGE_KEY,isHrEditorRoute,readCanonicalHr,TabPersistence,type LocksPort,type StoragePort} from '../src/multitabPersistence.ts';
 import type {AppState,HRAnalysis,Organization} from '../src/types.ts';
 
 class SharedStorage implements StoragePort {
@@ -33,13 +33,22 @@ function state(revision=2):AppState {
     hrProfileSaved:true,tvet:structuredClone(tvetSample)};
 }
 const tick=()=>new Promise<void>(resolve=>setImmediate(resolve));
+test('only B1 work pages claim the editor lock',()=>{
+  for(const path of ['/organization/hr/intake','/organization/hr/heatmap','/organization/hr/mobility',
+    '/organization/hr/training','/organization/hr/dashboard','/organization/hr/department/synthetic'])
+    assert.equal(isHrEditorRoute(path),true,path);
+  for(const path of ['/','/individual','/individual/intake/start','/organization/tvet/students',
+    '/organization/hr/about','/organization','/organization/hr/intake/extra'])
+    assert.equal(isHrEditorRoute(path),false,path);
+});
 function fixture(initial=state()) {
   const storage=new SharedStorage(),locks=new SharedLocks();
   storage.setItem(STORAGE_KEY,JSON.stringify({schema:1,state:initial}));
-  const make=(snapshot:AppState)=>{
+  const make=(snapshot:AppState,onHrRoute=true)=>{
     const statuses:string[]=[];
     const tab=new TabPersistence(snapshot,storage,locks,status=>statuses.push(status));
     tab.start();
+    if(onHrRoute)tab.setHrRoute(true);
     return {tab,statuses};
   };
   return {storage,locks,make};
@@ -182,4 +191,67 @@ test('an external scenario change stops a stale B1 analysis before HTTP',async()
   assert.equal(result.kind,'busy');assert.equal(calls,0);
   assert.equal(readCanonicalHr(f.storage)?.hr.workspaceRevision,2);
   a.tab.close();b.tab.close();
+});
+
+test('Home, Individual and B2 tabs never claim the B1 lock; B1 navigation and tab close release it',async()=>{
+  const f=fixture();
+  const home=f.make(state(),false);
+  await tick();
+  assert.equal(home.tab.status,'inactive');
+  assert.equal(f.locks.held.has(HR_EDITOR_LOCK),false);
+  const b1=f.make(state());await tick();
+  assert.equal(b1.tab.status,'active');
+  await b1.tab.persist(state());
+  await home.tab.persist({...state(),profile:{...state().profile,occupation:'Synthetic Individual edit'},
+    tvet:{...state().tvet,name:'Synthetic B2 edit'}});
+  assert.equal(b1.tab.status,'active');
+  assert.equal(readCanonicalHr(f.storage)?.hr.workspaceRevision,2);
+  home.tab.setHrRoute(true);await tick();
+  assert.equal(home.tab.status,'blocked');
+  home.tab.setHrRoute(false);
+  assert.equal(home.tab.status,'inactive');
+  b1.tab.setHrRoute(false);await tick();
+  assert.equal(f.locks.held.has(HR_EDITOR_LOCK),false);
+  home.tab.setHrRoute(true);await tick();
+  assert.equal(home.tab.status,'conflict');
+  home.tab.acceptLatest();assert.equal(home.tab.status,'active');
+  home.tab.close();await tick();
+  b1.tab.setHrRoute(true);await tick();
+  assert.equal(b1.tab.status,'active');
+  b1.tab.close();
+});
+
+test('navigation during a pending B1 request retains lock until a confirmed outcome is persisted',async()=>{
+  const f=fixture();const a=f.make(state()),b=f.make(state(),false);await tick();
+  await a.tab.persist(state());
+  const request={clientWorkspaceId:'client-synthetic',workspaceId:'server-synthetic',workspaceRevision:2,
+    revision:2,scenario:'moderate' as const,operationId:'synthetic-navigation-op'};
+  assert.equal(await a.tab.reserveHrRequest(request,state()),true);
+  a.tab.setHrRoute(false);
+  assert.equal(f.locks.held.has(HR_EDITOR_LOCK),true);
+  b.tab.setHrRoute(true);await tick();
+  assert.equal(b.tab.status,'blocked');
+  await a.tab.persist({...state(),hr:{...state().hr,hrAnalysis:null,
+    hrRecovery:{status:'unknown',request}}});
+  await tick();
+  assert.equal(f.locks.held.has(HR_EDITOR_LOCK),false);
+  b.tab.retryEditor();await tick();
+  assert.equal(b.tab.status,'conflict');
+  assert.equal(readCanonicalHr(f.storage)?.hr.hrRecovery?.status,'unknown');
+  a.tab.close();b.tab.close();
+});
+
+test('closing a tab during pending releases its browser lock while refreshed B1 stays fail closed',async()=>{
+  const f=fixture();const a=f.make(state());await tick();await a.tab.persist(state());
+  const request={clientWorkspaceId:'client-synthetic',workspaceId:'server-synthetic',workspaceRevision:2,
+    revision:2,scenario:'moderate' as const,operationId:'synthetic-close-op'};
+  assert.equal(await a.tab.reserveHrRequest(request,state()),true);
+  a.tab.close();await tick();
+  assert.equal(f.locks.held.has(HR_EDITOR_LOCK),false);
+  const restored={...state(),hr:restoreHr(readCanonicalHr(f.storage)!.hr,true).hr};
+  assert.equal(restored.hr.hrRecovery?.status,'unknown');
+  const b=f.make(restored);await tick();
+  assert.equal(b.tab.status,'active');
+  assert.equal(await b.tab.reserveHrRequest(request,restored),false);
+  b.tab.close();
 });

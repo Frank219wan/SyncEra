@@ -8,7 +8,13 @@ import {beginHrAnalysis} from './hrState.ts';
 export const HR_STORAGE_KEY='futureproof-b1-cas-v1';
 export const HR_EDITOR_LOCK='futureproof-b1-editor-v1';
 export const APP_WRITE_LOCK='futureproof-app-write-v1';
-export type HrEditStatus='checking'|'active'|'blocked'|'conflict'|'unsupported';
+const HR_EDITOR_PAGES=new Set(['intake','heatmap','mobility','training','dashboard']);
+export function isHrEditorRoute(pathname:string):boolean {
+  if(!pathname.startsWith('/organization/hr/'))return false;
+  const rest=pathname.slice('/organization/hr/'.length);
+  return HR_EDITOR_PAGES.has(rest)||/^department\/[^/]+$/.test(rest);
+}
+export type HrEditStatus='inactive'|'checking'|'active'|'blocked'|'conflict'|'unsupported';
 
 export interface StoragePort {getItem(key:string):string|null;setItem(key:string,value:string):void}
 export interface LocksPort {
@@ -55,13 +61,16 @@ const fields:ReadonlyArray<keyof AppState>=['locale','profile','scenario','selec
   'serviceMeta','plan','trendPackage','draft','archivedPlans','tvet'];
 
 export class TabPersistence {
-  status:HrEditStatus='checking';
+  status:HrEditStatus='inactive';
   private expectedVersion:number;
   private baseline:AppState;
   private releaseEditor:(()=>void)|null=null;
   private editorHeld=false;
+  private claiming=false;
   private closed=false;
   private initialRetryUsed=false;
+  private onHrRoute=false;
+  private requestInFlight=false;
   private queue:Promise<unknown>=Promise.resolve();
   private storage:StoragePort;
   private locks:LocksPort|undefined;
@@ -75,18 +84,33 @@ export class TabPersistence {
   }
 
   start():void {
-    if(!this.locks){this.setStatus('unsupported');return;}
-    void this.claimEditor();
+    // The app store exists on every route; only B1 routes may claim B1's editor lock.
+    if(!this.locks)this.setStatus('unsupported');
+  }
+
+  setHrRoute(active:boolean):void {
+    this.onHrRoute=active;
+    if(active){
+      if(!this.locks){this.setStatus('unsupported');return;}
+      if(this.editorHeld)return;
+      this.setStatus('checking');
+      void this.claimEditor();
+    }else if(!this.requestInFlight){
+      this.releaseEditor?.();
+      this.setStatus('inactive');
+    }
   }
 
   retryEditor():void {
-    if((this.status==='blocked'||this.status==='conflict')&&!this.closed&&!this.editorHeld)void this.claimEditor();
+    if(this.onHrRoute&&(this.status==='blocked'||this.status==='conflict')&&!this.closed&&!this.editorHeld)void this.claimEditor();
   }
 
   private async claimEditor():Promise<void> {
-    if(!this.locks||this.editorHeld||this.closed)return;
+    if(!this.locks||this.editorHeld||this.claiming||this.closed||!this.onHrRoute)return;
+    this.claiming=true;
     try {
       await this.locks.request(HR_EDITOR_LOCK,{ifAvailable:true},async lock=>{
+        if(!this.onHrRoute||this.closed)return;
         if(!lock){
           this.setStatus('blocked');
           // React StrictMode releases its first mount's lock during a replay.
@@ -98,11 +122,19 @@ export class TabPersistence {
         const latest=hrRecord(this.storage);
         if(latest && latest.version!==this.expectedVersion)this.setStatus('conflict',latest);
         else this.setStatus('active',latest||undefined);
-        await new Promise<void>(resolve=>{this.releaseEditor=resolve;if(this.closed)resolve();});
+        await new Promise<void>(resolve=>{this.releaseEditor=resolve;if(this.closed||(!this.onHrRoute&&!this.requestInFlight))resolve();});
         this.editorHeld=false;
         this.releaseEditor=null;
+        if(!this.closed){
+          if(this.onHrRoute)this.setStatus('checking');
+          else this.setStatus('inactive');
+        }
       });
     }catch {this.setStatus('unsupported');}
+    finally {
+      this.claiming=false;
+      if(this.onHrRoute&&this.status==='checking'&&!this.editorHeld&&!this.closed)void this.claimEditor();
+    }
   }
 
   acceptLatest():HrRecord|null {
@@ -154,6 +186,7 @@ export class TabPersistence {
         const merged={...(appRecord(this.storage)?.state||source),hr:pending,hrProfileSaved:true};
         this.storage.setItem(STORAGE_KEY,JSON.stringify({schema:1,state:merged}));
         this.baseline=source;
+        this.requestInFlight=true;
         return true;
       });
     });
@@ -188,6 +221,10 @@ export class TabPersistence {
       if(authoritative){merged.hr=authoritative.hr;merged.hrProfileSaved=authoritative.hrProfileSaved;}
       this.storage.setItem(STORAGE_KEY,JSON.stringify({schema:1,state:merged}));
       this.baseline=next;
+      if(this.requestInFlight&&authoritative?.hr.hrRecovery?.status!=='pending'){
+        this.requestInFlight=false;
+        if(!this.onHrRoute)this.releaseEditor?.();
+      }
       return merged;
     };
     // Without Web Locks, B1 stays read-only. Individual and B2 retain their

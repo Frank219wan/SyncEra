@@ -13,7 +13,7 @@ import '@fontsource/noto-serif-sc/500.css';
 import './styles.css';
 import './theme.css';
 import './individual-home.css';
-import {Provider,useApp} from './store';
+import {Provider,useApp,HrLockRouteObserver} from './store';
 import {Shell,EmptyState,ButtonLink} from './components';
 import {Home,IndividualHome,OrganizationHome} from './pages/Home';
 import {About} from './pages/About';
@@ -47,7 +47,7 @@ class ErrorBoundary extends React.Component<{children:React.ReactNode},{error:bo
   static getDerivedStateFromError(){return{error:true};}
   render(){return this.state.error?<main className="crash-page"><h1>Something needs a fresh start.</h1><p>Your saved progress remains on this device. Reload the page to try again.</p><button className="button" onClick={()=>window.location.reload()}>Reload page</button></main>:this.props.children;}
 }
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><Provider><BrowserRouter><div id="site-routes"><Routes><Route path="/" element={<Home/>}/><Route element={<Shell><Outlet/></Shell>}>
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><ErrorBoundary><Provider><BrowserRouter><HrLockRouteObserver/><div id="site-routes"><Routes><Route path="/" element={<Home/>}/><Route element={<Shell><Outlet/></Shell>}>
   <Route path="/individual" element={<IndividualHome/>}/>
   <Route path="/individual/radar" element={<RadarRoute/>}/>
   <Route path="/individual/intake" element={<Intake/>}/>
