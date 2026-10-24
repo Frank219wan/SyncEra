@@ -131,3 +131,9 @@
 | PROTECTED PREVIEW ACCEPTED／READY TO MERGE #36／READY TO MERGE #37 | NO／NO／NO |
 
 **整体状态：BLOCKED；PROTECTED PREVIEW ACCEPTED = NO；READY TO MERGE #36 = NO；READY TO MERGE #37 = NO；PRODUCTION RELEASED = NO。** 后续须在维持双端 Authentication、Preview 隔离与无付费调用的条件下，完成受控故障 UI 验证、可得范围内的 Function 日志审核及独立 Reviewer Approval，再由部署负责人决定是否合并。
+
+## 2026-10-24 20:34 GMT+7：B1 新工作区恢复路径复测
+
+Frontend Preview `dpl_4dSde6U8raCs6QGQ3FZE6xFaV8EG`／代码 `6d09a0b7ac6c40da7686a28bdc47370489d16e75` 为 Ready，分支别名已指向该部署；Backend 沿用此前受保护 Preview `d76afe947787bd0cd0a7b1747159cb00f3b112f4`。两标签均加载 `assets/index-B1D-Uq1L.js`。Home 不占用 B1 编辑锁；第二个 B1 标签显示只读提示；另一标签进入 B2 时，当前 B1 编辑锁仍有效。同源 `/api/v1/health` 返回 HTTP 200 JSON。
+
+**新增阻塞：**在当前 B1 标签明确确认创建独立的虚构工作区后，Frontend 的 `POST /api/v1/organizations/hr/analyze` 请求日志为 HTTP 200（20:34:22 GMT+7，Request ID `d7wxf-1792848862863-4d19d832bb28`），但本地 UI 仍显示 `pending` 和跨标签冲突。根因是保存新本地身份后立即自动分析，早于 React Provider 提交新身份；响应无法安全附着到本地 CAS 记录。不得重试旧 Revision 或把 HTTP 200 等同于 UI 恢复 PASS。修复改为新工作区保存后让用户再次明确发起分析，等待新 SHA 的 CI、单独批准的 Preview 部署和云端复测。测试产生的虚构服务端记录未自动清理。B1 CLOUD = FAIL；MULTITAB CAS 整体 = NOT ACCEPTED；PROTECTED PREVIEW ACCEPTED = NO；READY TO MERGE #36/#37 = NO。

@@ -142,6 +142,38 @@ test('explicit new workspace preserves synthetic draft but clears old identity a
   a.tab.close();
 });
 
+test('new workspace waits for the committed local identity before its first server CAS request',async()=>{
+  const f=fixture();const a=f.make(state());await tick();await a.tab.persist(state());
+  const request={clientWorkspaceId:'client-synthetic',workspaceId:'server-synthetic',workspaceRevision:2,
+    revision:2,scenario:'moderate' as const,operationId:'synthetic-prior-unknown'};
+  const unresolved={...state(),hr:{...state().hr,hrAnalysis:null,hrRecovery:{status:'unknown' as const,request}}};
+  await a.tab.persist(unresolved);
+  const fresh=createHrWorkspaceFromDraft(unresolved.hr);
+  await a.tab.persist({...unresolved,hr:fresh});
+  assert.equal(readCanonicalHr(f.storage)?.hr.clientWorkspaceId,fresh.clientWorkspaceId);
+  assert.equal(readCanonicalHr(f.storage)?.hr.hrRecovery,null);
+  assert.equal(readCanonicalHr(f.storage)?.hr.workspaceId,undefined);
+
+  // The next user action sees the newly committed state. Reserving from the
+  // previous React render would attach a pending request to the wrong identity.
+  let committed={...unresolved,hr:fresh};
+  const update=(change:(value:AppState)=>AppState)=>{committed=change(committed);};
+  let calls=0;
+  const result=await runHrAnalysis(committed,update,async()=>{
+    calls++;
+    return {analysis:{mode:'hr',workspaceId:'synthetic-new-server',workspaceRevision:1,
+      scenario:'moderate',snapshotId:'synthetic-snapshot'} as HRAnalysis,
+      meta:{requestId:'synthetic',snapshotId:'synthetic-snapshot',generatedAt:null,
+        dataLabel:'synthetic_demo',isMock:true,modelVersion:'rules-only'}};
+  },undefined,request=>a.tab.reserveHrRequest(request,committed));
+  assert.equal(result.kind,'received');assert.equal(calls,1);
+  await a.tab.persist(committed);
+  assert.equal(readCanonicalHr(f.storage)?.hr.workspaceRevision,1);
+  assert.equal(readCanonicalHr(f.storage)?.hr.hrRecovery,null);
+  assert.equal(readCanonicalHr(f.storage)?.hr.hrLastOperationId,result.request?.operationId);
+  a.tab.close();
+});
+
 test('old same-workspace writes cannot erase unknown recovery or revive an old analysis',async()=>{
   const f=fixture();const a=f.make(state());await tick();await a.tab.persist(state());
   const request={clientWorkspaceId:'client-synthetic',workspaceId:'server-synthetic',workspaceRevision:2,

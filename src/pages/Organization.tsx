@@ -161,7 +161,10 @@ function HRIntake(){
     const fresh=createHrWorkspaceFromDraft(source);
     if(!await saveHrWorkspace(fresh)){setError(t('Could not safely save the new workspace. Your draft remains open.','无法安全保存新工作区，草稿仍在。','Tidak dapat menyimpan ruang kerja baharu dengan selamat. Draf masih ada.'));return;}
     setConfirmNew(false);setRecoveryOpen(false);setEditing(false);setError('');
-    void reviewPlan(fresh);
+    // Let React commit the new local identity before reserving a server CAS
+    // request. An immediate analysis can still read the previous workspace
+    // from the provider and leave the new request stranded as pending.
+    toast(t('Separate workspace created. Review its profile, then analyze it when ready.','独立工作区已创建；请核对资料后再运行分析。','Ruang kerja berasingan dicipta. Semak profilnya sebelum analisis.'));
   }
   const recoveryPanel=recovery?<section className="surface department-detail" role="alert">
     <h2>{t('Workspace revision could not be confirmed.','无法确认工作区版本。','Semakan ruang kerja tidak dapat disahkan.')}</h2>
