@@ -5,9 +5,13 @@ import {fromContractSkillId,verifiedRoleAlignmentTags,type ApiCareerAnalysis,typ
 import {hasPersonalValue,personalFields} from '../profilePersonalization';
 import {useApp} from '../store';
 import type {Evidence,MarketRadarPackage,Recommendation,TrendPackage} from '../types';
-import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip} from '../components';
+import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip,icons} from '../components';
+import {CareerArtwork} from '../components/visual/careers/CareerArtwork';
 import {LiveCareerRadar} from './LiveCareerRadar';
 import {Radar} from './RadarExperience';
+import './career-matches-visual.css';
+
+const {ArrowRight,BarChart3,Compass,Info,Leaf}=icons;
 
 function EvidenceSources({ids}:{ids:string[]}) {
   const {t}=useApp();
@@ -79,7 +83,7 @@ function ConnectedDosmRadar(){
   return <LiveCareerRadar data={data} onPeriodChange={setPeriod}/>;
 }
 export function ConnectedRecommendations(){
-  const {state,setState,t}=useApp();
+  const {state,setState,t,copy}=useApp();
   const eligible=Boolean(state.snapshotId&&state.results?.length&&state.results.every(item=>item.origin==='computed'));
   const [results,setResults]=useState<Recommendation[]|null>(eligible?state.results:null);
   const [analysis,setAnalysis]=useState<ApiCareerAnalysis|undefined>();
@@ -96,35 +100,63 @@ export function ConnectedRecommendations(){
     return()=>{active=false;};
   },[eligible,state.profile.id,state.scenario,state.snapshotId,attempt,setState]);
   if(!eligible)return <EmptyState title={t('Confirm your profile first','请先确认画像','Sahkan profil dahulu')} description={t('A connected recommendation requires a confirmed profile and a current snapshot.','连接服务的推荐需要已确认画像和当前快照。','Cadangan memerlukan profil disahkan dan gambaran semasa.')} action={<ButtonLink to="/individual/intake/start">{t('Build my profile','创建画像','Bina profil')}</ButtonLink>}/>;
-  return <>
-    <PageHeader title={t('Career matches','职业推荐','Padanan kerjaya')} description={t('Relative fit from the selected snapshot and scenario.','基于所选快照和情景的相对匹配。','Padanan relatif daripada gambaran dan senario terpilih.')} action={<DemoNotice/>}/>
-    <div className="results-context"><div><strong>{t('Current snapshot','当前快照','Gambaran semasa')}: {state.snapshotId}</strong><p>{state.serviceMeta?.dataLabel} · {t('Scores are not hiring probabilities.','评分不代表录用概率。','Skor bukan kebarangkalian diambil bekerja.')}</p></div><ScenarioSwitcher/></div>
-    <p className="inline-note">{t('Career vision and work style are not included in this score yet. Only the service calculates scores; no 8/7/5 sub-scores are shown.','愿景与工作方式尚未参与本次评分。评分仅来自服务端；不展示尚未实现的 8/7/5 分项。','Visi kerjaya dan gaya kerja belum termasuk dalam skor ini. Hanya perkhidmatan mengira skor.')}</p>
+  const shown=results&&!error?results:[];
+  const strengthCount=new Set(shown.flatMap(item=>item.strengths??[])).size;
+  const gapCount=new Set(shown.flatMap(item=>(item.skillGaps??[]).map(gap=>gap.skillId))).size;
+  const selectedRadarRole=state.trendPackage?.roles.find(role=>role.id===state.selectedRole);
+  const selectedName=shown.find(item=>item.roleId===state.selectedRole)?.roleName
+    ?? (selectedRadarRole?copy(selectedRadarRole.name):undefined);
+  const scenarioName=state.scenario==='fast'?t('Fast','快速','Pantas'):t('Moderate','中等','Sederhana');
+  return <div className="matches-page connected-matches-page">
+    <section className="matches-hero"><span className="matches-eyebrow">{t('CAREER ATLAS · YOUR NEXT CHAPTER','职业图鉴 · 你的下一章','ATLAS KERJAYA · BAB SETERUSNYA')}</span><PageHeader title={t('Possibilities that grow with you.','与你一起成长的职业可能。','Peluang yang berkembang bersama anda.')} description={t('Explore your strengths through recommendations calculated for your confirmed profile.','从已确认的画像与优势出发，探索服务端计算的职业方向。','Teroka kekuatan anda melalui cadangan yang dikira untuk profil disahkan.')} action={<DemoNotice/>}/><div className="matches-hero-leaf" aria-hidden="true"><Leaf size={90} strokeWidth={.8}/><Leaf size={50} strokeWidth={.8}/></div></section>
+    <section className="matches-overview" aria-label={t('Overview of current recommendations','当前推荐概览','Gambaran cadangan semasa')}>
+      <div><span>{t('Career matches','职业推荐','Padanan kerjaya')}</span><strong>{shown.length}</strong></div>
+      <div><span>{t('Confirmed strengths','已确认优势','Kekuatan disahkan')}</span><strong>{strengthCount}</strong></div>
+      <div><span>{t('Skills to grow','待提升技能','Kemahiran untuk dibina')}</span><strong>{gapCount}</strong></div>
+      <div><span>{t('AI scenario','AI 发展情景','Senario AI')}</span><strong className="matches-scenario-value">{scenarioName}</strong></div>
+    </section>
+    <div className="results-context"><div><strong>{t('Your career matches','你的职业推荐','Padanan kerjaya anda')}</strong><p>{t('Current snapshot','当前快照','Gambaran semasa')}: {state.snapshotId} · {state.serviceMeta?.dataLabel} · {t('Scores are calculated by the service, not hiring probabilities.','评分由服务端计算，不代表录用概率。','Skor dikira oleh perkhidmatan, bukan kebarangkalian diambil bekerja.')}</p></div><ScenarioSwitcher/></div>
+    <p className="inline-note">{t('Career vision and work style are not included in this score yet. No unimplemented sub-scores are shown.','愿景与工作方式尚未参与本次评分；不展示尚未实现的分项。','Visi kerjaya dan gaya kerja belum termasuk dalam skor ini. Tiada subskor yang belum dilaksanakan dipaparkan.')}</p>
     {personalFields.some(field=>!hasPersonalValue(state.profile,field))&&<p className="muted">{t('Some optional answers are missing; personalized interpretation may be less reliable. Missing answers do not exclude roles in the frontend.','部分选填信息未提供，个性化解读的可信度可能较低；前端不会因缺失答案排除岗位。','Sebahagian jawapan pilihan tiada; tafsiran peribadi mungkin kurang boleh dipercayai.')}</p>}
+    {selectedName&&<div className="selected-role-strip"><Compass size={23}/><div><span>{t('From your radar exploration','你在雷达中关注的职业','Daripada penerokaan radar')}</span><strong>{selectedName}</strong></div><p>{t('Shown separately from the ranking','独立展示，不改变排名','Diasingkan daripada kedudukan')}</p><ButtonLink to={`/individual/roles/${state.selectedRole}`} secondary>{t('View role','查看职业','Lihat kerjaya')}<ArrowRight size={15}/></ButtonLink></div>}
     {error&&<ErrorState message={error} retry={()=>setAttempt(value=>value+1)}/>}
-    {busy&&<p className="muted">{t('Checking this scenario…','正在计算此情景…','Mengira senario ini…')}</p>}
-    {analysis&&results&&!error&&<section className="surface" aria-label="Career recommendation analysis">
-      <h2>{analysis.source==='minimax'?t('MiniMax career analysis','MiniMax 职业分析','Analisis kerjaya MiniMax'):t('Rule recommendation','规则推荐','Cadangan berasaskan peraturan')}</h2>
-      {analysis.source==='rules_fallback'&&<p className="muted">{t('MiniMax was not used for this result.','此结果未使用 MiniMax。','MiniMax tidak digunakan untuk hasil ini.')} ({analysis.status})</p>}
-      {analysis.role_id&&<p><strong>{t('Recommended direction','推荐方向','Arah disyorkan')}:</strong> {results.find(item=>item.roleId===analysis.role_id?.replace(/^role_/,'').replace(/_/g,'-'))?.roleName??analysis.role_id}</p>}
-      <p>{analysis.reason}</p>
-      {!!analysis.strength_skill_ids.length&&<div><strong>{t('Existing strengths','已有优势','Kekuatan sedia ada')}:</strong> <span className="skill-row">{analysis.strength_skill_ids.map(id=><SkillChip key={id} id={fromContractSkillId(id)} tone="strength"/>)}</span></div>}
-      {!!analysis.gap_skill_ids.length&&<div><strong>{t('Main skill gaps','主要技能缺口','Jurang kemahiran utama')}:</strong> <span className="skill-row">{analysis.gap_skill_ids.map(id=><SkillChip key={id} id={fromContractSkillId(id)}/>)}</span></div>}
-      <p><strong>{t('Scenario risks and uncertainty','情境风险与不确定性','Risiko senario dan ketidakpastian')}:</strong> {analysis.risk_and_uncertainty}</p>
-      {!!analysis.evidence_ids.length&&<details><summary>{t('Evidence','依据','Bukti')}</summary><EvidenceSources ids={analysis.evidence_ids}/></details>}
-    </section>}
-    {results&&!error&&<div className="career-grid">{results.map(item=><article className="career-card" key={item.roleId}>
-      <div className="career-top"><span className="rank-number">{item.rank}</span><span className="fit-score">{item.matchScore??'—'}<small>{t('Service-calculated score','服务计算评分','Skor dikira perkhidmatan')}</small></span></div>
+    {busy&&<p className="muted" role="status">{t('Checking this scenario…','正在计算此情景…','Mengira senario ini…')}</p>}
+    {results?.length===0&&!error&&<EmptyState title={t('No matches were returned','服务未返回推荐职业','Tiada padanan dipulangkan')} description={t('Review your confirmed profile and try another scenario.','核对已确认画像，或尝试其他情景。','Semak profil disahkan dan cuba senario lain.')} action={<ButtonLink to="/individual/intake/review">{t('Review profile','核对画像','Semak profil')}</ButtonLink>}/>}
+    <div aria-busy={busy} className={`career-grid ${busy?'is-loading':''}`}>{shown.map(item=><article className="career-card matches-card" key={item.roleId}>
+      <div className="matches-card-heading"><span className="matches-rank" aria-label={`${t('Rank','排序','Kedudukan')} ${item.rank}`}>{String(item.rank).padStart(2,'0')}</span><span className="matches-service-score">{item.matchScore??'—'}<small>{t('Service score','服务评分','Skor perkhidmatan')}</small></span></div>
+      <div className="matches-art-frame"><CareerArtwork roleId={item.roleId} domain=""/></div>
       <h2><Link to={`/individual/roles/${item.roleId}`}>{item.roleName??item.roleId}</Link></h2>
-      <p>{item.reason}</p>
-      <div className="skill-row">{item.strengths?.map(id=><SkillChip key={id} id={id} tone="strength"/>)}</div>
-      <details className="why-details"><summary>{t('Evidence and assumptions','依据与假设','Bukti dan andaian')}</summary>
+      <p className="matches-description">{item.reason}</p>
+      <span className="mini-label">{t('Your confirmed strengths','你已确认的优势','Kekuatan anda yang disahkan')}</span>
+      <div className="skill-row">{item.strengths?.length?item.strengths.map(id=><SkillChip key={id} id={id} tone="strength"/>):<span className="muted">{t('No confirmed overlap reported','服务未报告已确认的技能交集','Tiada pertindihan disahkan dilaporkan')}</span>}</div>
+      <span className="mini-label matches-gap-label">{t('Skills to grow','值得培养的技能','Kemahiran untuk dibina')}</span>
+      <div className="matches-gap-list">{item.skillGaps?.length?item.skillGaps.map(gap=><Link key={gap.skillId} to={`/individual/skills/${gap.skillId}/mind-map?role=${item.roleId}`} className="matches-gap-link">{gap.name}<ArrowRight size={14} aria-hidden="true"/></Link>):<span className="muted">{t('No skill gaps reported','服务未报告技能差距','Tiada jurang kemahiran dilaporkan')}</span>}</div>
+      <details className="why-details"><summary>{t('Why this role · evidence and uncertainty','为何推荐 · 依据与不确定性','Mengapa kerjaya ini · bukti dan ketidakpastian')}<Info size={15}/></summary>
+        {item.scoreBreakdown&&<dl className="matches-breakdown">{([
+          ['skill_compatibility',t('Skill compatibility','技能匹配','Keserasian kemahiran')],
+          ['interests_preferences',t('Interests and preferences','兴趣与偏好','Minat dan pilihan')],
+          ['scenario_outlook',t('Scenario outlook','情景前景','Prospek senario')],
+          ['transition_feasibility',t('Transition feasibility','转型可行性','Kebolehlaksanaan peralihan')],
+        ] as const).map(([key,label])=><div key={key}><dt>{label}</dt><dd>{item.scoreBreakdown?.[key]??'—'}</dd></div>)}</dl>}
         {item.scenarioAssumptions?.map((assumption,index)=><p key={index}>{assumption}</p>)}
-        {item.uncertainty&&<p>{t('Uncertainty','不确定性','Ketidakpastian')}: {item.uncertainty}</p>}
+        {item.uncertainty&&<p><strong>{t('Uncertainty','不确定性','Ketidakpastian')}:</strong> {item.uncertainty}</p>}
         <EvidenceSources ids={item.evidenceIds??[]}/>
       </details>
-    </article>)}</div>}
-  </>;
+      <Link className="career-link" to={`/individual/roles/${item.roleId}`}>{t('Explore role and learning path','探索职业与学习路径','Teroka kerjaya dan laluan pembelajaran')}<ArrowRight size={17}/></Link>
+    </article>)}</div>
+    {analysis&&results&&!error&&<details className="matches-analysis-details"><summary><BarChart3 size={18} aria-hidden="true"/>{t('How this recommendation was calculated','推荐如何计算','Bagaimana cadangan ini dikira')}</summary>
+      <div className="matches-analysis-body"><h2>{analysis.source==='minimax'?t('MiniMax career analysis','MiniMax 职业分析','Analisis kerjaya MiniMax'):t('Rule recommendation','规则推荐','Cadangan berasaskan peraturan')}</h2>
+        <p>{t('Snapshot','快照','Gambaran')}: {state.snapshotId} · {t('Model version','模型版本','Versi model')}: {state.serviceMeta?.modelVersion??t('Not supplied','未提供','Tidak disediakan')}</p>
+        {analysis.source==='rules_fallback'&&<p>{t('MiniMax was not used for this result.','此结果未使用 MiniMax。','MiniMax tidak digunakan untuk hasil ini.')} ({analysis.status})</p>}
+        {analysis.role_id&&<p><strong>{t('Recommended direction','推荐方向','Arah disyorkan')}:</strong> {shown.find(item=>item.roleId===analysis.role_id?.replace(/^role_/,'').replace(/_/g,'-'))?.roleName??analysis.role_id}</p>}
+        <p>{analysis.reason}</p>
+        {!!analysis.strength_skill_ids.length&&<div><strong>{t('Existing strengths','已有优势','Kekuatan sedia ada')}:</strong> <span className="skill-row">{analysis.strength_skill_ids.map(id=><SkillChip key={id} id={fromContractSkillId(id)} tone="strength"/>)}</span></div>}
+        {!!analysis.gap_skill_ids.length&&<div><strong>{t('Main skill gaps','主要技能缺口','Jurang kemahiran utama')}:</strong> <span className="skill-row">{analysis.gap_skill_ids.map(id=><SkillChip key={id} id={fromContractSkillId(id)}/>)}</span></div>}
+        <p><strong>{t('Scenario risks and uncertainty','情境风险与不确定性','Risiko senario dan ketidakpastian')}:</strong> {analysis.risk_and_uncertainty}</p>
+        {!!analysis.evidence_ids.length&&<details><summary>{t('Evidence','依据','Bukti')}</summary><EvidenceSources ids={analysis.evidence_ids}/></details>}
+      </div>
+    </details>}
+  </div>;
 }
 
 export function ConnectedRoleDetail(){

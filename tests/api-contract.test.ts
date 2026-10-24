@@ -96,6 +96,28 @@ test('real recommendations require matching profile, snapshot, ranking, scores a
   assert.throws(()=>validateRecommendationPayload({...payload,recommendations:[{...first,skill_gaps:[{...unknownGap,current_level:'unknown'}]}]},meta,expected));
 });
 
+test('real recommendations preserve a server role outside the demo catalogue across scenarios',()=>{
+  const role={rank:1,role_id:'role_synthetic_systems_coach',role_name:'Synthetic Systems Coach',
+    match_score:69.5,score_breakdown:{skill_compatibility:80,interests_preferences:60,scenario_outlook:70,transition_feasibility:50},
+    strengths:['skill_sql'],skill_gaps:[{skill_id:'skill_python',name:'Python',current_level:1,target_level:3,importance:'high'}],
+    reason:'Synthetic server explanation.',evidence_ids:['ev_synthetic_1'],scenario_assumptions:['Moderate synthetic assumption'],uncertainty:'Synthetic uncertainty.'};
+  const meta={request_id:'req_synthetic_1',snapshot_id:'snap_synthetic_1',model_version:'rules-v1',data_label:'synthetic_demo',is_mock:true};
+  const expected={profileId:'profile_synthetic_1',scenario:'moderate' as const,snapshotId:'snap_synthetic_1',topK:5};
+  const moderate={profile_id:expected.profileId,ai_scenario:'moderate',recommendations:[role]};
+  const mapped=mapRecommendations(validateRecommendationPayload(moderate,meta,expected));
+  assert.equal(mapped[0].roleId,'synthetic-systems-coach');
+  assert.equal(mapped[0].roleName,'Synthetic Systems Coach');
+  assert.equal(mapped[0].matchScore,69.5);
+  assert.equal(mapped[0].skillGaps?.[0].skillId,'python');
+  assert.deepEqual(mapped[0].evidenceIds,['ev_synthetic_1']);
+  const fastRole={...role,match_score:71.5,score_breakdown:{...role.score_breakdown,scenario_outlook:80},scenario_assumptions:['Fast synthetic assumption']};
+  const fast={profile_id:expected.profileId,ai_scenario:'fast',recommendations:[fastRole]};
+  const fastExpected={...expected,scenario:'fast' as const};
+  assert.equal(mapRecommendations(validateRecommendationPayload(fast,meta,fastExpected))[0].matchScore,71.5);
+  assert.throws(()=>validateRecommendationPayload(fast,meta,expected));
+  assert.throws(()=>validateRecommendationPayload(fast,{...meta,snapshot_id:'snap_stale'},fastExpected));
+});
+
 test('contract IDs round-trip without leaking display names into keys', () => {
   assert.equal(toContractRoleId('data-analyst'), 'role_data_analyst');
   assert.equal(fromContractRoleId('role_data_analyst'), 'data-analyst');
