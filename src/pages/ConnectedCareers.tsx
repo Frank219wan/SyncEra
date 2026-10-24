@@ -7,7 +7,7 @@ import {useApp} from '../store';
 import type {Evidence,MarketRadarPackage,Recommendation,TrendPackage} from '../types';
 import {ButtonLink,DemoNotice,EmptyState,ErrorState,PageHeader,ScenarioSwitcher,SkillChip,icons} from '../components';
 import {CareerArtwork} from '../components/visual/careers/CareerArtwork';
-import {analysisStatusText,careerAnalysisReason,dataLabel,evidenceText,originalLanguage,recommendationText,roleLabel,roleSummaryText,skillLabel,taskText} from '../dynamicI18n';
+import {analysisStatusText,careerAnalysisReason,dataLabel,evidenceText,originalLanguage,priorityText,recommendationText,roleLabel,roleSummaryText,skillLabel,taskText} from '../dynamicI18n';
 import {LiveCareerRadar} from './LiveCareerRadar';
 import {Radar} from './RadarExperience';
 import './career-matches-visual.css';
@@ -189,11 +189,11 @@ export function ConnectedRoleDetail(){
     {error&&<ErrorState message={error}/>}
     {tasksError&&<ErrorState message={tasksError} retry={()=>setAttempt(value=>value+1)}/>}
     {role&&<><section className="surface"><h2>{t('Required skills','所需技能','Kemahiran diperlukan')}</h2>
-      {role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {skill.importance}</span></div>)}
+      {role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {priorityText(skill.importance,state.locale)}</span></div>)}
       {result&&<p>{t('Service-calculated score','服务计算评分','Skor dikira perkhidmatan')}: {result.matchScore??'—'} · {recommendationText(result,'reason',state.locale)}</p>}
     </section>
     <section className="surface"><h2>{t('Role alignment tags and sources','岗位关联标签与来源','Tag padanan kerjaya dan sumber')}</h2>
-      {verifiedRoleAlignmentTags(role).length?verifiedRoleAlignmentTags(role).map((tag,index)=><p key={`${tag.kind}-${tag.label}-${index}`}>{tag.label} · {tag.kind==='interest'?t('Interest','兴趣','Minat'):tag.kind==='goal'?t('Goal','目标','Matlamat'):t('Work style','工作方式','Gaya kerja')} · {tag.source==='MASCO'?'MASCO':tag.source==='curated'?t('Manually curated','人工整理','Disusun secara manual'):t('AI generated','AI 生成','Dijana AI')}</p>)
+      {verifiedRoleAlignmentTags(role).length?verifiedRoleAlignmentTags(role).map((tag,index)=><p key={`${tag.kind}-${tag.label}-${index}`}>{originalLanguage(tag.label,state.locale)} · {tag.kind==='interest'?t('Interest','兴趣','Minat'):tag.kind==='goal'?t('Goal','目标','Matlamat'):t('Work style','工作方式','Gaya kerja')} · {tag.source==='MASCO'?'MASCO':tag.source==='curated'?t('Manually curated','人工整理','Disusun secara manual'):t('AI generated','AI 生成','Dijana AI')}</p>)
         :<p className="muted">{t('API v1.0 does not yet provide sourced interest, goal or work-style tags for this role. No tags are invented here.','API v1.0 尚未提供该岗位带来源的兴趣、目标或工作方式标签；此处不编造标签。','API v1.0 belum menyediakan tag bersumber untuk kerjaya ini; tiada tag direka.')}</p>}
     </section>
     <section className="surface"><h2>{t('Task impacts','任务影响','Impak tugas')}</h2>
