@@ -107,3 +107,46 @@ html[data-theme="dark"] .matches-page .matches-analysis-details{background:#253a
 @media(max-width:480px){.matches-page .matches-gap-list{margin-left:15px;margin-right:15px}.matches-page .matches-service-score{font-size:23px}.matches-page .matches-analysis-details>summary{padding:13px 15px}.matches-page .matches-analysis-body{padding:0 15px 15px}}
 @media(max-width:480px){.matches-page .matches-breakdown{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.matches-page .matches-card{transition:none}.matches-page .matches-card:hover{transform:none}}
+
+/* Connected career detail shares the Demo page's summary, tabs and skill columns. */
+.connected-role-detail{min-width:0;padding-bottom:32px}
+.connected-role-detail .page-heading{margin-bottom:8px}
+.connected-role-detail .role-summary{gap:18px}
+.connected-role-detail .role-summary>div:first-child{min-width:0}
+.connected-role-detail .role-summary>div:first-child>span{overflow-wrap:anywhere}
+.connected-role-detail .role-summary strong{display:flex;align-items:baseline;flex-wrap:wrap;gap:7px}
+.connected-role-detail .role-summary strong small{margin:0;line-height:1.5}
+.connected-role-detail .page-tabs{gap:8px}
+.connected-role-detail .page-tabs button{min-height:42px;font-size:12px}
+.connected-role-detail .connected-role-explanation{margin:0 0 20px;line-height:1.7;overflow-wrap:anywhere}
+.connected-role-detail .skill-columns{margin-bottom:24px}
+.connected-role-detail .skill-columns>section,.connected-role-detail .connected-role-requirements{padding:25px}
+.connected-role-detail .skill-line{min-width:0;flex-wrap:wrap;gap:10px;line-height:1.5}
+.connected-role-detail .skill-line>span:nth-child(2){overflow-wrap:anywhere}
+.connected-role-detail .gap-link{color:var(--action)}
+.connected-role-detail .gap-link:hover{text-decoration:underline}
+.connected-role-detail .inline-note{display:flex;align-items:flex-start;gap:8px;line-height:1.7;margin:0 0 24px}
+.connected-role-detail .inline-note svg{flex-shrink:0}
+.connected-role-detail .connected-role-requirements{margin-top:24px}
+.connected-role-detail .connected-role-requirements h2{margin-bottom:15px}
+.connected-role-detail .connected-xray-item{border-top:1px solid var(--line);padding:0 0 22px}
+.connected-role-detail .connected-xray-item .xray-row{border:0}
+.connected-role-detail .connected-xray-item .connected-evidence{margin-top:14px}
+.connected-role-detail .connected-evidence{display:grid;gap:12px;margin:14px 0 24px}
+.connected-role-detail .connected-evidence .surface{padding:17px 20px;min-width:0}
+.connected-role-detail .connected-evidence h4{font-size:14px}
+.connected-role-detail .connected-evidence p{font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.connected-role-detail .connected-evidence a{overflow-wrap:anywhere}
+.connected-role-detail .impact-panel{margin-top:0;margin-bottom:22px}
+.connected-role-detail .impact-panel h3{margin:24px 0 8px}
+.connected-role-detail .sdg-item{overflow-wrap:anywhere}
+html[data-theme="dark"] .connected-role-detail .gap-link{color:#c7ebad}
+html[data-theme="dark"] .connected-role-detail .connected-role-explanation{color:var(--body)}
+html[data-theme="dark"] .connected-role-detail .sdg-item>span{background:#2c4a35;color:#def2ce;border:1px solid #668766}
+@media(max-width:680px){.connected-role-detail .role-summary>.button{width:100%;justify-content:center}.connected-role-detail .page-tabs{display:grid;grid-template-columns:1fr;align-items:stretch}.connected-role-detail .page-tabs button{width:100%;text-align:left}.connected-role-detail .skill-columns>section,.connected-role-detail .connected-role-requirements,.connected-role-detail .xray-panel,.connected-role-detail .impact-panel{padding:20px}.connected-role-detail .xray-row{grid-template-columns:1fr;gap:10px}.connected-role-detail .xray-row p{grid-column:auto}.connected-role-detail .role-summary strong{font-size:29px}}
+@media(max-width:390px){.connected-role-detail .page-heading h1{overflow-wrap:anywhere}.connected-role-detail .role-summary{gap:14px}.connected-role-detail .skill-line>span:nth-child(2){margin-left:0}.connected-role-detail .sdg-item{display:block}.connected-role-detail .sdg-item>span{display:inline-block;margin-bottom:10px}}
+.connected-role-detail .role-summary{flex-wrap:wrap}
+.connected-role-detail .role-summary>div:first-child{flex:1 1 240px}
+.connected-role-detail .role-summary>.button{flex:0 1 auto;max-width:100%;white-space:normal;text-align:center}
+html[data-theme="dark"] .connected-role-detail .skill-line{color:var(--muted)}
+.connected-role-detail .connected-role-provenance{margin:13px 0 0;font-size:11px;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}

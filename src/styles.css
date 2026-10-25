@@ -64,6 +64,13 @@
   .main-area{width:100%;margin-left:0}
   .topbar{height:45px}
 }
+@media(max-width:420px){
+  .sidebar nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));overflow-x:visible}
+  .sidebar nav .nav-link{min-width:0;white-space:normal}
+  .topbar{height:auto;min-height:45px;flex-wrap:wrap;gap:6px;padding-top:8px;padding-bottom:8px}
+  .breadcrumb{flex-basis:100%;flex-wrap:wrap;overflow-x:visible;white-space:normal}
+  .topbar-actions{margin-left:auto}
+}
 
 /* Skillogy page feedback: clearer navigation, balanced growth cards and About branding. */
 @media(min-width:961px){

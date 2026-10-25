@@ -10,9 +10,10 @@ import {CareerArtwork} from '../components/visual/careers/CareerArtwork';
 import {analysisStatusText,careerAnalysisReason,dataLabel,evidenceText,originalLanguage,priorityText,recommendationText,roleLabel,roleSummaryText,skillLabel,taskText} from '../dynamicI18n';
 import {LiveCareerRadar} from './LiveCareerRadar';
 import {Radar} from './RadarExperience';
+import {currentRoleRecommendation,roleDetailContext} from './connectedRoleDetailState';
 import './career-matches-visual.css';
 
-const {ArrowRight,BarChart3,Compass,Info,Leaf}=icons;
+const {ArrowRight,BarChart3,Check,Compass,Info,Leaf}=icons;
 
 function EvidenceSources({ids}:{ids:string[]}) {
   const {state,t}=useApp();
@@ -167,46 +168,76 @@ export function ConnectedRecommendations(){
 export function ConnectedRoleDetail(){
   const {roleId}=useParams();
   const {state,setState,t}=useApp();
+  const [tab,setTab]=useState<'overview'|'xray'|'evidence'>('overview');
   const [role,setRole]=useState<ApiRoleData|null>(null);
-  const [error,setError]=useState('');
+  const [roleError,setRoleError]=useState('');
   const [tasks,setTasks]=useState<ApiTaskImpact[]|null>(null);
+  const [tasksContext,setTasksContext]=useState('');
   const [tasksError,setTasksError]=useState('');
   const [attempt,setAttempt]=useState(0);
+  const [recommendations,setRecommendations]=useState<Recommendation[]|null>(null);
+  const [recommendationContext,setRecommendationContext]=useState('');
+  const [recommendationError,setRecommendationError]=useState('');
+  const [recommendationMeta,setRecommendationMeta]=useState<{snapshotId:string|null;dataLabel:string;modelVersion:string|null;isMock:boolean}|null>(null);
+  const [recommendationBusy,setRecommendationBusy]=useState(false);
+  const [recommendationAttempt,setRecommendationAttempt]=useState(0);
+  const context=roleDetailContext(roleId,state.profile.id,state.profile.revision??0,state.snapshotId,state.scenario);
+  const taskContext=JSON.stringify([roleId,state.snapshotId]);
+  const hasConfirmedContext=Boolean(state.profile.id&&state.snapshotId&&state.results?.some(item=>item.origin==='computed'));
+
   useEffect(()=>{
     if(!roleId)return;
     let active=true;
-    setRole(null);setError('');setTasks(null);setTasksError('');
-    api.role(roleId).then(row=>{if(active)setRole(row.role);}).catch(e=>{if(active)setError((e as Error).message);});
-    api.roleTasks(roleId,state.snapshotId||undefined).then(row=>{if(active)setTasks(row.tasks);}).catch(e=>{if(active)setTasksError((e as Error).message);});
+    setRole(null);setRoleError('');setTasks(null);setTasksContext('');setTasksError('');
+    api.role(roleId).then(row=>{if(active)setRole(row.role);}).catch(e=>{if(active)setRoleError((e as Error).message);});
+    api.roleTasks(roleId,state.snapshotId||undefined).then(row=>{if(active){setTasks(row.tasks);setTasksContext(taskContext);}}).catch(e=>{if(active)setTasksError((e as Error).message);});
     return()=>{active=false;};
   },[roleId,state.snapshotId,attempt]);
-  const result=state.results?.find(item=>item.roleId===roleId&&item.origin==='computed');
+
+  useEffect(()=>{
+    if(!hasConfirmedContext||!roleId){setRecommendations(null);setRecommendationMeta(null);setRecommendationContext('');setRecommendationError('');setRecommendationBusy(false);return;}
+    let active=true;
+    setRecommendations(null);setRecommendationMeta(null);setRecommendationContext('');setRecommendationError('');setRecommendationBusy(true);
+    api.recommendDetailed(state.profile,state.scenario,state.selectedRole,state.snapshotId).then(({results,meta})=>{
+      if(active){setRecommendations(results);setRecommendationMeta(meta);setRecommendationContext(context);}
+    }).catch(e=>{if(active)setRecommendationError((e as Error).message);}).finally(()=>{if(active)setRecommendationBusy(false);});
+    return()=>{active=false;};
+  },[context,hasConfirmedContext,recommendationAttempt,roleId]);
+
+  const currentTasks=tasksContext===taskContext?tasks:null;
+  const current=hasConfirmedContext&&!recommendationError?currentRoleRecommendation(recommendations,recommendationContext,context,roleId):null;
   const impactLabel=(impact:ApiTaskImpact['impact_type'])=>impact==='automation_candidate'
     ?t('Automation candidate','自动化候选任务','Tugas berpotensi diautomasi')
     :impact==='ai_augmented'?t('AI augmented','AI 辅助','Dibantu AI'):t('Human-led oversight','人工主导与监督','Pengawasan diterajui manusia');
-  return <>
+  const tags=role?verifiedRoleAlignmentTags(role):[];
+  const assumptions=current?recommendationText(current,'scenarioAssumptions',state.locale):[];
+  const translatedAssumptions=Array.isArray(assumptions)?assumptions:[];
+  const importanceLabel=(importance:string)=>priorityText(importance,state.locale);
+  const tagKindLabel=(kind:string)=>kind==='interest'?t('Interest','兴趣','Minat'):kind==='goal'?t('Goal','目标','Matlamat'):t('Work style','工作方式','Gaya kerja');
+  const tagSourceLabel=(source:string)=>source==='MASCO'?'MASCO':source==='curated'?t('Manually curated','人工整理','Disusun secara manual'):t('AI generated','AI 生成','Dijana AI');
+  return <div className="connected-role-detail">
     <PageHeader title={role?roleLabel(roleId??'',role.name,state.locale):t('Career detail','职业详情','Butiran kerjaya')} description={role?roleSummaryText(roleId??'',role.summary,state.locale):undefined} back="/individual/recommendations" action={<DemoNotice/>}/>
-    {error&&<ErrorState message={error}/>}
-    {tasksError&&<ErrorState message={tasksError} retry={()=>setAttempt(value=>value+1)}/>}
-    {role&&<><section className="surface"><h2>{t('Required skills','所需技能','Kemahiran diperlukan')}</h2>
-      {role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {priorityText(skill.importance,state.locale)}</span></div>)}
-      {result&&<p>{t('Service-calculated score','服务计算评分','Skor dikira perkhidmatan')}: {result.matchScore??'—'} · {recommendationText(result,'reason',state.locale)}</p>}
-    </section>
-    <section className="surface"><h2>{t('Role alignment tags and sources','岗位关联标签与来源','Tag padanan kerjaya dan sumber')}</h2>
-      {verifiedRoleAlignmentTags(role).length?verifiedRoleAlignmentTags(role).map((tag,index)=><p key={`${tag.kind}-${tag.label}-${index}`}>{originalLanguage(tag.label,state.locale)} · {tag.kind==='interest'?t('Interest','兴趣','Minat'):tag.kind==='goal'?t('Goal','目标','Matlamat'):t('Work style','工作方式','Gaya kerja')} · {tag.source==='MASCO'?'MASCO':tag.source==='curated'?t('Manually curated','人工整理','Disusun secara manual'):t('AI generated','AI 生成','Dijana AI')}</p>)
-        :<p className="muted">{t('API v1.0 does not yet provide sourced interest, goal or work-style tags for this role. No tags are invented here.','API v1.0 尚未提供该岗位带来源的兴趣、目标或工作方式标签；此处不编造标签。','API v1.0 belum menyediakan tag bersumber untuk kerjaya ini; tiada tag direka.')}</p>}
-    </section>
-    <section className="surface"><h2>{t('Task impacts','任务影响','Impak tugas')}</h2>
-      <p className="muted">{t('Illustrative task scenarios from synthetic data. They do not predict job loss or replace human review.','来自合成数据的任务示例，不代表岗位流失预测，也不能替代人工审查。','Senario tugas ilustrasi daripada data sintetik. Ia bukan ramalan kehilangan kerja atau pengganti semakan manusia.')}</p>
-      {tasks===null&&!tasksError&&<p className="muted">{t('Loading task impacts…','正在加载任务影响…','Memuatkan impak tugas…')}</p>}
-      {tasks?.length===0&&<p className="muted">{t('No task impact examples are available for this role.','此职业暂无任务影响示例。','Tiada contoh impak tugas untuk kerjaya ini.')}</p>}
-      {tasks?.map(task=><article className="task-impact-card" key={task.task_id}>
-        <div className="section-heading"><h3>{taskText(task.task_id,'title',task.title,state.locale)}</h3><span className="subtle-tag">{impactLabel(task.impact_type)}</span></div>
-        <p>{taskText(task.task_id,'reason',task.reason,state.locale)}</p><p className="muted">{t('Uncertainty','不确定性','Ketidakpastian')}: {taskText(task.task_id,'uncertainty',task.uncertainty,state.locale)}</p>
-        <h4>{t('Evidence','依据','Bukti')}</h4><EvidenceSources ids={task.evidence_ids}/>
-      </article>)}
-    </section>
-    <section className="surface"><h2>{t('Source evidence','来源依据','Bukti sumber')}</h2><EvidenceSources ids={role.evidence_ids}/></section>
-    <div className="form-actions"><ButtonLink to="/individual/roadmap/draft" onClick={()=>setState(previous=>({...previous,selectedRole:roleId??''}))}>{t('Build my learning plan','制定学习计划','Bina pelan belajar')}</ButtonLink></div></>}
-  </>;
+    {roleError&&<ErrorState message={roleError} retry={()=>setAttempt(value=>value+1)}/>}
+    {!role&&!roleError&&<p className="muted" role="status">{t('Loading career details…','正在加载职业详情…','Memuatkan butiran kerjaya…')}</p>}
+    {role&&<>
+      <div className="role-summary"><div><span>{t('Career direction','职业方向','Arah kerjaya')} · {role.field_id}</span><strong>{current?.matchScore??'—'} <small>{t('Service match score · not a hiring probability','服务匹配评分 · 非录用概率','Skor padanan perkhidmatan · bukan kebarangkalian kerja')}</small></strong></div><ScenarioSwitcher/><ButtonLink to="/individual/roadmap/draft" onClick={()=>setState(previous=>({...previous,selectedRole:roleId??''}))}>{t('Build my learning plan','制定学习计划','Bina pelan belajar')}<ArrowRight size={16}/></ButtonLink></div>
+      {current&&recommendationMeta&&<p className="connected-role-provenance">{t('Snapshot','快照','Gambaran')}: {recommendationMeta.snapshotId} · {dataLabel(recommendationMeta.dataLabel,state.locale)} · {t('Model','模型','Model')}: {recommendationMeta.modelVersion??t('Unavailable','暂无','Tiada')}</p>}
+      <div className="filter-tabs page-tabs" role="group" aria-label={t('Career detail sections','职业详情栏目','Bahagian butiran kerjaya')}>{([
+        ['overview',t('Your fit & skills','匹配与技能','Padanan & kemahiran')],
+        ['xray',t('AI Task X-Ray','AI 任务透视','Imbasan tugas AI')],
+        ['evidence',t('Evidence & impact','依据与价值','Bukti & impak')],
+      ] as const).map(([id,label])=><button type="button" className={tab===id?'selected':''} aria-pressed={tab===id} key={id} onClick={()=>setTab(id)}>{label}</button>)}</div>
+      {tab==='overview'&&<>
+        <div className="strengths-intro"><Leaf size={25}/><div><h2>{t('Build on what you already have.','从你已拥有的能力出发。','Bina di atas kekuatan sedia ada.')}</h2><p>{t('Confirmed strengths and gaps below come from this scenario’s service result.','以下已确认优势与技能差距来自当前情景的服务端结果。','Kekuatan dan jurang di bawah datang daripada hasil perkhidmatan bagi senario ini.')}</p></div></div>
+        {recommendationBusy&&<p className="muted" role="status">{t('Checking this scenario…','正在计算此情景…','Mengira senario ini…')}</p>}
+        {recommendationError&&<ErrorState message={recommendationError} retry={()=>setRecommendationAttempt(value=>value+1)}/>}
+        {!hasConfirmedContext&&<p className="inline-note">{t('Confirm your profile and open Career Matches to see a verified personal score and gaps.','请确认画像并打开职业推荐，以查看经核验的个人评分与差距。','Sahkan profil dan buka Padanan Kerjaya untuk melihat skor dan jurang yang disahkan.')}</p>}
+        {hasConfirmedContext&&!recommendationBusy&&!recommendationError&&recommendationContext===context&&!current&&<p className="inline-note">{t('This role was not returned for the current profile and scenario. Personal fit is unavailable.','当前画像与情景的推荐中没有此职业，因此无法显示个人匹配。','Kerjaya ini tidak dipulangkan untuk profil dan senario semasa. Padanan peribadi tidak tersedia.')}</p>}
+        {current&&<><p className="connected-role-explanation"><strong>{t('Why this role','为何推荐','Mengapa kerjaya ini')}:</strong> {current.reason?recommendationText(current,'reason',state.locale):t('Explanation unavailable','暂无解释','Penjelasan tidak tersedia')}</p><div className="skill-columns"><section className="surface"><h2><Check size={21}/>{t('Your strengths','你已具备','Kekuatan anda')}</h2>{current.strengths?.length?current.strengths.map(id=><div className="skill-line" key={id}><SkillChip id={id} tone="strength"/><span>{t('Confirmed by you','已由你确认','Disahkan oleh anda')}</span><Check size={16}/></div>):<p className="muted">{t('No confirmed overlap reported','服务未报告已确认的技能交集','Tiada pertindihan disahkan dilaporkan')}</p>}</section><section className="surface"><h2><Compass size={21}/>{t('Skills to grow','值得培养','Kemahiran untuk dibina')}</h2>{current.skillGaps?.length?current.skillGaps.map(gap=><Link className="skill-line gap-link" to={`/individual/skills/${gap.skillId}/mind-map?role=${roleId}`} key={gap.skillId}><SkillChip id={gap.skillId}/><span>{t('Current level','当前等级','Tahap semasa')} {gap.currentLevel??t('Not recorded','未记录','Tidak direkodkan')} · {t('Target level','目标等级','Tahap sasaran')} {gap.targetLevel} · {importanceLabel(gap.importance)}</span><ArrowRight size={16}/></Link>):<p className="muted">{t('No skill gaps reported','服务未报告技能差距','Tiada jurang kemahiran dilaporkan')}</p>}</section></div><p className="inline-note"><Info size={17}/>{t('Uncertainty','不确定性','Ketidakpastian')}: {current.uncertainty?recommendationText(current,'uncertainty',state.locale):t('Not provided by the service','服务未提供','Tidak disediakan oleh perkhidmatan')}</p></>}
+        <section className="surface connected-role-requirements"><h2>{t('Required skills','所需技能','Kemahiran diperlukan')}</h2>{role.required_skills.length?role.required_skills.map(skill=><div className="skill-line" key={skill.skill_id}><SkillChip id={fromContractSkillId(skill.skill_id)}/><span>{t('Target level','目标等级','Tahap sasaran')} {skill.target_level} · {importanceLabel(skill.importance)}</span></div>):<p className="muted">{t('No requirements supplied','服务未提供技能要求','Tiada keperluan disediakan')}</p>}</section>
+      </>}
+      {tab==='xray'&&<section className="surface xray-panel"><h2>{t('How work may change','工作可能如何变化','Bagaimana kerja mungkin berubah')}</h2><p>{t('Illustrative task scenarios from synthetic data. They do not predict job loss or replace human review.','来自合成数据的任务示例，不代表岗位流失预测，也不能替代人工审查。','Senario tugas ilustrasi daripada data sintetik. Ia bukan ramalan kehilangan kerja atau pengganti semakan manusia.')}</p>{tasksError&&<ErrorState message={tasksError} retry={()=>setAttempt(value=>value+1)}/>} {currentTasks===null&&!tasksError&&<p className="muted" role="status">{t('Loading task impacts…','正在加载任务影响…','Memuatkan impak tugas…')}</p>}{currentTasks?.length===0&&<p className="muted">{t('No task impact examples are available for this role.','此职业暂无任务影响示例。','Tiada contoh impak tugas untuk kerjaya ini.')}</p>}{currentTasks?.map(task=><article className="connected-xray-item" key={task.task_id}><div className="xray-row"><strong>{taskText(task.task_id,'title',task.title,state.locale)}</strong><span className="subtle-tag">{impactLabel(task.impact_type)}</span><p>{taskText(task.task_id,'reason',task.reason,state.locale)}</p></div><p className="muted">{t('Uncertainty','不确定性','Ketidakpastian')}: {task.uncertainty?taskText(task.task_id,'uncertainty',task.uncertainty,state.locale):t('Not provided','未提供','Tidak disediakan')}</p><EvidenceSources ids={task.evidence_ids}/></article>)}</section>}
+      {tab==='evidence'&&<><section className="surface impact-panel"><h2>{t('Evidence & impact','依据与价值','Bukti & impak')}</h2>{current&&<><p>{t('Recommendation evidence','推荐依据','Bukti cadangan')}</p><EvidenceSources ids={current.evidenceIds??[]}/>{translatedAssumptions.map((assumption,index)=><p key={index}>{assumption}</p>)}</>}{!current&&<p className="muted">{t('Personal recommendation evidence is unavailable for this scenario.','当前情景无个人推荐依据。','Bukti cadangan peribadi tidak tersedia untuk senario ini.')}</p>}<h3>{t('Role source evidence','职业来源依据','Bukti sumber kerjaya')}</h3><EvidenceSources ids={role.evidence_ids}/><h3>{t('Role alignment tags and sources','岗位关联标签与来源','Tag padanan kerjaya dan sumber')}</h3>{tags.length?tags.map((tag,index)=><p key={`${tag.kind}-${tag.label}-${index}`}>{originalLanguage(tag.label,state.locale)} · {tagKindLabel(tag.kind)} · {tagSourceLabel(tag.source)}</p>):<p className="muted">{t('No verified role alignment tags supplied.','未提供经核验的岗位关联标签。','Tiada tag padanan kerjaya yang disahkan.')}</p>}</section><section className="surface impact-panel"><h2>{t('Potential impact','潜在影响','Impak berpotensi')}</h2>{role.sdg_links.length?role.sdg_links.map(link=><div className="sdg-item" key={link.sdg}><span>SDG {link.sdg}</span><div><p>{originalLanguage(link.rationale,state.locale)}</p><a className="text-button" href={`https://sdgs.un.org/goals/goal${link.sdg}`} target="_blank" rel="noreferrer">{t('Read the UN goal','查看联合国目标','Baca matlamat PBB')}<ArrowRight size={14}/></a></div></div>):<p className="muted">{t('No impact links supplied','服务未提供影响关联','Tiada pautan impak disediakan')}</p>}</section></>}
+    </>}
+  </div>;
 }

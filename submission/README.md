@@ -5,8 +5,8 @@ These **existing PDF files** were already uploaded by the team. This folder is t
 | Required document | File | Status |
 | --- | --- | --- |
 | Preliminary proposal | [SDC2026_SyncEra_Preliminary.pdf](SDC2026_SyncEra_Preliminary.pdf) | Present in repository;
-| Technical & tools declaration | [SDC2026_SyncEra_TechDeclaration.pdf](SDC2026_SyncEra_TechDeclaration.pdf) | Present in repository; 
-| Replit proof of use | [SDC2026_SyncEra_Replit_POU.pdf](SDC2026_SyncEra_Replit_POU.pdf) | Present in repository; 
+| Technical & tools declaration | [SDC2026_SyncEra_TechDeclaration.pdf](SDC2026_SyncEra_TechDeclaration.pdf) | Present in repository; |
+| Replit proof of use | [SDC2026_SyncEra_Replit_POU.pdf](SDC2026_SyncEra_Replit_POU.pdf) | Present in repository; |
 
 **Product name:** Skillogy. **Repository name:** SyncEra. **Registered team name:** SyncEra.
 
