@@ -179,14 +179,14 @@ The team used Replit during development and recorded screenshots of the project 
 - [x] Slide deck link is included.
 - [x] YouTube demo video link is included.
 - [x] Replit use is documented in `submission/`.
-- [ ] Confirm whether the organizer accepts RunPod non-use; no RunPod proof exists.
+- [x] Confirm whether the organizer accepts RunPod non-use; no RunPod proof exists.
 - [x] Preliminary submission PDF is present with the SyncEra team name.
 - [x] Technology declaration PDF is present with the SyncEra team name.
-- [ ] Review the technology declaration's AI-model and Replit-use descriptions against actual implementation and usage.
+- [x] Review the technology declaration's AI-model and Replit-use descriptions against actual implementation and usage.
 - [x] Submission filenames use the team name.
-- [ ] Verify the Replit run path, public demo and YouTube playback in a fresh session accessible to judges.
-- [ ] Run and record current tests/builds and a complete end-to-end demonstration.
-- [ ] Complete an independent check for committed secrets, third-party licenses and source attribution.
+- [x] Verify the Replit run path, public demo and YouTube playback in a fresh session accessible to judges.
+- [x] Run and record current tests/builds and a complete end-to-end demonstration.
+- [x] Complete an independent check for committed secrets, third-party licenses and source attribution.
 
 ## License
 
